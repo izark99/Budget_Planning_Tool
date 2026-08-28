@@ -131,7 +131,7 @@ async function checkSessionAlive() {
   try {
     const res = await apiSession();
     if (res.status === 401) {
-      location.href = '/login.html';
+      location.href = '/login';
     }
   } catch {
     // lỗi mạng tạm thời, không tự đăng xuất, để lần kiểm tra sau thử lại
@@ -140,7 +140,7 @@ async function checkSessionAlive() {
 
 async function logout() {
   await apiLogout();
-  location.href = '/login.html';
+  location.href = '/login';
 }
 
 /* ===========================================================

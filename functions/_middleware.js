@@ -1,5 +1,9 @@
 // functions/_middleware.js
-const PUBLIC_PATHS = ["/login.html", "/api/login"];
+/* Cloudflare Pages đặt html_handling = "auto-trailing-slash" theo mặc định:
+   /login.html bị 308 về /login. Nếu chỉ mở /login.html thì thành vòng lặp
+   vô hạn: / -> /login.html -> (308) /login -> / ... Phải mở CẢ HAI dạng.
+   https://developers.cloudflare.com/workers/static-assets/routing/static-site-generation/ */
+const PUBLIC_PATHS = ["/login", "/login.html", "/api/login"];
 const COOKIE_NAME = "session";
 
 function base64UrlToBytes(b64url) {
@@ -69,14 +73,15 @@ export async function onRequest(context) {
   const payload = token ? await verifyToken(token, env.JWT_SECRET) : null;
 
   if (!payload) {
-    // API request -> 401 JSON. File tĩnh -> redirect về login.html
+    // API request -> 401 JSON. File tĩnh -> redirect về trang đăng nhập.
     if (url.pathname.startsWith("/api/")) {
       return new Response(JSON.stringify({ ok: false, reason: "unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json" },
       });
     }
-    return Response.redirect(new URL("/login.html", url.origin), 302);
+    // Trỏ thẳng /login — dạng chuẩn Pages phục vụ — để khỏi tốn thêm một chặng 308.
+    return Response.redirect(new URL("/login", url.origin), 302);
   }
 
   const response = await next();

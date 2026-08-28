@@ -17,7 +17,7 @@ functions/
   api/logout.js         xoá cookie
   api/session.js        heartbeat kiểm phiên còn hạn
 public/
-  login.html            trang đăng nhập — đường dẫn công khai duy nhất
+  login.html            trang đăng nhập — Pages phục vụ ở /login
   index.html            khung app
   styles.css            toàn bộ CSS
   app.js                điểm vào, dựng vỏ, giữ nhịp phiên
@@ -97,8 +97,8 @@ npx wrangler pages dev
 | Mật khẩu thật | Biến môi trường `APP_PASSWORD` trên Cloudflare. Không bao giờ xuống trình duyệt. |
 | Phiên | Cookie `session` chứa payload `{iat, exp}` ký HMAC-SHA256 bằng `JWT_SECRET`. |
 | Cờ cookie | `HttpOnly` · `Secure` · `SameSite=Strict` · **không** `Max-Age` |
-| Hết hạn | `SESSION_MINUTES` phút. `app.js` gọi `/api/session` mỗi 60 giây; gặp 401 thì tự chuyển về `/login.html`. |
-| Chặn tĩnh | `_middleware.js` chặn **mọi** đường dẫn trừ `/login.html` và `/api/login`. |
+| Hết hạn | `SESSION_MINUTES` phút. `app.js` gọi `/api/session` mỗi 60 giây; gặp 401 thì tự chuyển về `/login`. |
+| Chặn tĩnh | `_middleware.js` chặn **mọi** đường dẫn trừ `/login`, `/login.html` và `/api/login`. |
 | Cache | Mọi phản hồi đã xác thực đều mang `Cache-Control: no-store`. |
 
 Không `Max-Age` nghĩa là cookie chết khi đóng hẳn trình duyệt — **không có đường
@@ -142,7 +142,55 @@ Mọi phần còn lại của `functions/` bám đúng code mẫu trong brief.
 
 ---
 
-## 6. Lịch sử
+## 6. Xử lý sự cố
+
+### Build hỏng: `Could not read package.json`
+
+```
+Executing user command: npm run build
+npm error enoent Could not read package.json
+Failed: build command exited with code: 1
+```
+
+Project Pages đang có **build command** trong khi repo này thuần tĩnh — không có
+`package.json` và không cần build. Vào **Settings › Build**, **để trống ô Build
+command**, rồi **Retry deployment**. Bỏ build command không ảnh hưởng `functions/`:
+Pages biên dịch thư mục đó ở bước riêng.
+
+Repo này **không cần** `package.json`. Đừng thêm vào chỉ để làm vừa lòng một build
+command đặt nhầm.
+
+### Mở trang báo "Too many redirects"
+
+Pages đặt [`html_handling = "auto-trailing-slash"`](https://developers.cloudflare.com/workers/static-assets/routing/static-site-generation/)
+theo mặc định: `/login.html` **bị 308 về `/login`**. Nếu `PUBLIC_PATHS` trong
+`_middleware.js` chỉ mở `/login.html` thì thành vòng lặp vô hạn:
+
+```
+/  →302→  /login.html  →308→  /login  →302→  /login.html  →308→ …
+```
+
+Vì vậy `PUBLIC_PATHS` phải mở **cả hai dạng**, và middleware chuyển hướng thẳng tới
+`/login` cho khỏi tốn thêm một chặng:
+
+```js
+const PUBLIC_PATHS = ["/login", "/login.html", "/api/login"];
+```
+
+Quy tắc chung: mọi trang `.html` cần công khai đều phải khai **cả hai** dạng đường dẫn.
+
+### Đăng nhập đúng mật khẩu nhưng vẫn quay về trang đăng nhập
+
+Chưa khai `JWT_SECRET`, hoặc vừa đổi nó (đổi `JWT_SECRET` làm mọi phiên đang chạy
+mất hiệu lực ngay). Kiểm ở **Settings › Variables and Secrets**.
+
+### Không ai đăng nhập được, luôn báo sai mật khẩu
+
+Chưa khai `APP_PASSWORD`. `login.js` so với chuỗi rỗng nên từ chối mọi mật khẩu.
+
+---
+
+## 7. Lịch sử
 
 App vốn là một file HTML 1,1 MB dùng cơ chế xác thực giả: tải mật khẩu từ một
 file công khai trên GitHub rồi so khớp ngay trong trình duyệt, và nhớ hash trong
