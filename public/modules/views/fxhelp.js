@@ -12,11 +12,16 @@ import { S, CAL_FIELDS, fmt, t } from '../state.js';
 import { FX, ENGINE } from '../formula.js';
 import { el, toast, modal } from '../ui.js';
 
+/* Ô công thức được bấm vào gần nhất. Hộp gợi ý dùng chung một cái cho cả màn
+   hình nên phải biết chèn vào đâu. */
+var activeFx = null;
+
 /* 'fx.args.IF' -> ['điều_kiện', 'giá_trị_nếu_đúng', 'giá_trị_nếu_sai'] */
 function fxArgs(doc) { return t(doc.a).split('|'); }
 
 /* Ô nhập công thức có kiểm tra cú pháp tại chỗ */
 function fxField(value, onChange, placeholder, onBlur) {
+  var box = el('div', { class: 'fx-wrap' });
   var ta = el('textarea', { class: 'fx', rows: 2, placeholder: placeholder || '' });
   ta.value = value || '';
   var msg = el('div', { class: 'fxok' });
@@ -30,11 +35,12 @@ function fxField(value, onChange, placeholder, onBlur) {
       msg.textContent = t('fx.valid') + (f.length ? ' ' + t('fx.valid.cols', { cols: f.join(', ') }) : '') + (n.length ? ' ' + t('fx.valid.vars', { vars: n.join(', ') }) : '');
     } else { msg.className = 'fxerr'; msg.textContent = '✕ ' + r.error; }
   }
+  ta.addEventListener('focus', function () { activeFx = box; if (box._onFocus) box._onFocus(); });
   ta.addEventListener('input', function () { onChange(ta.value); check(); });
   if (onBlur) ta.addEventListener('blur', onBlur);
   check();
   var assist = fxAssist(ta, onChange, check);
-  var box = el('div', { class: 'fx-wrap' }, [ta, assist, msg]);
+  box.appendChild(ta); box.appendChild(assist); box.appendChild(msg);
   box._insert = function (txt) {
     var s = ta.selectionStart, e = ta.selectionEnd;
     ta.value = ta.value.slice(0, s) + txt + ta.value.slice(e);
@@ -45,6 +51,53 @@ function fxField(value, onChange, placeholder, onBlur) {
 }
 
 /* Chip chèn nhanh tên cột / tham số / biến hệ thống */
+/* Hộp gợi ý dùng chung cho cả màn hình: dính theo màn hình khi cuộn, tự cuộn
+   bên trong khi danh sách dài. Chèn vào ô công thức được bấm gần nhất; chưa bấm
+   ô nào thì chèn vào `fallback`. */
+function chipsPanel(fallback) {
+  var box = el('div', { class: 'chipbox' });
+  var where = el('span', { class: 'target' });
+  var chips = el('div', { class: 'chips' });
+
+  function pick() { return activeFx || fallback; }
+  function refreshTarget() {
+    var tgt = pick();
+    where.textContent = tgt ? (tgt._label ? t('fx.chips.target', { name: tgt._label }) : t('fx.chips.target.any'))
+                            : t('fx.chips.target.none');
+  }
+  function add(text, title, ins) {
+    chips.appendChild(el('span', {
+      class: 'chip', text: text, title: title || '',
+      onclick: function () {
+        var tgt = pick();
+        if (!tgt) { toast(t('fx.chips.no_target'), 'bad'); return; }
+        tgt._insert(ins); refreshTarget();
+      }
+    }));
+  }
+
+  box.appendChild(el('h4', { text: t('fx.chips.title') }));
+  box.appendChild(where);
+  chips.appendChild(el('span', {
+    class: 'chip', style: 'background:var(--ink);color:#fff;border-color:var(--ink)',
+    text: t('fx.library.chip'), title: t('fx.library.chip.title'),
+    onclick: function () { fxLibrary(pick()); }
+  }));
+  (S.shared || []).forEach(function (sh) {
+    if (!sh.code) return;
+    add(sh.code, sh.name || t('fx.chips.shared'), sh.code);
+  });
+  ENGINE.usableCols().forEach(function (col) { add('[' + col + ']', '', '[' + col + ']'); });
+  (S.params || []).forEach(function (p) { if (p.name) add(p.name, t('fx.cat.params'), p.name); });
+  ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map(function (f) { return f.varName; }))
+    .forEach(function (v) { add(v, t('fx.sysvar'), v); });
+
+  box.appendChild(chips);
+  refreshTarget();
+  box._refreshTarget = refreshTarget;
+  return box;
+}
+
 function colChips(target) {
   var c = el('div', { class: 'chips' });
   c.appendChild(el('span', {
@@ -324,4 +377,4 @@ function fxAssist(ta, onChange, check) {
 
 
 
-export { FX_DOCS, FX_OPS, fxDocByName, fxSignature, fxLibrary, fxAssist, fxField, colChips };
+export { FX_DOCS, FX_OPS, fxDocByName, fxSignature, fxLibrary, fxAssist, fxField, colChips, chipsPanel };

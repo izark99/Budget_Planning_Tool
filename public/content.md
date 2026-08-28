@@ -1,17 +1,25 @@
 # content.md — toàn bộ text tiếng Việt hiển thị trên giao diện
 #
+
 # Định dạng: mỗi dòng là `khoá: giá trị`. Dòng trống và dòng bắt đầu bằng # bị bỏ qua.
+
 # Chỉ tách tại dấu hai chấm ĐẦU TIÊN, nên giá trị chứa ":" thoải mái.
+
 # `\n` trong giá trị thành ký tự xuống dòng. `{ten}` là chỗ điền, code truyền vào
+
 # qua t('khoa', { ten: giaTri }).
 #
+
 # Sửa file này là đổi được chữ trên giao diện, KHÔNG cần deploy lại code.
 #
-# CẢNH BÁO: những chuỗi vừa là nhãn vừa là GIAO THỨC — tên cột file Excel mẫu,
-# danh sách nhận diện header khi nhập, giá trị mồi ghi vào file dự án .json —
-# KHÔNG nằm ở đây. Chúng ở lại trong code và có comment đánh dấu, vì đổi chúng
-# là hỏng chức năng nhập file. Đừng chuyển chúng sang đây.
 
+# CẢNH BÁO: những chuỗi vừa là nhãn vừa là GIAO THỨC — tên cột file Excel mẫu,
+
+# danh sách nhận diện header khi nhập, giá trị mồi ghi vào file dự án .json —
+
+# KHÔNG nằm ở đây. Chúng ở lại trong code và có comment đánh dấu, vì đổi chúng
+
+# là hỏng chức năng nhập file. Đừng chuyển chúng sang đây.
 
 # Nhãn chung
 app.brand: Lập ngân sách
@@ -72,6 +80,14 @@ toast.template.ok: Đã tải file mẫu
 # Số và đơn vị
 num.suffix.billion: tỷ
 num.suffix.million: tr
+
+# Vai trò cột (ROLES trong state.js giữ KHOÁ, phân giải lúc render)
+role.attr: Thuộc tính
+role.key: Khoá nhân sự
+role.position: Chức danh
+role.unit: Đơn vị (→ Cost Center)
+role.month: Cột tháng
+role.skip: Bỏ qua
 
 # Bảng dữ liệu
 table.addRow: + Thêm dòng
@@ -242,6 +258,12 @@ fx.var.DINH_BIEN: Hệ số định biên của tháng đó
 fx.var.SO_THANG: Số tháng trích của công thức này
 fx.var.THANG: Tháng đang tính, 1 đến 12
 fx.var.calField: {label} của tháng đang tính
+fx.chips.title: Gợi ý chèn
+fx.chips.target: Chèn vào: {name}
+fx.chips.target.any: Chèn vào ô đang chọn
+fx.chips.target.none: Bấm vào một ô công thức để chèn
+fx.chips.no_target: Bấm vào ô công thức cần chèn trước đã
+fx.chips.shared: Công thức dùng chung
 
 # Máy tính ngân sách
 engine.err.code: Lỗi {e}
@@ -266,6 +288,7 @@ engine.warn.policy.miss: Chính sách "{name}": {n} dòng không khớp bảng, 
 engine.warn.unitcol: Chưa chọn cột Đơn vị — không suy ra được Cost Center
 engine.where.raise: Tăng lương "{name}"
 engine.where.row: {code} › {name} (dòng {i})
+engine.where.shared: Công thức dùng chung "{code}"
 
 # Màn 1-2 · Định biên & Thiết lập
 hc.bang_dinh_bien: Bảng định biên
@@ -315,6 +338,15 @@ setup.th_formula_name: Dùng trong công thức
 setup.th_role: Vai trò
 setup.th_sample: Giá trị mẫu
 setup.th_type: Kiểu
+setup.shared.title: Công thức dùng chung
+setup.shared.add: + Thêm công thức
+setup.shared.name: Diễn giải
+setup.shared.formula: Biểu thức
+setup.shared.empty: Chưa khai công thức dùng chung nào
+setup.shared.dup: Trùng tên gọi
+setup.shared.bad: Sai cú pháp
+setup.shared.untitled: (chưa đặt tên)
+setup.shared.help: Đặt tên cho một biểu thức rồi gọi lại ở nhiều công thức chi phí: viết <code>LUONG_CO_BAN</code> hoặc <code>[Lương cơ bản]</code>. Khác <strong>tham số</strong> ở chỗ tham số là một con số cố định, còn đây là biểu thức tính theo từng dòng và từng tháng. Sửa một chỗ thì mọi công thức gọi tới đều đổi theo. Chỗ này <strong>không tự làm tròn</strong> — cần thì viết <code>ROUND()</code> trong công thức chi phí.
 
 # Màn 3-5 · Phân loại nhóm & Ngày công
 cal.ap_cho_tat_ca: áp cho tất cả
@@ -465,6 +497,18 @@ fm.tu_thang_da_chon_tro_di_ket_qua: Từ tháng đã chọn trở đi, kết qu�
 fm.xoa: Xoá
 fm.xoa_sach_ca_bon_bang: Xoá sạch cả bốn bảng
 fm.xoa_sach_du_lieu_cua_ca_bon_bang: Xoá sạch dữ liệu của cả bốn bảng phân loại chi phí?
+fm.nhom_thu: Nhóm
+fm.refs.title: Thông tin dùng trong công thức
+fm.refs.name: Tên
+fm.refs.kind: Loại
+fm.refs.value: Giá trị
+fm.refs.varying: Đổi theo tháng
+fm.refs.empty: Công thức này không tham chiếu cột hay biến nào
+fm.kind.field: Cột định biên
+fm.kind.param: Tham số
+fm.kind.monthvar: Biến theo tháng
+fm.kind.shared: Công thức dùng chung
+fm.kind.unknown: Không nhận ra
 
 # Màn 7 · Tờ trình ngoại lệ
 exc.guide_1: Có ID thì ghép theo ID; bỏ trống ID và điền Chuc Danh thì áp cho mọi người giữ chức danh đó.
@@ -504,6 +548,9 @@ maps.word_unit: đơn vị
 # Màn 9 · Tăng lương
 raise.cond_placeholder: Bỏ trống = áp cho tất cả
 raise.n_rows: {n} dòng áp dụng
+fm.raise.cost_group: Áp cho công thức chi phí
+fm.raise.shared_group: Áp cho công thức dùng chung
+fm.raise.shared_note: Chọn ở đây thì mọi công thức chi phí gọi tới nó đều ăn theo. Đừng chọn kèm cả công thức chi phí đang dùng nó, kẻo một đợt tăng bị tính hai lần.
 
 # Màn 10 · Kết quả
 res.chua_co_so_lieu: Chưa có số liệu

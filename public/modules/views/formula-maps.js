@@ -7,7 +7,7 @@ import { MONTHS, S, allMonths, fmt, nkey, numOf, setRESULT, t, touch, uid } from
 import { ENGINE } from '../formula.js';
 import { distinctVals, pickFile } from '../io.js';
 import { confirmBox, dataTable, downloadTemplate, el, esc, foldPanel, importMapped, modal, panel, render, ribbon, toast } from '../ui.js';
-import { colChips, fxField } from './fxhelp.js';
+import { chipsPanel, fxField } from './fxhelp.js';
 
 /* ==== 07-view-formula-maps.js ==== */
 /* ===========================================================
@@ -118,12 +118,17 @@ function viewFormula() {
 
   /* --- nhóm & công thức --- */
   var rulesBox = el('div');
+  var chips = chipsPanel(null);
   function drawRules() {
     rulesBox.innerHTML = '';
     (fc.rules || []).forEach(function (r, i) {
       var mc = ENGINE.countMatch(r.cond);
       var condBox = fxField(r.cond, function (v) { r.cond = v; setRESULT(null); touch(); }, t('fm.cond_placeholder'), drawRules);
       var fxBox = fxField(r.formula, function (v) { r.formula = v; setRESULT(null); touch(); }, '0');
+      var gname = r.name || (t('fm.nhom_thu') + ' ' + (i + 1));
+      condBox._label = gname + ' · ' + t('fm.dieu_kien_nhom');
+      fxBox._label = gname + ' · ' + t('fm.cong_thuc_tinh_tien');
+      condBox._onFocus = fxBox._onFocus = function () { if (chips._refreshTarget) chips._refreshTarget(); };
       rulesBox.appendChild(el('div', { class: 'rule' }, [
         el('div', { class: 'h' }, [
           el('span', { class: 'idx', text: String(i + 1).padStart(2, '0') }),
@@ -136,8 +141,8 @@ function viewFormula() {
           el('button', { class: 'btn sm del', text: '✕', onclick: function () { fc.rules.splice(i, 1); setRESULT(null); touch(); drawRules(); } })
         ]),
         el('div', { class: 'b' }, [
-          el('div', {}, [el('label', { class: 'f', text: t('fm.dieu_kien_nhom') }), condBox, colChips(condBox)]),
-          el('div', {}, [el('label', { class: 'f', text: t('fm.cong_thuc_tinh_tien') }), fxBox, colChips(fxBox)])
+          el('div', {}, [el('label', { class: 'f', text: t('fm.dieu_kien_nhom') }), condBox]),
+          el('div', {}, [el('label', { class: 'f', text: t('fm.cong_thuc_tinh_tien') }), fxBox])
         ])
       ]));
     });
@@ -154,7 +159,7 @@ function viewFormula() {
     ]),
     el('div', { class: 'body' }, [
       el('p', { class: 'hint', html: t('fm.rules_help') }),
-      rulesBox
+      el('div', { class: 'fxlayout' }, [rulesBox, chips])
     ])
   ]));
 
@@ -197,6 +202,72 @@ function autoGroup(fc) {
       }
     }
   ]);
+}
+
+var REF_KIND = {
+  field: 'fm.kind.field', param: 'fm.kind.param',
+  monthvar: 'fm.kind.monthvar', shared: 'fm.kind.shared', unknown: 'fm.kind.unknown'
+};
+
+/* Hiển thị giá trị thô: số thì phân cách nghìn, chuỗi giữ nguyên, lỗi thì ghi mã lỗi. */
+function refVal(v) {
+  if (v && typeof v === 'object' && v.err) return v.err;
+  if (v === '' || v === null || v === undefined) return '—';
+  if (typeof v === 'number') return fmt(v);
+  if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+  return String(v);
+}
+
+function refsTable(refs) {
+  var box = el('div', { style: 'margin-top:14px' });
+  box.appendChild(el('h4', {
+    style: 'margin:0 0 8px;font:600 11px var(--disp);letter-spacing:.06em;text-transform:uppercase;color:var(--soft)',
+    text: t('fm.refs.title')
+  }));
+  if (!refs.length) {
+    box.appendChild(el('p', { class: 'hint', style: 'margin:0', text: t('fm.refs.empty') }));
+    return box;
+  }
+
+  var fixed = refs.filter(function (r) { return r.constant; });
+  var vary = refs.filter(function (r) { return !r.constant; });
+
+  if (fixed.length) {
+    box.appendChild(el('div', { class: 'tw', style: 'max-height:none' }, [
+      el('table', {}, [
+        el('thead', {}, [el('tr', {}, [
+          el('th', { text: t('fm.refs.name') }), el('th', { text: t('fm.refs.kind') }),
+          el('th', { text: t('fm.refs.value') })
+        ])]),
+        el('tbody', {}, fixed.map(function (r) {
+          return el('tr', {}, [
+            el('td', { class: 'mono', text: r.key }),
+            el('td', { text: t(REF_KIND[r.kind] || 'fm.kind.unknown') }),
+            el('td', { class: r.error ? 'mono' : 'num', text: r.error ? ('✕ ' + r.error) : refVal(r.value) })
+          ]);
+        }))
+      ])
+    ]));
+  }
+
+  if (vary.length) {
+    box.appendChild(el('p', { class: 'hint', style: 'margin:10px 0 4px', text: t('fm.refs.varying') }));
+    box.appendChild(el('div', { class: 'tw', style: 'max-height:none' }, [
+      el('table', {}, [
+        el('thead', {}, [el('tr', {}, [el('th', { text: t('fm.refs.name') }), el('th', { text: t('fm.refs.kind') })]
+          .concat(MONTHS.map(function (m) { return el('th', { class: 'num', text: m }); })))]),
+        el('tbody', {}, vary.map(function (r) {
+          return el('tr', {}, [
+            el('td', { class: 'mono', text: r.key }),
+            el('td', { text: t(REF_KIND[r.kind] || 'fm.kind.unknown') })
+          ].concat(r.values.map(function (v) {
+            return el('td', { class: 'num', text: refVal(v) });
+          })));
+        }))
+      ])
+    ]));
+  }
+  return box;
 }
 
 function previewPanel(fc) {
@@ -277,6 +348,10 @@ function previewPanel(fc) {
       el('table', {}, [el('thead', {}, [el('tr', {}, head)]), el('tbody', {}, body)])
     ]));
     out.appendChild(el('p', { class: 'hint', style: 'margin:8px 0 0', text: t('fm.cot_mo_la_thang_khong_trich_so') }));
+
+    /* Mọi thông tin công thức tham chiếu, kèm giá trị của chính dòng này —
+       để đối chiếu mà không phải mở lại bảng định biên. */
+    out.appendChild(refsTable(res.refs || []));
   }
 
   fillPicker(); draw();
@@ -582,18 +657,30 @@ function viewRaise() {
     S.raises.forEach(function (r, i) {
       var condBox = fxField(r.cond, function (v) { r.cond = v; setRESULT(null); touch(); }, t('raise.cond_placeholder'), draw);
       var mc = ENGINE.countMatch(r.cond);
-      var picker = el('div', { class: 'chips' });
-      S.formulas.forEach(function (f) {
-        var on = (r.formulas || []).indexOf(f.code) >= 0;
-        picker.appendChild(el('span', {
-          class: 'chip', style: on ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '',
-          text: f.code, onclick: function () {
-            r.formulas = on ? r.formulas.filter(function (x) { return x !== f.code; }) : (r.formulas || []).concat([f.code]);
-            setRESULT(null); touch(); draw();
-          }
-        }));
-      });
-      if (!(r.formulas || []).length) picker.appendChild(el('span', { class: 'fxok', text: t('fm.chua_chon_ap_cho_tat_ca_cong_thuc') }));
+      var picker = el('div');
+      function pickGroup(title, items, code, note) {
+        if (!items.length) return;
+        var line = el('div', { class: 'chips' });
+        items.forEach(function (f) {
+          var c = code(f);
+          var on = (r.formulas || []).indexOf(c) >= 0;
+          line.appendChild(el('span', {
+            class: 'chip', style: on ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '',
+            text: c, title: f.name || '', onclick: function () {
+              r.formulas = on ? r.formulas.filter(function (x) { return x !== c; }) : (r.formulas || []).concat([c]);
+              setRESULT(null); touch(); draw();
+            }
+          }));
+        });
+        picker.appendChild(el('label', { class: 'f', style: 'margin-top:7px', text: title }));
+        picker.appendChild(line);
+        if (note) picker.appendChild(el('div', { class: 'fxok', text: note }));
+      }
+      pickGroup(t('fm.raise.cost_group'), S.formulas, function (f) { return f.code; }, null);
+      pickGroup(t('fm.raise.shared_group'),
+        (S.shared || []).filter(function (x) { return x && x.code; }),
+        function (f) { return f.code; }, t('fm.raise.shared_note'));
+      if (!(r.formulas || []).length) picker.appendChild(el('div', { class: 'fxok', text: t('fm.chua_chon_ap_cho_tat_ca_cong_thuc') }));
 
       box.appendChild(el('div', { class: 'rule' }, [
         el('div', { class: 'h' }, [
@@ -611,7 +698,10 @@ function viewRaise() {
           el('input', { type: 'number', step: '0.1', class: 'fx', style: 'text-align:right', value: r.pct, oninput: function (e) { r.pct = parseFloat(e.target.value) || 0; setRESULT(null); touch(); } })]),
           el('div', {}, [el('label', { class: 'f', text: t('fm.ap_cho_cong_thuc_nao') }), picker])
         ]),
-        el('div', { style: 'padding:0 10px 10px' }, [el('label', { class: 'f', text: t('fm.gioi_han_pham_vi_tuy_chon') }), condBox, colChips(condBox)])
+        el('div', { style: 'padding:0 10px 10px' }, [
+          el('label', { class: 'f', text: t('fm.gioi_han_pham_vi_tuy_chon') }),
+          el('div', { class: 'fxlayout' }, [condBox, chipsPanel(condBox)])
+        ])
       ]));
     });
     if (!S.raises.length) box.appendChild(el('div', { class: 'empty', text: t('fm.chua_khai_bao_dot_tang_luong_nao') }));

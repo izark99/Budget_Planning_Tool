@@ -2,10 +2,11 @@
    MÀN 1 & 2 — BẢNG ĐỊNH BIÊN và THIẾT LẬP
    Tách nguyên văn từ khối 05-view-hc-setup.js.
    =========================================================== */
-import { M, MONTHS, ROLES, S, fmt, setRESULT, t, touch } from '../state.js';
-import { ENGINE } from '../formula.js';
+import { M, MONTHS, ROLES, S, fmt, nkey, setRESULT, t, touch, uid } from '../state.js';
+import { ENGINE, FX } from '../formula.js';
 import { dedupeHeaders, distinctVals, pickFile, readWorkbook, sheetAoa } from '../io.js';
 import { downloadTemplate, el, modal, panel, readTable, render, ribbon, toast } from '../ui.js';
+import { chipsPanel, fxField } from './fxhelp.js';
 
 /* ==== 05-view-hc-setup.js ==== */
 /* ===========================================================
@@ -216,7 +217,7 @@ function viewSetup() {
               if (c.role === 'month' && !c.month) c.month = null;
               ENGINE.invalidate(); setRESULT(null); touch(); draw();
             }
-          }, ROLES.map(function (r) { return el('option', { value: r.v, selected: c.role === r.v, text: r.t }); }))]),
+          }, ROLES.map(function (r) { return el('option', { value: r.v, selected: c.role === r.v, text: t(r.t) }); }))]),
           el('td', { style: 'width:90px' }, [c.role === 'month' ? el('select', {
             style: dup ? 'border-color:var(--danger)' : '',
             onchange: function (e) { c.month = +e.target.value || null; ENGINE.invalidate(); setRESULT(null); touch(); draw(); }
@@ -279,6 +280,72 @@ function viewSetup() {
     if (!S.params.length) pb.appendChild(el('tr', {}, [el('td', { colspan: 4, class: 'empty', text: t('hc.chua_co_hang_so_nao') })]));
   }
   fillP();
+
+  /* ---------- Công thức dùng chung ----------
+     Biểu thức đặt tên, tính lúc chạy theo từng dòng × tháng. Công thức chi phí
+     gọi được bằng tên gọi (LUONG_CO_BAN) hoặc bằng diễn giải ([Lương cơ bản]).
+     Khác tham số ở chỗ tham số là một con số cố định, còn cái này là biểu thức. */
+  var shBox = el('div');
+  function drawShared() {
+    shBox.innerHTML = '';
+    var seen = {};
+    (S.shared || []).forEach(function (sh, i) {
+      var code = nkey(sh.code);
+      var dup = code && seen[code];
+      seen[code] = 1;
+      var fx = fxField(sh.formula, function (v) { sh.formula = v; setRESULT(null); touch(); }, '0', drawShared);
+      fx._label = sh.code || t('setup.shared.untitled');
+      var chk = FX.tryCompile(String(sh.formula || '').trim() || '0');
+      shBox.appendChild(el('div', { class: 'rule' }, [
+        el('div', { class: 'h' }, [
+          el('span', { class: 'idx', text: String(i + 1).padStart(2, '0') }),
+          el('input', {
+            class: 'nm', value: sh.code || '', placeholder: 'TEN_GOI', style: 'width:180px;font-family:var(--mono)',
+            oninput: function (e) {
+              sh.code = e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+              e.target.value = sh.code; setRESULT(null); touch();
+            },
+            onblur: drawShared
+          }),
+          el('input', {
+            class: 'nm', value: sh.name || '', placeholder: t('setup.shared.name'), style: 'width:200px;font-weight:400',
+            oninput: function (e) { sh.name = e.target.value; setRESULT(null); touch(); }, onblur: drawShared
+          }),
+          dup ? el('span', { class: 'tag r', text: t('setup.shared.dup') })
+              : (chk.ok ? el('span', { class: 'tag g', text: t('fx.valid') })
+                        : el('span', { class: 'tag r', text: t('setup.shared.bad') })),
+          el('div', { class: 'sp' }),
+          el('button', {
+            class: 'btn sm del', text: '✕',
+            onclick: function () { S.shared.splice(i, 1); setRESULT(null); touch(); drawShared(); }
+          })
+        ]),
+        el('div', { class: 'b', style: 'grid-template-columns:1fr' }, [
+          el('div', {}, [el('label', { class: 'f', text: t('setup.shared.formula') }), fx])
+        ])
+      ]));
+    });
+    if (!(S.shared || []).length) shBox.appendChild(el('div', { class: 'empty', text: t('setup.shared.empty') }));
+  }
+  drawShared();
+
+  wrap.appendChild(el('div', { class: 'panel' }, [
+    el('header', {}, [
+      el('h3', { text: t('setup.shared.title') }), el('div', { class: 'sp' }),
+      el('button', {
+        class: 'btn sm', text: t('setup.shared.add'),
+        onclick: function () {
+          S.shared = S.shared || [];
+          S.shared.push({ id: uid(), code: 'CT_MOI_' + (S.shared.length + 1), name: '', formula: '0' });
+          setRESULT(null); touch(); drawShared();
+        }
+      })
+    ]),
+    el('div', { class: 'body' }, [el('p', { class: 'hint', html: t('setup.shared.help') })]),
+    el('div', { class: 'body' }, [
+      el('div', { class: 'fxlayout' }, [shBox, chipsPanel(null)])
+    ])
+  ]));
 
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [

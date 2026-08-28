@@ -106,6 +106,7 @@ function openProject() {
         var next = Object.assign(defaultState(), o);
         next.maps = Object.assign({ costCode: [], costCenter: [], budgetCode: [], accountCode: [] }, next.maps || {});
         next.policies = next.policies || [];
+        next.shared = next.shared || [];
         next.ui = next.ui || { view: 'hc' };
         setS(next);
         ENGINE.invalidate(); setRESULT(null); save(); shellRender();

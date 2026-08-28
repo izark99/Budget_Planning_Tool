@@ -309,7 +309,42 @@ var FX = (function () {
     if (Object.prototype.hasOwnProperty.call(row, name)) return row[name];
     var lk = ctx.fieldIndex && ctx.fieldIndex[String(name).toLowerCase().trim()];
     if (lk !== undefined && Object.prototype.hasOwnProperty.call(row, lk)) return row[lk];
+    var sh = sharedValue(ctx, name);          /* [Lương cơ bản] cũng gọi được */
+    if (sh !== undefined) return sh;
     return ERR('#REF!');
+  }
+
+  /* Công thức dùng chung — biểu thức đặt tên, tính lúc chạy.
+     Trả về undefined nếu tên không phải công thức dùng chung, để nơi gọi
+     còn báo #NAME? / #REF! như cũ.
+     Không làm tròn sau khi áp tăng lương: một biểu thức đặt tên có thể là hệ số
+     hay tỷ lệ chứ không riêng tiền lương. Cần tròn thì viết ROUND() trong công
+     thức chi phí. */
+  function sharedValue(ctx, rawKey) {
+    var reg = ctx.shared;
+    if (!reg) return undefined;
+    var d = reg[String(rawKey == null ? '' : rawKey).toUpperCase().trim()];
+    if (!d) return undefined;
+    if (!d.fn) return ERR('#NAME?');
+
+    var stack = ctx.__shStack || (ctx.__shStack = {});
+    if (stack[d.code]) return ERR('#CIRC!');   /* tự tham chiếu vòng tròn */
+    stack[d.code] = 1;
+    var v;
+    try { v = d.fn.eval(ctx); } finally { delete stack[d.code]; }
+    if (isErr(v)) return v;
+
+    if (d.raises && d.raises.length) {
+      var m = (ctx.vars && ctx.vars.THANG) || 1, f = 1;
+      for (var i = 0; i < d.raises.length; i++) {
+        var rz = d.raises[i];
+        if (m < rz.from) continue;
+        if (rz.condFn) { var cv = rz.condFn.eval(ctx); if (isErr(cv) || toBool(cv) !== true) continue; }
+        f *= (1 + rz.pct / 100);
+      }
+      if (f !== 1) { var n = toNum(v); if (isErr(n)) return n; v = n * f; }
+    }
+    return v;
   }
 
   function evalNode(node, ctx) {
@@ -322,6 +357,8 @@ var FX = (function () {
         var up = node.v.toUpperCase();
         if (ctx.vars && Object.prototype.hasOwnProperty.call(ctx.vars, up)) return ctx.vars[up];
         if (ctx.params && Object.prototype.hasOwnProperty.call(ctx.params, up)) return ctx.params[up];
+        var sh = sharedValue(ctx, up);
+        if (sh !== undefined) return sh;
         return ERR('#NAME?');
       }
       case 'neg': { var a = toNum(evalNode(node.a, ctx)); return isErr(a) ? a : -a; }
@@ -474,6 +511,76 @@ var ENGINE = (function () {
     return out;
   }
 
+  /* Dựng sổ đăng ký công thức dùng chung.
+     Trả về { reg, monthDep, errors }:
+       reg      — tra theo code VÀ theo name (đều viết hoa), cùng trỏ về một định nghĩa
+       monthDep — code nào phụ thuộc tháng (trực tiếp, qua raise, hay qua công thức
+                  dùng chung khác). Thiếu bước lan truyền này thì công thức chi phí
+                  gọi tới nó sẽ bị cache nhầm giữa các tháng.
+     Tăng lương chỉ áp cho công thức dùng chung khi được LIỆT KÊ ĐÍCH DANH.
+     Danh sách rỗng vẫn giữ nghĩa cũ là "mọi công thức chi phí", nếu cho nó áp luôn
+     cho công thức dùng chung thì một đợt tăng sẽ bị tính hai lần. */
+  function buildShared() {
+    var defs = (S.shared || []).filter(function (x) { return x && nkey(x.code); });
+    var reg = {}, byCode = {}, errors = [];
+
+    defs.forEach(function (d) {
+      var code = nkey(d.code);
+      var c = FX.tryCompile(String(d.formula == null ? '' : d.formula).trim() || '0');
+      var rec = { code: code, name: d.name || '', fn: c.ok ? c.fn : null, err: c.ok ? null : c.error, raises: [] };
+      if (!c.ok) errors.push({ where: code, msg: c.error });
+      byCode[code] = rec;
+      reg[code] = rec;
+      if (nkey(d.name)) reg[nkey(d.name)] = rec;
+    });
+
+    (S.raises || []).forEach(function (r) {
+      if (r.active === false) return;
+      var list = (r.formulas || []).map(nkey);
+      if (!list.length) return;                       /* rỗng = chỉ áp cho công thức chi phí */
+      var cf = null;
+      if (r.cond && String(r.cond).trim()) { var cc = FX.tryCompile(r.cond); if (cc.ok) cf = cc.fn; }
+      list.forEach(function (code) {
+        if (byCode[code]) byCode[code].raises.push({ from: +r.fromMonth || 1, pct: parseFloat(r.pct) || 0, condFn: cf });
+      });
+    });
+
+    /* lan truyền phụ thuộc tháng qua đồ thị tham chiếu */
+    var monthDep = {}, seen = {};
+    function dep(code) {
+      if (Object.prototype.hasOwnProperty.call(monthDep, code)) return monthDep[code];
+      var rec = byCode[code];
+      if (!rec || !rec.fn) return (monthDep[code] = false);
+      if (seen[code]) return false;                   /* vòng tròn: chặn đệ quy vô hạn */
+      seen[code] = 1;
+      var d = rec.fn.info.monthDependent || rec.raises.length > 0;
+      if (!d) {
+        var refs = rec.fn.info.names.concat(rec.fn.info.fields.map(nkey));
+        for (var i = 0; i < refs.length && !d; i++) {
+          var target = reg[nkey(refs[i])];
+          if (target && target.code !== code) d = dep(target.code);
+        }
+      }
+      delete seen[code];
+      return (monthDep[code] = d);
+    }
+    Object.keys(byCode).forEach(dep);
+    return { reg: reg, monthDep: monthDep, errors: errors };
+  }
+
+  /* Công thức có phụ thuộc tháng không — tính cả qua công thức dùng chung nó gọi. */
+  function fnMonthDep(fn, sh) {
+    if (!fn) return false;
+    if (fn.info.monthDependent) return true;
+    if (!sh) return false;
+    var refs = fn.info.names.concat(fn.info.fields.map(nkey));
+    for (var i = 0; i < refs.length; i++) {
+      var rec = sh.reg[nkey(refs[i])];
+      if (rec && sh.monthDep[rec.code]) return true;
+    }
+    return false;
+  }
+
   function buildParams() {
     var p = {};
     (S.params || []).forEach(function (x) {
@@ -617,6 +724,10 @@ var ENGINE = (function () {
     var rows = applyPolicies(applyClasses(buildRows(), warnings), warnings);
     var nR = rows.length;
     var params = buildParams();
+    var sh = buildShared();
+    sh.errors.forEach(function (e) {
+      formulaErrors.push({ where: t('engine.where.shared', { code: e.where }), msg: e.msg });
+    });
     var fieldIndex = {};
     usableCols().forEach(function (c) { fieldIndex[String(c).toLowerCase().trim()] = c; });
     var cal = buildCalendar();
@@ -685,7 +796,7 @@ var ENGINE = (function () {
 
       for (var i = 0; i < nR; i++) {
         var rc = ctxRow[i];
-        var ctx = { row: rc.row, fieldIndex: fieldIndex, params: params, lookups: {}, vars: { THANG: 0, DINH_BIEN: 0, SO_THANG: nSel } };
+        var ctx = { row: rc.row, fieldIndex: fieldIndex, params: params, lookups: {}, shared: sh.reg, vars: { THANG: 0, DINH_BIEN: 0, SO_THANG: nSel } };
         var chosen = null;
         for (var g = 0; g < rules.length; g++) {
           var ru = rules[g]; if (ru.err) continue;
@@ -696,7 +807,7 @@ var ENGINE = (function () {
         gs[i] = chosen ? (chosen.name || t('engine.group.unnamed')) : null;
         if (!chosen || !chosen.valFn) continue;
 
-        var monthDep = chosen.valFn.info.monthDependent;
+        var monthDep = fnMonthDep(chosen.valFn, sh);
         var cache = null;
         var exs = (exById[rc.id] || []).concat(exByPos[rc.pos] || []);
 
@@ -804,7 +915,7 @@ var ENGINE = (function () {
     usableCols().forEach(function (c) { fieldIndex[String(c).toLowerCase().trim()] = c; });
     var cal = buildCalendar();
     return {
-      row: row, fieldIndex: fieldIndex, params: buildParams(), lookups: {},
+      row: row, fieldIndex: fieldIndex, params: buildParams(), lookups: {}, shared: buildShared().reg,
       vars: Object.assign({ THANG: month || 1, DINH_BIEN: (row.__m || [])[(month || 1) - 1] || 0, SO_THANG: nSel || 12 },
         calVars(cal.pick(row), month || 1))
     };
@@ -895,8 +1006,52 @@ var ENGINE = (function () {
     return {
       group: chosen.name || t('engine.group.unnamed'), row: row, months: out, total: total,
       nSel: nSel, alloc: alloc, error: err,
-      id: idCol ? row[idCol] : '', hasRaise: myRaises.length > 0, hasExc: exs.length > 0
+      id: idCol ? row[idCol] : '', hasRaise: myRaises.length > 0, hasExc: exs.length > 0,
+      refs: collectRefs([chosen.condFn, chosen.valFn], ctx, row, nSel, cal)
     };
+  }
+
+  /* Mọi thông tin công thức thực sự dùng tới, kèm giá trị của dòng đang thử.
+     Mỗi tên được biên dịch lại thành một biểu thức con rồi eval, nên đi đúng
+     cùng đường phân giải với công thức thật: cột -> tham số -> biến tháng ->
+     công thức dùng chung. Nhờ vậy không có chuyện bảng đối chiếu hiển thị một
+     đằng còn máy tính lại lấy một nẻo. */
+  function collectRefs(fns, ctx, row, nSel, cal) {
+    var order = [], seen = {};
+    fns.forEach(function (f) {
+      if (!f) return;
+      f.info.fields.forEach(function (x) {
+        var k = '[' + x + ']'; if (!seen[k]) { seen[k] = 1; order.push({ key: k, raw: x, field: true }); }
+      });
+      f.info.names.forEach(function (x) {
+        if (!seen[x]) { seen[x] = 1; order.push({ key: x, raw: x, field: false }); }
+      });
+    });
+
+    function kindOf(r) {
+      var up = nkey(r.raw);
+      if (!r.field) {
+        if (ctx.vars && Object.prototype.hasOwnProperty.call(ctx.vars, up)) return 'monthvar';
+        if (ctx.params && Object.prototype.hasOwnProperty.call(ctx.params, up)) return 'param';
+      }
+      if (ctx.shared && ctx.shared[up]) return 'shared';
+      return r.field ? 'field' : 'unknown';
+    }
+
+    var hcf0 = row.__m || [];
+    return order.map(function (r) {
+      var c = FX.tryCompile(r.key);
+      var vals = [], kind = kindOf(r);
+      if (!c.ok) return { key: r.key, kind: kind, error: c.error, constant: true, values: [] };
+      for (var m = 1; m <= M; m++) {
+        ctx.vars = Object.assign({ THANG: m, DINH_BIEN: hcf0[m - 1] || 0, SO_THANG: nSel }, calVars(cal.pick(row), m));
+        var v = c.fn.eval(ctx);
+        vals.push(FX.isErr(v) ? { err: v.__err } : v);
+      }
+      var first = JSON.stringify(vals[0]);
+      var constant = vals.every(function (v) { return JSON.stringify(v) === first; });
+      return { key: r.key, kind: kind, constant: constant, values: vals, value: vals[0] };
+    });
   }
 
   function preview(fc, rowIdx, month) {

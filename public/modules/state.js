@@ -100,6 +100,9 @@ function defaultState() {
     ],
     classes: [],
     policies: [],
+    /* Công thức dùng chung: biểu thức đặt tên, tính lúc chạy theo từng dòng × tháng.
+       Gọi được bằng `code` (LUONG_CO_BAN) hoặc bằng `[name]` ([Lương cơ bản]). */
+    shared: [],
     calendar: { groupCol: '', tables: [blankCalTable('*')] },
     formulas: [
       {
@@ -145,6 +148,7 @@ function load() {
     S.ui = S.ui || { view: 'hc' };
     S.ui.collapsed = S.ui.collapsed || {};
     S.maps = Object.assign({ costCode: [], costCenter: [], budgetCode: [], accountCode: [] }, S.maps || {});
+    S.shared = S.shared || [];
     return true;
   } catch (e) { return false; }
 }

@@ -106,7 +106,40 @@ lùi offline**, đúng mục tiêu của thiết kế.
 
 ---
 
-## 4. Sửa chữ trên giao diện
+## 4. Công thức dùng chung
+
+Khai ở **Thiết lập › Công thức dùng chung**: đặt tên cho một biểu thức rồi gọi lại
+ở nhiều công thức chi phí.
+
+```
+LUONG_CO_BAN   ROUND([Coefficient]*LUONG_CO_SO,-3)
+
+FC_BHXH  =  LUONG_CO_BAN * TY_LE_BHXH_CTY%
+FC_TET   =  LUONG_CO_BAN * 2
+```
+
+Gọi được bằng **tên gọi** (`LUONG_CO_BAN`) hoặc bằng **diễn giải trong ngoặc vuông**
+(`[Lương cơ bản]`) — cả hai ra cùng một giá trị.
+
+Khác `tham số` ở chỗ tham số là một con số cố định, còn đây là biểu thức tính theo
+**từng dòng × từng tháng**. Gọi được cả cột định biên, tham số, biến tháng và công
+thức dùng chung khác. Tham chiếu vòng tròn trả về `#CIRC!` chứ không treo máy.
+
+**Không tự làm tròn** sau khi áp tăng lương — một biểu thức đặt tên có thể là hệ số
+hay tỷ lệ chứ không riêng tiền. Cần tròn thì viết `ROUND()` trong công thức chi phí.
+
+### Tăng lương áp cho công thức dùng chung
+
+Ở **Tăng lương › Áp cho công thức dùng chung**: chọn đích danh một công thức dùng
+chung thì **mọi công thức chi phí gọi tới nó đều ăn theo** — khai một chỗ, áp toàn bộ.
+
+> ⚠️ Đừng chọn kèm cả công thức chi phí đang dùng nó, kẻo một đợt tăng bị tính hai
+> lần. Danh sách để trống vẫn giữ nghĩa cũ là "mọi công thức chi phí" và **không**
+> đụng tới công thức dùng chung, đúng như trước.
+
+---
+
+## 5. Sửa chữ trên giao diện
 
 Sửa `public/content.md` rồi deploy lại. Định dạng `khoá: giá trị`, một dòng một
 khoá, bỏ qua dòng trống và dòng bắt đầu bằng `#`. `{ten}` là chỗ điền.
@@ -118,7 +151,7 @@ khoá, bỏ qua dòng trống và dòng bắt đầu bằng `#`. `{ten}` là ch�
 
 ---
 
-## 5. Sai lệch có chủ đích so với brief
+## 6. Sai lệch có chủ đích so với brief
 
 Một chỗ duy nhất, ở cuối `functions/_middleware.js`. Brief mục 2 viết:
 
@@ -142,7 +175,7 @@ Mọi phần còn lại của `functions/` bám đúng code mẫu trong brief.
 
 ---
 
-## 6. Xử lý sự cố
+## 7. Xử lý sự cố
 
 ### Build hỏng: `Could not read package.json`
 
@@ -190,7 +223,7 @@ Chưa khai `APP_PASSWORD`. `login.js` so với chuỗi rỗng nên từ chối m
 
 ---
 
-## 7. Lịch sử
+## 8. Lịch sử
 
 App vốn là một file HTML 1,1 MB dùng cơ chế xác thực giả: tải mật khẩu từ một
 file công khai trên GitHub rồi so khớp ngay trong trình duyệt, và nhớ hash trong

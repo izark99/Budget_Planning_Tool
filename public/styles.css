@@ -148,18 +148,25 @@ label.f { display: block; font-size: 11.5px; letter-spacing: .05em; text-transfo
 
 /* ============ Tables ============ */
 .tw { overflow: auto; max-height: 62vh; border-top: 1px solid var(--rule-2); }
-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12.5px; }
+/* width:max-content + min-width:100% — bảng hẹp vẫn lấp đầy panel, bảng nhiều cột
+   thì tràn ra và .tw cuộn ngang. Trước đây width:100% ép co lại, cộng với
+   overflow-wrap:anywhere ở th nên tiêu đề bị bẻ mỗi dòng một chữ cái. */
+table { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; font-size: 12.5px; }
 th {
   position: sticky; top: 0; z-index: 2; background: var(--bone-2); text-align: left;
   font: 600 11px/1.3 var(--disp);
   letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3);
   padding: 7px 9px; border-bottom: 1px solid var(--rule);
-  white-space: normal; overflow-wrap: anywhere;
+  white-space: nowrap;
   vertical-align: middle; text-align: center;
 }
 th.nowrap { white-space: nowrap; }
 th.num { text-align: center; }
 td { padding: 4px 9px; border-bottom: 1px solid var(--rule-2); vertical-align: middle; }
+/* Ô chứa văn bản dài (công thức, ghi chú) thì xuống dòng thay vì kéo bảng dài vô tận. */
+td { max-width: 460px; overflow-wrap: anywhere; }
+/* Ô có ô nhập thì đừng co lại quá hẹp khi bảng ở chế độ max-content. */
+td > input[type=text], td > input[type=number] { min-width: 90px; }
 td > input[type=text], td > input[type=number], td > select { height: calc(var(--ctl) - 4px); }
 td > .btn.sm { height: calc(var(--ctl) - 4px); }
 tbody tr:hover { background: #FAFBF8; }
@@ -208,6 +215,25 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .chip { font: 11px var(--mono); background: var(--bone-2); border: 1px solid var(--rule-2); border-radius: 2px; padding: 1px 5px; cursor: pointer; }
 .chip:hover { border-color: var(--ink-3); background: #fff; }
 
+/* Hộp gợi ý cột: dính theo màn hình khi cuộn, tự cuộn bên trong khi danh sách dài */
+.chipbox {
+  position: sticky; top: 10px; align-self: start;
+  border: 1px solid var(--rule-2); border-radius: var(--r); background: var(--bone-2);
+  padding: 9px 10px; max-height: calc(100vh - 90px); overflow: auto;
+}
+.chipbox > h4 {
+  margin: 0 0 7px; font: 600 11px var(--disp); letter-spacing: .06em;
+  text-transform: uppercase; color: var(--soft);
+}
+.chipbox .chips { margin-top: 0; }
+.chipbox .target { font: 11px var(--mono); color: var(--mineral); margin-bottom: 7px; display: block; }
+/* Khu soạn công thức: danh sách nhóm bên trái, hộp gợi ý dính bên phải */
+.fxlayout { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 14px; align-items: start; }
+/* Ô lưới mặc định min-width:auto nên không co nhỏ hơn nội dung — bảng rộng sẽ
+   đẩy tràn cả trang thay vì tự cuộn bên trong. min-width:0 trả quyền co lại. */
+.fxlayout > *, .split > *, .rule > .b > * { min-width: 0; }
+@media (max-width: 1240px) { .fxlayout { grid-template-columns: 1fr; } .chipbox { position: static; max-height: 210px; } }
+
 /* ============ Import wizard ============ */
 .drop {
   border: 1.5px dashed var(--rule); border-radius: var(--r); padding: 26px; text-align: center; background: var(--bone-2);
@@ -217,7 +243,7 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .drop strong { display: block; font: 600 15px var(--disp); letter-spacing: .03em; }
 .drop span { color: var(--soft); font-size: 12.5px; }
 
-.split { display: grid; grid-template-columns: 320px 1fr; gap: 18px; align-items: start; }
+.split { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 1100px) { .split { grid-template-columns: 1fr; } .rule > .b { grid-template-columns: 1fr; } }
 @media (max-width: 860px) {
   .shell { flex-direction: column; }
