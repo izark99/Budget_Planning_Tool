@@ -1,0 +1,7 @@
+# Chép thành .dev.vars để chạy `npx wrangler pages dev` tại máy.
+# .dev.vars nằm trong .gitignore — KHÔNG commit.
+# Trên Cloudflare thật, ba giá trị này khai bằng `wrangler pages secret put`
+# (APP_PASSWORD, JWT_SECRET) và Settings → Variables (SESSION_MINUTES).
+APP_PASSWORD=doi-mat-khau-nay
+JWT_SECRET=chuoi-ngau-nhien-dai-sinh-bang-openssl-rand-base64-32
+SESSION_MINUTES=30
