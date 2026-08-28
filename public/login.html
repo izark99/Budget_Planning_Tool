@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Đăng nhập — Lập ngân sách định biên</title>
+<!-- CSS nội tuyến, không dùng /styles.css: middleware chặn mọi file tĩnh khi
+     chưa có phiên hợp lệ, nên trang này phải tự đứng được một mình.
+     Các quy tắc dưới đây trích nguyên từ styles.css để giao diện liền mạch. -->
+<style>
+:root {
+  --ink: #0F1D24;
+  --ink-2: #1B2E37;
+  --ink-3: #33474F;
+  --soft: #66787F;
+  --bone-2: #F4F6F1;
+  --panel: #FFFFFF;
+  --rule: #CBD3CD;
+  --rule-2: #E1E6DF;
+  --mineral: #14664F;
+  --mineral-2: #E4EFE9;
+  --danger: #8E2B2B;
+  --focus: #2E7D8F;
+  --disp: "Bahnschrift", "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
+  --body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --mono: "Consolas", "Cascadia Mono", ui-monospace, "SF Mono", monospace;
+  --r: 3px;
+  --ctl: 32px;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; font: 14px/1.45 var(--body); color: var(--ink); -webkit-font-smoothing: antialiased; }
+
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--ink); }
+.login .card { background: var(--panel); border-radius: var(--r); width: 100%; max-width: 400px; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.login h1 { margin: 0 0 4px; font: 600 20px var(--disp); letter-spacing: .05em; text-transform: uppercase; }
+.login p.sub { margin: 0 0 20px; color: var(--soft); font-size: 12.5px; }
+.login .msg { margin-top: 10px; font-size: 12.5px; min-height: 18px; }
+.login .msg.bad { color: var(--danger); }
+.login .msg.ok { color: var(--mineral); }
+.login .btn { width: 100%; justify-content: center; margin-top: 14px; padding: 9px; }
+.login .ribbon { margin-bottom: 16px; }
+
+label.f { display: block; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--soft); margin-bottom: 3px; }
+input[type=password] {
+  border: 1px solid var(--rule); border-radius: var(--r); background: #fff; width: 100%;
+  font-size: 13px; height: var(--ctl); padding: 0 8px; line-height: normal;
+}
+input[type=password]:focus { outline: 2px solid var(--focus); outline-offset: -1px; }
+.btn {
+  background: var(--panel); border: 1px solid var(--rule); border-radius: var(--r);
+  height: var(--ctl); padding: 0 12px;
+  cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  white-space: nowrap; font-family: inherit;
+}
+.btn:hover { border-color: var(--ink-3); }
+.btn.pri { background: var(--ink); color: #fff; border-color: var(--ink); }
+.btn.pri:hover { background: var(--ink-2); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
+
+.ribbon { display: inline-flex; gap: 1px; vertical-align: middle; }
+.ribbon i {
+  width: 13px; height: 15px; background: #EDF0EB; border: 1px solid var(--rule-2); border-radius: 1px;
+  display: inline-block; font: 600 8px/14px var(--mono); text-align: center; color: #A8B3AD; font-style: normal;
+  cursor: default;
+}
+.ribbon i.on { background: var(--mineral); border-color: var(--mineral); color: #fff; }
+</style>
+</head>
+<body>
+  <div class="login">
+    <div class="card">
+      <span class="ribbon" id="ribbon"></span>
+      <h1>Lập ngân sách</h1>
+      <p class="sub">Công cụ dựng ngân sách từ bảng định biên</p>
+      <label class="f" for="pass">Mật khẩu</label>
+      <input id="pass" type="password" placeholder="Nhập mật khẩu" autofocus autocomplete="current-password" />
+      <button class="btn pri" id="btn">Đăng nhập</button>
+      <div class="msg" id="msg"></div>
+    </div>
+  </div>
+  <script>
+    /* Dải 12 tháng — chữ ký thị giác của app, dựng lại y như hàm ribbon() bản gốc */
+    var r = document.getElementById("ribbon");
+    for (var m = 1; m <= 12; m++) {
+      var i = document.createElement("i");
+      i.className = "on";
+      i.title = "T" + String(m).padStart(2, "0");
+      r.appendChild(i);
+    }
+
+    const btn = document.getElementById("btn");
+    const input = document.getElementById("pass");
+    const msg = document.getElementById("msg");
+
+    async function login() {
+      const password = input.value;
+      if (!password) {
+        msg.className = "msg bad";
+        msg.textContent = "Chưa nhập mật khẩu.";
+        return;
+      }
+      btn.disabled = true;
+      msg.className = "msg";
+      msg.textContent = "Đang kiểm tra...";
+      try {
+        const res = await fetch("/api/login", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        });
+        const data = await res.json();
+        btn.disabled = false;
+        if (data.ok) {
+          msg.className = "msg ok";
+          msg.textContent = "Đúng rồi, đang mở...";
+          location.href = "/";
+        } else if (data.reason === "wrong") {
+          msg.className = "msg bad";
+          msg.textContent = "Mật khẩu không đúng.";
+          input.select();
+        } else {
+          msg.className = "msg bad";
+          msg.textContent = "Không xác thực được, thử lại sau.";
+        }
+      } catch (e) {
+        btn.disabled = false;
+        msg.className = "msg bad";
+        msg.textContent = "Lỗi mạng, thử lại.";
+      }
+    }
+
+    btn.addEventListener("click", login);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") login(); });
+  </script>
+</body>
+</html>
