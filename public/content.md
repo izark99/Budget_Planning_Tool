@@ -51,6 +51,9 @@ view.result.tab: Kết quả
 view.result.title: Kết quả ngân sách
 view.setup.sub: Vai trò từng cột và tham số dùng chung
 view.setup.tab: Thiết lập
+view.accrual.tab: % trích
+view.accrual.title: % trích theo phân loại
+view.accrual.sub: Chọn cột phân loại cho từng Formula Code, khai % từng tháng
 
 # Nút và hộp thoại dùng chung
 btn.agree: Đồng ý
@@ -509,6 +512,7 @@ fm.kind.param: Tham số
 fm.kind.monthvar: Biến theo tháng
 fm.kind.shared: Công thức dùng chung
 fm.kind.unknown: Không nhận ra
+fm.line_accrual: % trích
 
 # Màn 7 · Tờ trình ngoại lệ
 exc.guide_1: Có ID thì ghép theo ID; bỏ trống ID và điền Chuc Danh thì áp cho mọi người giữ chức danh đó.
@@ -551,6 +555,28 @@ raise.n_rows: {n} dòng áp dụng
 fm.raise.cost_group: Áp cho công thức chi phí
 fm.raise.shared_group: Áp cho công thức dùng chung
 fm.raise.shared_note: Chọn ở đây thì mọi công thức chi phí gọi tới nó đều ăn theo. Đừng chọn kèm cả công thức chi phí đang dùng nó, kẻo một đợt tăng bị tính hai lần.
+acc.title: % trích theo phân loại
+acc.help: Mỗi Formula Code chọn <strong>một cột phân loại</strong> rồi khai % cho từng giá trị của cột đó × 12 tháng. % được nhân vào ở bước cuối, <strong>cùng chỗ với hệ số định biên</strong> — tức là sau tăng lương và sau tờ trình ngoại lệ. Ô để trống hoặc chưa khai đều tính là <strong>100%</strong>, nên màn này bỏ trống thì kết quả không đổi một đồng.
+acc.col_label: Cột phân loại
+acc.pick_col: — chưa chọn —
+acc.no_col: Chọn một cột phân loại ở trên để bắt đầu khai %
+acc.no_col_badge: chưa chọn cột
+acc.no_rows: Chưa có giá trị nào — bấm "Sinh sẵn từ dữ liệu"
+acc.th_value: Giá trị phân loại
+acc.sync: Sinh sẵn từ dữ liệu
+acc.synced: Đã thêm {n} giá trị
+acc.sync_none: Không có giá trị mới
+acc.all100: Đặt tất cả 100%
+acc.all100_done: Đã đặt tất cả về 100%
+acc.confirm_clear: Xoá toàn bộ % trích đã khai cho {code}?
+acc.n_declared: {n} ô khác 100%
+acc.import_title: Nhập % trích theo phân loại
+acc.imported: Đã nhập {n} dòng % trích
+acc.imported_skip: Đã nhập {n} dòng, bỏ qua {s} dòng có Formula Code không khai
+acc.guide_1: Cột Formula Code phải trùng mã đã khai ở màn Công thức chi phí; dòng nào không trùng sẽ bị bỏ qua.
+acc.guide_2: Cột Cot Phan Loai là tên cột dùng để phân loại, ví dụ Salary Group hoặc Dept.
+acc.guide_3: Cột Gia Tri là một giá trị cụ thể của cột phân loại đó.
+acc.guide_4: T01 đến T12 nhập số phần trăm: 100 nghĩa là trích đủ, 50 là trích một nửa, bỏ trống cũng là 100.
 
 # Màn 10 · Kết quả
 res.chua_co_so_lieu: Chưa có số liệu

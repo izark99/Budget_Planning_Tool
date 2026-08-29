@@ -137,6 +137,35 @@ chung thì **mọi công thức chi phí gọi tới nó đều ăn theo** — k
 > lần. Danh sách để trống vẫn giữ nghĩa cũ là "mọi công thức chi phí" và **không**
 > đụng tới công thức dùng chung, đúng như trước.
 
+### % trích theo phân loại
+
+Màn **% trích**: mỗi Formula Code chọn **một cột phân loại** — bất kỳ cột nào dùng
+được (cột gốc của bảng định biên, cột do Phân loại nhóm sinh ra, cột do Chính sách
+sinh ra) — rồi khai % cho từng giá trị của cột đó × 12 tháng.
+
+```
+FC_LUONG_HESO   cột phân loại: Dept
+                        T01  T02 ... T07  T08 ... T12
+   AC                   100  100 ...  50   50 ...  50
+   SL                   100  100 ... 100  100 ... 100
+```
+
+Vị trí trong chuỗi tính:
+
+```
+công thức gốc → tăng lương → tờ trình ngoại lệ → × % trích × hệ số định biên → vào ngân sách
+```
+
+Ô để trống, giá trị chưa khai, hay Formula Code chưa chọn cột — tất cả đều tính là
+**100%**. Bỏ trống cả màn thì kết quả không đổi một đồng, và file dự án cũ mở lên
+vẫn ra đúng số cũ.
+
+Có **Tải mẫu Excel** / **Nhập từ Excel** để khai nhanh. Cột file mẫu:
+`Formula Code · Cot Phan Loai · Gia Tri · T01…T12`. Dòng nào có Formula Code không
+khớp mã đã khai sẽ bị bỏ qua và báo số lượng.
+
+Bảng **Thử trên một dòng thật** có thêm hàng `% trích` để đối chiếu.
+
 ---
 
 ## 5. Sửa chữ trên giao diện

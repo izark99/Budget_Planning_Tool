@@ -103,7 +103,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .panel > header {
   display: flex; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--rule-2);
 }
-.panel > header h3 { margin: 0; font: 600 13px var(--disp); letter-spacing: .08em; text-transform: uppercase; }
+/* Tiêu đề bảng / khối — MỘT quy cách duy nhất cho cả app.
+   Trước đây panel dùng 13px/.08em, chipbox 11px/.06em, bảng đối chiếu lại đặt
+   style thẳng trong JS — ba nơi ba kiểu. Giờ gom về đây. */
+.panel > header h3,
+.chipbox > h4,
+h4.sec { margin: 0; font: 600 13px var(--disp); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+h4.sec { margin: 0 0 8px; }
 .panel > header .sp { flex: 1; }
 .panel .body { padding: 14px; }
 .panel .body.tight { padding: 0; }
@@ -219,16 +225,18 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .chipbox {
   position: sticky; top: 10px; align-self: start;
   border: 1px solid var(--rule-2); border-radius: var(--r); background: var(--bone-2);
-  padding: 9px 10px; max-height: calc(100vh - 90px); overflow: auto;
+  padding: 9px 10px; max-height: 260px; overflow: auto;
 }
-.chipbox > h4 {
-  margin: 0 0 7px; font: 600 11px var(--disp); letter-spacing: .06em;
-  text-transform: uppercase; color: var(--soft);
-}
+.chipbox > h4 { margin: 0 0 7px; }
 .chipbox .chips { margin-top: 0; }
 .chipbox .target { font: 11px var(--mono); color: var(--mineral); margin-bottom: 7px; display: block; }
 /* Khu soạn công thức: danh sách nhóm bên trái, hộp gợi ý dính bên phải */
 .fxlayout { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 14px; align-items: start; }
+/* Ở màn Công thức chi phí, hộp gợi ý xuống cột trái dưới danh sách Formula Code
+   (vùng vốn bỏ trống), trả lại toàn bộ bề ngang bên phải cho khu soạn công thức. */
+.fxlayout.solo { grid-template-columns: minmax(0, 1fr); }
+.split > .col-left { display: flex; flex-direction: column; gap: 18px; }
+.split > .col-left .chipbox { position: sticky; top: 10px; }
 /* Ô lưới mặc định min-width:auto nên không co nhỏ hơn nội dung — bảng rộng sẽ
    đẩy tràn cả trang thay vì tự cuộn bên trong. min-width:0 trả quyền co lại. */
 .fxlayout > *, .split > *, .rule > .b > * { min-width: 0; }

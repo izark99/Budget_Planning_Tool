@@ -581,6 +581,30 @@ var ENGINE = (function () {
     return false;
   }
 
+  /* % trích theo phân loại — tra theo Formula Code, giá trị cột phân loại, và tháng.
+     Trả về HỆ SỐ (1 = 100%). Không khai, khai thiếu tháng, hay ô để trống đều ra 1,
+     nên thêm tính năng này mà chưa khai gì thì kết quả không đổi một đồng. */
+  function buildAccruals() {
+    var by = {};
+    (S.accruals || []).forEach(function (a) {
+      if (!a || !nkey(a.code) || !a.col) return;
+      var map = {};
+      (a.rows || []).forEach(function (r) { if (r) map[nkey(r.key)] = r.m || []; });
+      by[nkey(a.code)] = { col: a.col, map: map };
+    });
+    return by;
+  }
+  function accrualFactor(acc, code, row, m) {
+    var a = acc && acc[nkey(code)];
+    if (!a) return 1;
+    var arr = a.map[nkey(row[a.col])];
+    if (!arr) return 1;
+    var raw = arr[m - 1];
+    if (raw === '' || raw === null || raw === undefined) return 1;
+    var n = numOf(raw);
+    return isNaN(n) ? 1 : n / 100;
+  }
+
   function buildParams() {
     var p = {};
     (S.params || []).forEach(function (x) {
@@ -725,6 +749,7 @@ var ENGINE = (function () {
     var nR = rows.length;
     var params = buildParams();
     var sh = buildShared();
+    var acc = buildAccruals();
     sh.errors.forEach(function (e) {
       formulaErrors.push({ where: t('engine.where.shared', { code: e.where }), msg: e.msg });
     });
@@ -851,7 +876,7 @@ var ENGINE = (function () {
             }
           }
 
-          var amount = Math.round(val * alloc * hcf);
+          var amount = Math.round(val * alloc * hcf * accrualFactor(acc, fc.code, rc.row, m));
           if (!isFinite(amount) || !amount) continue;
           arr[i * M + (m - 1)] = amount;
           totalsByFc[c] += amount; monthTotals[m - 1] += amount;
@@ -973,6 +998,8 @@ var ENGINE = (function () {
     });
 
     var cal = buildCalendar();
+    var accP = buildAccruals();
+    var hasAccrual = !!accP[nkey(fc.code)];
     var out = [], total = 0, err = null;
     for (var m = 1; m <= M; m++) {
       var hcf = (row.__m || [])[m - 1] || 0;
@@ -999,7 +1026,8 @@ var ENGINE = (function () {
         rec.exc = true;
       });
       rec.afterExc = val;
-      rec.amount = Math.round(val * alloc * hcf);
+      rec.accrual = accrualFactor(accP, fc.code, row, m) * 100;
+      rec.amount = Math.round(val * alloc * hcf * (rec.accrual / 100));
       total += rec.amount;
       out.push(rec);
     }
@@ -1007,6 +1035,7 @@ var ENGINE = (function () {
       group: chosen.name || t('engine.group.unnamed'), row: row, months: out, total: total,
       nSel: nSel, alloc: alloc, error: err,
       id: idCol ? row[idCol] : '', hasRaise: myRaises.length > 0, hasExc: exs.length > 0,
+      hasAccrual: hasAccrual,
       refs: collectRefs([chosen.condFn, chosen.valFn], ctx, row, nSel, cal)
     };
   }

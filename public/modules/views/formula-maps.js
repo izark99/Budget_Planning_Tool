@@ -62,7 +62,9 @@ function viewFormula() {
     ]));
   });
   list.appendChild(ul);
-  split.appendChild(list);
+  /* Cột trái: danh sách Formula Code, rồi tới hộp gợi ý ở khoảng trống bên dưới. */
+  var colLeft = el('div', { class: 'col-left' }, [list]);
+  split.appendChild(colLeft);
 
   if (!fc) { split.appendChild(el('div', { class: 'panel' }, [el('div', { class: 'empty', text: t('fm.them_mot_formula_code') })])); wrap.appendChild(split); return wrap; }
 
@@ -159,10 +161,11 @@ function viewFormula() {
     ]),
     el('div', { class: 'body' }, [
       el('p', { class: 'hint', html: t('fm.rules_help') }),
-      el('div', { class: 'fxlayout' }, [rulesBox, chips])
+      rulesBox
     ])
   ]));
 
+  colLeft.appendChild(chips);
   split.appendChild(right);
   wrap.appendChild(split);
   wrap.appendChild(previewPanel(fc));
@@ -220,10 +223,7 @@ function refVal(v) {
 
 function refsTable(refs) {
   var box = el('div', { style: 'margin-top:14px' });
-  box.appendChild(el('h4', {
-    style: 'margin:0 0 8px;font:600 11px var(--disp);letter-spacing:.06em;text-transform:uppercase;color:var(--soft)',
-    text: t('fm.refs.title')
-  }));
+  box.appendChild(el('h4', { class: 'sec', text: t('fm.refs.title') }));
   if (!refs.length) {
     box.appendChild(el('p', { class: 'hint', style: 'margin:0', text: t('fm.refs.empty') }));
     return box;
@@ -317,6 +317,7 @@ function previewPanel(fc) {
       { k: 'raw', t: t('fm.line_raw'), always: true },
       { k: 'raised', t: t('fm.line_raised'), when: res.hasRaise },
       { k: 'afterExc', t: t('fm.line_afterExc'), when: res.hasExc },
+      { k: 'accrual', t: t('fm.line_accrual'), when: res.hasAccrual, pct: true },
       { k: 'amount', t: t('fm.line_amount'), always: true, strong: true }
     ].filter(function (l) { return l.always || l.when; });
 
@@ -328,6 +329,13 @@ function previewPanel(fc) {
       var sum = 0;
       var tds = res.months.map(function (rec) {
         var v = rec[l.k];
+        /* Hàng % trích là tỷ lệ chứ không phải tiền — không cộng dồn, hiện kèm dấu %. */
+        if (l.pct) {
+          return el('td', {
+            class: 'num' + (rec.on ? '' : ' zero'),
+            text: rec.on ? (v == null ? '100%' : (Math.round(v * 100) / 100) + '%') : '–'
+          });
+        }
         if (l.k === 'amount') sum += v; else if (rec.on) sum += v;
         return el('td', {
           class: 'num' + (rec.on && v ? '' : ' zero'),
@@ -336,7 +344,8 @@ function previewPanel(fc) {
         });
       });
       return el('tr', { class: l.strong ? 'tot' : '' },
-        [el('td', { text: l.t })].concat(tds).concat([el('td', { class: 'num', text: fmt(sum) })]));
+        [el('td', { text: l.t })].concat(tds)
+          .concat([el('td', { class: 'num' + (l.pct ? ' zero' : ''), text: l.pct ? '' : fmt(sum) })]));
     });
 
     body.push(el('tr', {}, [el('td', { text: t('fm.he_so_dinh_bien') })]

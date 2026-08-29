@@ -18,6 +18,7 @@ import { viewPolicies } from './modules/views/policy.js';
 import { viewFormula, viewExc, viewMaps, viewRaise } from './modules/views/formula-maps.js';
 import { viewResult, runBudget } from './modules/views/result.js';
 import { viewDashboard } from './modules/views/dashboard.js';
+import { viewAccrual } from './modules/views/accrual.js';
 
 var VIEWS = [
   { k: 'hc', n: '1', t: 'dash.kind_row', title: 'hc.bang_dinh_bien', sub: 'view.hc.sub', fn: viewHC },
@@ -29,8 +30,9 @@ var VIEWS = [
   { k: 'exc', n: '7', t: 'fm.to_trinh_ngoai_le', title: 'fm.to_trinh_ngoai_le', sub: 'view.exc.sub', fn: viewExc },
   { k: 'maps', n: '8', t: 'view.maps.tab', title: 'view.maps.tab', sub: 'view.maps.sub', fn: viewMaps },
   { k: 'raise', n: '9', t: 'view.raise.tab', title: 'fm.du_kien_tang_luong', sub: 'view.raise.sub', fn: viewRaise },
-  { k: 'result', n: '10', t: 'view.result.tab', title: 'view.result.title', sub: 'view.result.sub', fn: viewResult },
-  { k: 'dash', n: '11', t: 'view.dash.tab', title: 'view.dash.title', sub: 'view.dash.sub', fn: viewDashboard }
+  { k: 'accrual', n: '10', t: 'view.accrual.tab', title: 'view.accrual.title', sub: 'view.accrual.sub', fn: viewAccrual },
+  { k: 'result', n: '11', t: 'view.result.tab', title: 'view.result.title', sub: 'view.result.sub', fn: viewResult },
+  { k: 'dash', n: '12', t: 'view.dash.tab', title: 'view.dash.title', sub: 'view.dash.sub', fn: viewDashboard }
 ];
 
 function badgeFor(k) {
@@ -44,6 +46,10 @@ function badgeFor(k) {
     case 'policy': return (S.policies || []).length ? { t: String(S.policies.length) } : null;
     case 'dash': return RESULT ? null : { t: '–' };
     case 'formula': return { t: String(S.formulas.length) };
+    case 'accrual': {
+      var na = (S.accruals || []).filter(function (a) { return a.col && (a.rows || []).length; }).length;
+      return na ? { t: String(na) } : null;
+    }
     case 'exc': return S.exceptions.length ? { t: String(S.exceptions.length) } : null;
     case 'maps': {
       var miss = S.formulas.filter(function (f) {
@@ -107,6 +113,7 @@ function openProject() {
         next.maps = Object.assign({ costCode: [], costCenter: [], budgetCode: [], accountCode: [] }, next.maps || {});
         next.policies = next.policies || [];
         next.shared = next.shared || [];
+        next.accruals = next.accruals || [];
         next.ui = next.ui || { view: 'hc' };
         setS(next);
         ENGINE.invalidate(); setRESULT(null); save(); shellRender();
