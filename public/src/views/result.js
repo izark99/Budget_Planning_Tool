@@ -22,8 +22,8 @@ function runBudget(silent) {
 }
 
 function viewResult() {
-  var wrap = el('div');
-  var R = RESULT;
+  const wrap = el('div');
+  const R = RESULT;
   if (!R) {
     wrap.appendChild(el('div', { class: 'panel' }, [el('div', { class: 'empty' }, [
       el('strong', { text: S.hc.rows.length ? t('dash.not_run') : t('msg.no_hc') }),
@@ -36,9 +36,9 @@ function viewResult() {
     return wrap;
   }
 
-  var applied = {};
-  R.conflicts.forEach(function (c) { applied[c.no + '|' + c.id + '|' + c.formulaCode] = 1; });
-  var diffs = R.conflicts.filter(function (c) { return c.diff; });
+  const applied = {};
+  R.conflicts.forEach((c) => { applied[c.no + '|' + c.id + '|' + c.formulaCode] = 1; });
+  const diffs = R.conflicts.filter((c) => { return c.diff; });
 
   wrap.appendChild(el('div', { class: 'stats' }, [
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('res.total_budget', { y: S.meta.year }) }), el('div', { class: 'v money', text: fmtShort(R.grand) }), el('div', { class: 'u', text: t('dash.currency', { n: fmt(R.grand) }) })]),
@@ -51,30 +51,30 @@ function viewResult() {
   if (R.formulaErrors.length) {
     wrap.appendChild(el('div', { class: 'errbox' }, [
       el('strong', { text: t('res.formula_errors', { n: R.formulaErrors.length }) }),
-      el('ul', {}, R.formulaErrors.slice(0, 8).map(function (e) { return el('li', { text: e.where + ' — ' + e.msg }); }))
+      el('ul', {}, R.formulaErrors.slice(0, 8).map((e) => { return el('li', { text: e.where + ' — ' + e.msg }); }))
     ]));
   }
   if (R.warnings.length) {
     wrap.appendChild(el('div', { class: 'warnbox' }, [
       el('strong', { text: t('res.warnings', { n: R.warnings.length }) }),
-      el('ul', {}, R.warnings.slice(0, 10).map(function (w) { return el('li', { text: w.msg }); })),
+      el('ul', {}, R.warnings.slice(0, 10).map((w) => { return el('li', { text: w.msg }); })),
       R.warnings.length > 10 ? el('div', { style: 'margin-top:5px', text: t('res.more_warnings', { n: R.warnings.length - 10 }) }) : null
     ]));
   }
 
   /* theo Formula Code */
-  var byFc = R.formulas.map(function (fc, c) {
-    var mt = new Array(M).fill(0), arr = R.data[c];
-    for (var i = 0; i < R.rows.length; i++) for (var m = 0; m < M; m++) mt[m] += arr[i * M + m];
-    return { fc: fc, mt: mt, total: R.totalsByFc[c] };
+  const byFc = R.formulas.map((fc, c) => {
+    const mt = new Array(M).fill(0), arr = R.data[c];
+    for (let i = 0; i < R.rows.length; i++) for (let m = 0; m < M; m++) mt[m] += arr[i * M + m];
+    return { fc, mt, total: R.totalsByFc[c] };
   });
-  var rowsEl = byFc.map(function (x) {
+  const rowsEl = byFc.map((x) => {
     return el('tr', {}, [el('td', { class: 'mono', text: x.fc.code }), el('td', { text: x.fc.name || '' }), el('td', {}, [ribbon(x.fc.months)])]
-      .concat(x.mt.map(function (v) { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
+      .concat(x.mt.map((v) => { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
       .concat([el('td', { class: 'num', text: fmt(x.total) })]));
   });
   rowsEl.push(el('tr', { class: 'tot' }, [el('td', { colspan: 3, text: t('res.tong_cong') })]
-    .concat(R.monthTotals.map(function (v) { return el('td', { class: 'num', text: fmt(v) }); }))
+    .concat(R.monthTotals.map((v) => { return el('td', { class: 'num', text: fmt(v) }); }))
     .concat([el('td', { class: 'num', text: fmt(R.grand) })])));
 
   wrap.appendChild(el('div', { class: 'panel' }, [
@@ -85,26 +85,26 @@ function viewResult() {
     ]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
       el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: 'Formula Code' }), el('th', { text: t('export.audit.name') }), el('th', { text: t('export.audit.monthsPicked') })]
-        .concat(MONTHS.map(function (m) { return el('th', { class: 'num', text: m }); }))
+        .concat(MONTHS.map((m) => { return el('th', { class: 'num', text: m }); }))
         .concat([el('th', { class: 'num', text: t('fm.full_year') })]))]), el('tbody', {}, rowsEl)])
     ])])
   ]));
 
   /* pivot 4 tầng */
-  var pr = R.pivot.map(function (p) {
+  const pr = R.pivot.map((p) => {
     return el('tr', {}, [
       el('td', { class: 'mono', text: p.accountCode }), el('td', { class: 'mono', text: p.budgetCode }),
       el('td', { class: 'mono', text: p.costCode }), el('td', { class: 'mono', text: p.costCenter }),
       el('td', { class: 'mono', text: p.formulaCode })
-    ].concat(p.m.map(function (v) { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
+    ].concat(p.m.map((v) => { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
       .concat([el('td', { class: 'num', text: fmt(p.total) })]));
   });
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('res.pivot_title') }), el('span', { class: 'tag', text: t('table.info.rows', { n: R.pivot.length }) })]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
       el('table', {}, [el('thead', {}, [el('tr', {}, ['Account Code', 'Budget Code', 'Cost Code', 'Cost Center', 'Formula Code']
-        .map(function (h) { return el('th', { text: h }); })
-        .concat(MONTHS.map(function (m) { return el('th', { class: 'num', text: m }); }))
+        .map((h) => { return el('th', { text: h }); })
+        .concat(MONTHS.map((m) => { return el('th', { class: 'num', text: m }); }))
         .concat([el('th', { class: 'num', text: t('fm.full_year') })]))]),
       el('tbody', {}, pr.length ? pr : [el('tr', {}, [el('td', { colspan: 18, class: 'empty', text: t('res.chua_co_so_lieu') })])])])
     ])])
@@ -117,8 +117,8 @@ function viewResult() {
       diffs.length ? el('div', { class: 'tw' }, [
         el('table', {}, [
           el('thead', {}, [el('tr', {}, [t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('export.audit.month'), t('export.audit.formula'), t('dash.kind_exc'), t('exc.th_rule'), t('res.th_applied'), t('res.th_winner')]
-            .map(function (h, i) { return el('th', { class: (i >= 5 && i <= 8) ? 'num' : '', text: h }); }))]),
-          el('tbody', {}, diffs.slice(0, 500).map(function (c) {
+            .map((h, i) => { return el('th', { class: (i >= 5 && i <= 8) ? 'num' : '', text: h }); }))]),
+          el('tbody', {}, diffs.slice(0, 500).map((c) => {
             return el('tr', {}, [
               el('td', { class: 'mono', text: c.no }), el('td', { class: 'mono', text: String(c.id == null ? '' : c.id) }),
               el('td', { text: String(c.position == null ? '' : c.position) }), el('td', { class: 'mono', text: c.formulaCode }),
@@ -141,8 +141,8 @@ function viewResult() {
    =========================================================== */
 function exportDialog() {
   if (!RESULT) { runBudget(); if (!RESULT) return; }
-  var R = RESULT;
-  var opt = { person: true, pivot: true, fc: true, conflict: true, audit: true, long: false };
+  const R = RESULT;
+  const opt = { person: true, pivot: true, fc: true, conflict: true, audit: true, long: false };
   function cb(k, label, note) {
     return el('label', { style: 'display:flex;gap:8px;align-items:flex-start;margin-bottom:9px' }, [
       el('input', { type: 'checkbox', checked: opt[k], onchange: function (e) { opt[k] = e.target.checked; } }),
@@ -156,7 +156,7 @@ function exportDialog() {
     cb('conflict', t('res.sheet_conflict'), t('table.info.rows', { n: fmt(R.conflicts.length) })),
     cb('audit', t('res.sheet_audit'), t('res.sheet_audit_note')),
     cb('long', t('res.sheet_long'), t('res.sheet_long_note', { n: fmt(R.rows.length * M * R.formulas.length) }))
-  ]), [{ label: t('btn.cancel') }, { label: t('res.export_btn'), cls: 'pri', onclick: function () { setTimeout(function () { doExport(opt); }, 60); } }]);
+  ]), [{ label: t('btn.cancel') }, { label: t('res.export_btn'), cls: 'pri', onclick: function () { setTimeout(() => { doExport(opt); }, 60); } }]);
 }
 
 /* Vỏ mỏng quanh io.exportBudget(): io.js chỉ dựng workbook và ném lỗi,

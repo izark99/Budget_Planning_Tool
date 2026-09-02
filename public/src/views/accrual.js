@@ -6,7 +6,7 @@
    % nhân vào ở bước cuối, cùng chỗ với hệ số định biên.
    Chưa khai = 100%, nên màn này để trống thì kết quả không đổi.
    =========================================================== */
-import { M, MONTHS, S, fmt, nkey, numOf, setRESULT, touch, uid } from '../core/state.js';
+import { M, MONTHS, S, nkey, numOf, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { distinctVals, pickFile } from '../platform/io.js';
@@ -15,21 +15,21 @@ import { downloadTemplate, foldPanel, importMapped, panel } from '../ui/widgets.
 
 /* CHUỖI GIAO THỨC — tên cột của file mẫu .xlsx, đồng thời là khoá khớp khi
    nhập lại. Đổi là hỏng chức năng nhập file. Để ASCII không dấu cho chắc. */
-var IMP_CODE = 'Formula Code';
-var IMP_COL = 'Cot Phan Loai';
-var IMP_KEY = 'Gia Tri';
+const IMP_CODE = 'Formula Code';
+const IMP_COL = 'Cot Phan Loai';
+const IMP_KEY = 'Gia Tri';
 function impMonth(m) { return 'T' + String(m).padStart(2, '0'); }
 
 /* Chỉ ĐỌC — không tạo gì. Mở tab mà tự sinh bản ghi rỗng cho mọi Formula Code
    thì state bị bẩn và file dự án phình ra dù người dùng chưa khai gì. */
 function findEntry(code) {
-  return (S.accruals || []).filter(function (a) { return nkey(a.code) === nkey(code); })[0] || null;
+  return (S.accruals || []).filter((a) => { return nkey(a.code) === nkey(code); })[0] || null;
 }
 /* Tạo khi người dùng thật sự bắt đầu khai. */
 function ensureEntry(code) {
-  var found = findEntry(code);
+  const found = findEntry(code);
   if (found) return found;
-  var made = { id: uid(), code: code, col: '', rows: [] };
+  const made = { id: uid(), code, col: '', rows: [] };
   S.accruals = (S.accruals || []).concat([made]);
   return made;
 }
@@ -43,10 +43,10 @@ function valuesOf(col) {
 
 /* Bổ sung những giá trị có trong dữ liệu mà chưa khai. Không đụng dòng đã khai. */
 function syncRows(a) {
-  var have = {};
-  (a.rows || []).forEach(function (r) { have[nkey(r.key)] = 1; });
-  var added = 0;
-  valuesOf(a.col).forEach(function (v) {
+  const have = {};
+  (a.rows || []).forEach((r) => { have[nkey(r.key)] = 1; });
+  let added = 0;
+  valuesOf(a.col).forEach((v) => {
     if (have[nkey(v)]) return;
     a.rows.push({ key: v, m: blankMonths() });
     added++;
@@ -55,16 +55,16 @@ function syncRows(a) {
 }
 
 function declaredCount(a) {
-  var n = 0;
-  (a.rows || []).forEach(function (r) {
-    (r.m || []).forEach(function (x) { if (x !== '' && x !== null && x !== undefined && numOf(x) !== 100) n++; });
+  let n = 0;
+  (a.rows || []).forEach((r) => {
+    (r.m || []).forEach((x) => { if (x !== '' && x !== null && x !== undefined && numOf(x) !== 100) n++; });
   });
   return n;
 }
 
 function viewAccrual() {
-  var wrap = el('div');
-  var cols = ENGINE.usableCols();
+  const wrap = el('div');
+  const cols = ENGINE.usableCols();
 
   wrap.appendChild(panel(t('acc.title'), [
     el('button', { class: 'btn sm', text: t('table.downloadTemplate'), onclick: accTemplate }),
@@ -78,17 +78,17 @@ function viewAccrual() {
     return wrap;
   }
 
-  S.formulas.forEach(function (fc) {
-    var body = el('div');
+  S.formulas.forEach((fc) => {
+    const body = el('div');
 
     function draw() {
       body.innerHTML = '';
-      var a = findEntry(fc.code) || { code: fc.code, col: '', rows: [] };
+      const a = findEntry(fc.code) || { code: fc.code, col: '', rows: [] };
 
-      var sel = el('select', { style: 'max-width:280px' }, [el('option', { value: '', text: t('acc.pick_col') })]
-        .concat(cols.map(function (c) { return el('option', { value: c, selected: a.col === c, text: c }); })));
-      sel.addEventListener('change', function (e) {
-        var live = ensureEntry(fc.code);          /* tới đây mới thực sự tạo bản ghi */
+      const sel = el('select', { style: 'max-width:280px' }, [el('option', { value: '', text: t('acc.pick_col') })]
+        .concat(cols.map((c) => { return el('option', { value: c, selected: a.col === c, text: c }); })));
+      sel.addEventListener('change', (e) => {
+        const live = ensureEntry(fc.code);          /* tới đây mới thực sự tạo bản ghi */
         live.col = e.target.value;
         live.rows = [];
         if (live.col) syncRows(live);
@@ -100,20 +100,20 @@ function viewAccrual() {
         el('div', { class: 'sp', style: 'flex:1' }),
         a.col ? el('button', {
           class: 'btn sm', text: t('acc.sync'), onclick: function () {
-            var n = syncRows(a);
+            const n = syncRows(a);
             setRESULT(null); touch(); draw();
-            toast(n ? t('acc.synced', { n: n }) : t('acc.sync_none'));
+            toast(n ? t('acc.synced', { n }) : t('acc.sync_none'));
           }
         }) : null,
         a.col ? el('button', {
           class: 'btn sm', text: t('acc.all100'), onclick: function () {
-            (a.rows || []).forEach(function (r) { r.m = blankMonths(); });
+            (a.rows || []).forEach((r) => { r.m = blankMonths(); });
             setRESULT(null); touch(); draw(); toast(t('acc.all100_done'));
           }
         }) : null,
         (a.rows || []).length ? el('button', {
           class: 'btn sm del', text: t('table.clear'), onclick: function () {
-            confirmBox(t('acc.confirm_clear', { code: fc.code }), function () {
+            confirmBox(t('acc.confirm_clear', { code: fc.code }), () => {
               a.rows = []; setRESULT(null); touch(); draw();
             });
           }
@@ -125,10 +125,10 @@ function viewAccrual() {
         return;
       }
 
-      var tb = el('tbody');
-      (a.rows || []).forEach(function (r, ri) {
-        var tds = [el('td', { class: 'nowrap', text: String(r.key == null ? '' : r.key) })];
-        for (var m = 0; m < M; m++) {
+      const tb = el('tbody');
+      (a.rows || []).forEach((r, ri) => {
+        const tds = [el('td', { class: 'nowrap', text: String(r.key == null ? '' : r.key) })];
+        for (let m = 0; m < M; m++) {
           (function (m) {
             tds.push(el('td', { style: 'width:78px' }, [el('input', {
               type: 'text', class: 'fx', style: 'text-align:right',
@@ -136,7 +136,7 @@ function viewAccrual() {
               placeholder: '100',
               oninput: function (e) {
                 r.m = r.m || blankMonths();
-                var raw = e.target.value.trim();
+                const raw = e.target.value.trim();
                 r.m[m] = raw === '' ? '' : numOf(raw);
                 setRESULT(null); touch();
               }
@@ -156,7 +156,7 @@ function viewAccrual() {
       body.appendChild(el('div', { class: 'tw', style: 'max-height:none' }, [
         el('table', {}, [
           el('thead', {}, [el('tr', {}, [el('th', { class: 'nowrap', text: t('acc.th_value') })]
-            .concat(MONTHS.map(function (mn) { return el('th', { class: 'num', text: mn }); }))
+            .concat(MONTHS.map((mn) => { return el('th', { class: 'num', text: mn }); }))
             .concat([el('th', { text: '' })]))]),
           tb
         ])
@@ -164,11 +164,11 @@ function viewAccrual() {
     }
     draw();
 
-    var cur = findEntry(fc.code);
-    var n = cur ? declaredCount(cur) : 0;
+    const cur = findEntry(fc.code);
+    const n = cur ? declaredCount(cur) : 0;
     wrap.appendChild(foldPanel('acc_' + fc.code, fc.code + ' · ' + (fc.name || ''),
       [(cur && cur.col) ? el('span', { class: 'tag g', text: cur.col }) : el('span', { class: 'tag', text: t('acc.no_col_badge') }),
-       n ? el('span', { class: 'tag o', text: t('acc.n_declared', { n: n }) }) : null],
+       n ? el('span', { class: 'tag o', text: t('acc.n_declared', { n }) }) : null],
       [], body, null));
   });
 
@@ -176,11 +176,11 @@ function viewAccrual() {
 }
 
 function accTemplate() {
-  var rows = [];
-  (S.accruals || []).forEach(function (a) {
+  const rows = [];
+  (S.accruals || []).forEach((a) => {
     if (!a.col) return;
-    (a.rows || []).forEach(function (r) {
-      rows.push([a.code, a.col, r.key].concat((r.m || blankMonths()).map(function (x) { return x === '' ? '' : numOf(x); })));
+    (a.rows || []).forEach((r) => {
+      rows.push([a.code, a.col, r.key].concat((r.m || blankMonths()).map((x) => { return x === '' ? '' : numOf(x); })));
     });
   });
   if (!rows.length && S.formulas.length) {
@@ -188,44 +188,44 @@ function accTemplate() {
   }
   downloadTemplate({
     tableName: 'tblPhanTramTrich', title: t('acc.title'), sheetName: 'PhanTramTrich',
-    headers: [IMP_CODE, IMP_COL, IMP_KEY].concat(MONTHS.map(function (_, i) { return impMonth(i + 1); })),
-    rows: rows,
+    headers: [IMP_CODE, IMP_COL, IMP_KEY].concat(MONTHS.map((_, i) => { return impMonth(i + 1); })),
+    rows,
     guide: [t('acc.guide_1'), t('acc.guide_2'), t('acc.guide_3'), t('acc.guide_4')],
     file: 'mau-phan-tram-trich.xlsx'
   });
 }
 
 function accImport(file) {
-  var fields = [
+  const fields = [
     { k: 'code', label: IMP_CODE, required: true },
     { k: 'col', label: IMP_COL, required: true },
     { k: 'key', label: IMP_KEY }
-  ].concat(MONTHS.map(function (_, i) { return { k: 'm' + (i + 1), label: impMonth(i + 1) }; }));
+  ].concat(MONTHS.map((_, i) => { return { k: 'm' + (i + 1), label: impMonth(i + 1) }; }));
 
-  importMapped(file, t('acc.import_title'), fields, function (out) {
-    var known = {};
-    S.formulas.forEach(function (f) { known[nkey(f.code)] = f.code; });
-    var byCode = {}, skipped = 0, n = 0;
-    out.forEach(function (o) {
-      var code = known[nkey(o.code)];
+  importMapped(file, t('acc.import_title'), fields, (out) => {
+    const known = {};
+    S.formulas.forEach((f) => { known[nkey(f.code)] = f.code; });
+    const byCode = {}; let skipped = 0, n = 0;
+    out.forEach((o) => {
+      const code = known[nkey(o.code)];
       if (!code) { skipped++; return; }
       if (!byCode[code]) byCode[code] = { col: String(o.col || '').trim(), rows: [] };
-      var m = [];
-      for (var i = 1; i <= M; i++) {
-        var raw = o['m' + i];
+      const m = [];
+      for (let i = 1; i <= M; i++) {
+        const raw = o['m' + i];
         m.push(raw === '' || raw === null || raw === undefined ? '' : numOf(raw));
       }
-      byCode[code].rows.push({ key: String(o.key == null ? '' : o.key).trim(), m: m });
+      byCode[code].rows.push({ key: String(o.key == null ? '' : o.key).trim(), m });
       n++;
     });
 
-    Object.keys(byCode).forEach(function (code) {
-      var a = ensureEntry(code);
+    Object.keys(byCode).forEach((code) => {
+      const a = ensureEntry(code);
       a.col = byCode[code].col || a.col;
       a.rows = byCode[code].rows;
     });
     setRESULT(null); touch(); render();
-    toast(skipped ? t('acc.imported_skip', { n: n, s: skipped }) : t('acc.imported', { n: n }),
+    toast(skipped ? t('acc.imported_skip', { n, s: skipped }) : t('acc.imported', { n }),
       skipped ? 'bad' : 'good');
   });
 }

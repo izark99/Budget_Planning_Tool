@@ -12,38 +12,38 @@ import { CAL_FIELDS, MONTHS, S, nkey, numOf } from './state.js';
 import { t } from './content.js';
 import { FX } from './expression.js';
 
-var ENGINE = (function () {
+const ENGINE = (function () {
   'use strict';
-  var M = 12;
+  const M = 12;
 
   /* Làm tròn lên theo bội số, hướng ra xa 0 giống ROUNDUP của Excel */
   function roundUpTo(x, step) {
     if (!isFinite(x) || !step) return x;
-    var sign = x < 0 ? -1 : 1;
+    const sign = x < 0 ? -1 : 1;
     return sign * Math.ceil(Math.abs(x) / step - 1e-9) * step;
   }
 
   function roleCol(role) {
-    var c = (S.cols || []).filter(function (x) { return x.role === role; })[0];
+    const c = (S.cols || []).filter((x) => { return x.role === role; })[0];
     return c ? c.alias : '';
   }
   function monthCols() {
-    return (S.cols || []).filter(function (x) { return x.role === 'month' && x.month >= 1 && x.month <= M; })
-      .sort(function (a, b) { return a.month - b.month; });
+    return (S.cols || []).filter((x) => { return x.role === 'month' && x.month >= 1 && x.month <= M; })
+      .sort((a, b) => { return a.month - b.month; });
   }
   function attrCols() {
-    return (S.cols || []).filter(function (x) { return x.role !== 'skip' && x.role !== 'month'; });
+    return (S.cols || []).filter((x) => { return x.role !== 'skip' && x.role !== 'month'; });
   }
   /* Mọi tên cột dùng được trong công thức: cột định biên + cột nhóm dẫn xuất */
   function usableCols() {
-    return attrCols().map(function (c) { return c.alias; })
-      .concat((S.classes || []).map(function (c) { return c.name; }).filter(Boolean))
+    return attrCols().map((c) => { return c.alias; })
+      .concat((S.classes || []).map((c) => { return c.name; }).filter(Boolean))
       .concat(policyCols());
   }
   function policyCols() {
-    var out = [];
-    (S.policies || []).forEach(function (p) {
-      (p.outs || []).forEach(function (o) { if (o && o.name) out.push(o.name); });
+    const out = [];
+    (S.policies || []).forEach((p) => {
+      (p.outs || []).forEach((o) => { if (o && o.name) out.push(o.name); });
     });
     return out;
   }
@@ -58,43 +58,43 @@ var ENGINE = (function () {
      Danh sách rỗng vẫn giữ nghĩa cũ là "mọi công thức chi phí", nếu cho nó áp luôn
      cho công thức dùng chung thì một đợt tăng sẽ bị tính hai lần. */
   function buildShared() {
-    var defs = (S.shared || []).filter(function (x) { return x && nkey(x.code); });
-    var reg = {}, byCode = {}, errors = [];
+    const defs = (S.shared || []).filter((x) => { return x && nkey(x.code); });
+    const reg = {}, byCode = {}, errors = [];
 
-    defs.forEach(function (d) {
-      var code = nkey(d.code);
-      var c = FX.tryCompile(String(d.formula == null ? '' : d.formula).trim() || '0');
-      var rec = { code: code, name: d.name || '', fn: c.ok ? c.fn : null, err: c.ok ? null : c.error, raises: [] };
+    defs.forEach((d) => {
+      const code = nkey(d.code);
+      const c = FX.tryCompile(String(d.formula == null ? '' : d.formula).trim() || '0');
+      const rec = { code, name: d.name || '', fn: c.ok ? c.fn : null, err: c.ok ? null : c.error, raises: [] };
       if (!c.ok) errors.push({ where: code, msg: c.error });
       byCode[code] = rec;
       reg[code] = rec;
       if (nkey(d.name)) reg[nkey(d.name)] = rec;
     });
 
-    (S.raises || []).forEach(function (r) {
+    (S.raises || []).forEach((r) => {
       if (r.active === false) return;
-      var list = (r.formulas || []).map(nkey);
+      const list = (r.formulas || []).map(nkey);
       if (!list.length) return;                       /* rỗng = chỉ áp cho công thức chi phí */
-      var cf = null;
-      if (r.cond && String(r.cond).trim()) { var cc = FX.tryCompile(r.cond); if (cc.ok) cf = cc.fn; }
-      list.forEach(function (code) {
+      let cf = null;
+      if (r.cond && String(r.cond).trim()) { const cc = FX.tryCompile(r.cond); if (cc.ok) cf = cc.fn; }
+      list.forEach((code) => {
         if (byCode[code]) byCode[code].raises.push({ from: +r.fromMonth || 1, pct: parseFloat(r.pct) || 0, condFn: cf });
       });
     });
 
     /* lan truyền phụ thuộc tháng qua đồ thị tham chiếu */
-    var monthDep = {}, seen = {};
+    const monthDep = {}, seen = {};
     function dep(code) {
       if (Object.prototype.hasOwnProperty.call(monthDep, code)) return monthDep[code];
-      var rec = byCode[code];
+      const rec = byCode[code];
       if (!rec || !rec.fn) return (monthDep[code] = false);
       if (seen[code]) return false;                   /* vòng tròn: chặn đệ quy vô hạn */
       seen[code] = 1;
-      var d = rec.fn.info.monthDependent || rec.raises.length > 0;
+      let d = rec.fn.info.monthDependent || rec.raises.length > 0;
       if (!d) {
-        var refs = rec.fn.info.names.concat(rec.fn.info.fields.map(nkey));
-        for (var i = 0; i < refs.length && !d; i++) {
-          var target = reg[nkey(refs[i])];
+        const refs = rec.fn.info.names.concat(rec.fn.info.fields.map(nkey));
+        for (let i = 0; i < refs.length && !d; i++) {
+          const target = reg[nkey(refs[i])];
           if (target && target.code !== code) d = dep(target.code);
         }
       }
@@ -102,7 +102,7 @@ var ENGINE = (function () {
       return (monthDep[code] = d);
     }
     Object.keys(byCode).forEach(dep);
-    return { reg: reg, monthDep: monthDep, errors: errors };
+    return { reg, monthDep, errors };
   }
 
   /* Công thức có phụ thuộc tháng không — tính cả qua công thức dùng chung nó gọi. */
@@ -110,9 +110,9 @@ var ENGINE = (function () {
     if (!fn) return false;
     if (fn.info.monthDependent) return true;
     if (!sh) return false;
-    var refs = fn.info.names.concat(fn.info.fields.map(nkey));
-    for (var i = 0; i < refs.length; i++) {
-      var rec = sh.reg[nkey(refs[i])];
+    const refs = fn.info.names.concat(fn.info.fields.map(nkey));
+    for (let i = 0; i < refs.length; i++) {
+      const rec = sh.reg[nkey(refs[i])];
       if (rec && sh.monthDep[rec.code]) return true;
     }
     return false;
@@ -122,31 +122,31 @@ var ENGINE = (function () {
      Trả về HỆ SỐ (1 = 100%). Không khai, khai thiếu tháng, hay ô để trống đều ra 1,
      nên thêm tính năng này mà chưa khai gì thì kết quả không đổi một đồng. */
   function buildAccruals() {
-    var by = {};
-    (S.accruals || []).forEach(function (a) {
+    const by = {};
+    (S.accruals || []).forEach((a) => {
       if (!a || !nkey(a.code) || !a.col) return;
-      var map = {};
-      (a.rows || []).forEach(function (r) { if (r) map[nkey(r.key)] = r.m || []; });
-      by[nkey(a.code)] = { col: a.col, map: map };
+      const map = {};
+      (a.rows || []).forEach((r) => { if (r) map[nkey(r.key)] = r.m || []; });
+      by[nkey(a.code)] = { col: a.col, map };
     });
     return by;
   }
   function accrualFactor(acc, code, row, m) {
-    var a = acc && acc[nkey(code)];
+    const a = acc && acc[nkey(code)];
     if (!a) return 1;
-    var arr = a.map[nkey(row[a.col])];
+    const arr = a.map[nkey(row[a.col])];
     if (!arr) return 1;
-    var raw = arr[m - 1];
+    const raw = arr[m - 1];
     if (raw === '' || raw === null || raw === undefined) return 1;
-    var n = numOf(raw);
+    const n = numOf(raw);
     return isNaN(n) ? 1 : n / 100;
   }
 
   function buildParams() {
-    var p = {};
-    (S.params || []).forEach(function (x) {
+    const p = {};
+    (S.params || []).forEach((x) => {
       if (!x.name) return;
-      var n = typeof x.value === 'number' ? x.value : parseFloat(String(x.value).replace(/[,\s]/g, ''));
+      const n = typeof x.value === 'number' ? x.value : parseFloat(String(x.value).replace(/[,\s]/g, ''));
       p[nkey(x.name)] = (isNaN(n) || String(x.value).trim() === '') ? x.value : n;
     });
     return p;
@@ -154,13 +154,13 @@ var ENGINE = (function () {
 
   /* ---- Dựng dòng làm việc: giá trị theo alias + __m ---- */
   function buildRows() {
-    var acols = attrCols(), mcols = monthCols();
-    var hasMonths = mcols.length === M;
-    return (S.hc.rows || []).map(function (raw) {
-      var o = {};
-      acols.forEach(function (c) { o[c.alias] = c.type === 'num' ? numOf(raw[c.src]) : raw[c.src]; });
-      var m = new Array(M).fill(1);
-      if (hasMonths) mcols.forEach(function (c, k) { m[k] = numOf(raw[c.src]); });
+    const acols = attrCols(), mcols = monthCols();
+    const hasMonths = mcols.length === M;
+    return (S.hc.rows || []).map((raw) => {
+      const o = {};
+      acols.forEach((c) => { o[c.alias] = c.type === 'num' ? numOf(raw[c.src]) : raw[c.src]; });
+      const m = new Array(M).fill(1);
+      if (hasMonths) mcols.forEach((c, k) => { m[k] = numOf(raw[c.src]); });
       o.__m = m;
       return o;
     });
@@ -168,23 +168,23 @@ var ENGINE = (function () {
 
   /* ---- Áp bảng phân loại theo thứ tự ---- */
   function applyClasses(rows, warn) {
-    (S.classes || []).forEach(function (cl) {
+    (S.classes || []).forEach((cl) => {
       if (!cl.name) return;
-      var keys = cl.keys || [];
-      var idx = {};
-      (cl.rows || []).forEach(function (r) {
-        var k = keys.map(function (_, j) { return nkey(r[j]); }).join('\u0001');
+      const keys = cl.keys || [];
+      const idx = {};
+      (cl.rows || []).forEach((r) => {
+        const k = keys.map((_, j) => { return nkey(r[j]); }).join('\u0001');
         if (idx[k] === undefined) idx[k] = r[keys.length];
       });
-      var hasStar = (cl.rows || []).some(function (r) { return keys.some(function (_, j) { return String(r[j]).trim() === '*'; }); });
-      var miss = 0;
-      rows.forEach(function (row) {
-        var vals = keys.map(function (kc) { return nkey(row[kc]); });
-        var v = idx[vals.join('\u0001')];
+      const hasStar = (cl.rows || []).some((r) => { return keys.some((_, j) => { return String(r[j]).trim() === '*'; }); });
+      let miss = 0;
+      rows.forEach((row) => {
+        const vals = keys.map((kc) => { return nkey(row[kc]); });
+        let v = idx[vals.join('\u0001')];
         if (v === undefined && hasStar) {
           // thử thay dần từng khoá bằng *
-          for (var b = 1; b < (1 << keys.length) && v === undefined; b++) {
-            var probe = vals.map(function (x, j) { return (b >> j) & 1 ? '*' : x; });
+          for (let b = 1; b < (1 << keys.length) && v === undefined; b++) {
+            const probe = vals.map((x, j) => { return (b >> j) & 1 ? '*' : x; });
             v = idx[probe.join('\u0001')];
           }
         }
@@ -199,28 +199,28 @@ var ENGINE = (function () {
   /* Bảng chính sách: cùng cơ chế khoá như phân loại nhóm, nhưng sinh ra
      nhiều cột giá trị (mức lương, mức phụ cấp, hệ số thưởng…) một lúc. */
   function applyPolicies(rows, warn) {
-    (S.policies || []).forEach(function (po) {
-      var keys = po.keys || [], outs = (po.outs || []).filter(function (o) { return o && o.name; });
+    (S.policies || []).forEach((po) => {
+      const keys = po.keys || [], outs = (po.outs || []).filter((o) => { return o && o.name; });
       if (!outs.length) return;
-      var idx = {};
-      (po.rows || []).forEach(function (r) {
-        var k = keys.map(function (_, j) { return nkey(r[j]); }).join('\u0001');
+      const idx = {};
+      (po.rows || []).forEach((r) => {
+        const k = keys.map((_, j) => { return nkey(r[j]); }).join('\u0001');
         if (idx[k] === undefined) idx[k] = r;
       });
-      var hasStar = (po.rows || []).some(function (r) { return keys.some(function (_, j) { return String(r[j]).trim() === '*'; }); });
-      var miss = 0;
-      rows.forEach(function (row) {
-        var vals = keys.map(function (kc) { return nkey(row[kc]); });
-        var rec = idx[vals.join('\u0001')];
+      const hasStar = (po.rows || []).some((r) => { return keys.some((_, j) => { return String(r[j]).trim() === '*'; }); });
+      let miss = 0;
+      rows.forEach((row) => {
+        const vals = keys.map((kc) => { return nkey(row[kc]); });
+        let rec = idx[vals.join('\u0001')];
         if (rec === undefined && hasStar) {
-          for (var b = 1; b < (1 << keys.length) && rec === undefined; b++) {
-            var probe = vals.map(function (x, j) { return (b >> j) & 1 ? '*' : x; });
+          for (let b = 1; b < (1 << keys.length) && rec === undefined; b++) {
+            const probe = vals.map((x, j) => { return (b >> j) & 1 ? '*' : x; });
             rec = idx[probe.join('\u0001')];
           }
         }
         if (rec === undefined) miss++;
-        outs.forEach(function (o, oi) {
-          var v = rec ? rec[keys.length + oi] : ((po.def || [])[oi]);
+        outs.forEach((o, oi) => {
+          let v = rec ? rec[keys.length + oi] : ((po.def || [])[oi]);
           if (v === undefined || v === null || v === '') v = (po.def || [])[oi];
           row[o.name] = (o.type === 'text') ? (v == null ? '' : String(v)) : numOf(v);
         });
@@ -232,35 +232,35 @@ var ENGINE = (function () {
 
   /* ---- Lịch ngày công theo nhóm ---- */
   function buildCalendar() {
-    var cal = S.calendar || { groupCol: '', tables: [] };
-    var byScope = {}, def = null;
-    (cal.tables || []).forEach(function (t) {
+    const cal = S.calendar || { groupCol: '', tables: [] };
+    const byScope = {}; let def = null;
+    (cal.tables || []).forEach((t) => {
       if (nkey(t.scope) === '*' || t.scope === '') def = t; else byScope[nkey(t.scope)] = t;
     });
     if (!def && cal.tables && cal.tables.length) def = cal.tables[0];
     return {
       groupCol: cal.groupCol || '',
       pick: function (row) {
-        if (cal.groupCol) { var t = byScope[nkey(row[cal.groupCol])]; if (t) return t; }
+        if (cal.groupCol) { const t = byScope[nkey(row[cal.groupCol])]; if (t) return t; }
         return def;
       }
     };
   }
   function calVars(tbl, m) {
-    var o = {};
-    var src = tbl && tbl.m && tbl.m[m - 1] ? tbl.m[m - 1] : {};
-    CAL_FIELDS.forEach(function (f) { o[f.varName] = numOf(src[f.k]); });
+    const o = {};
+    const src = tbl && tbl.m && tbl.m[m - 1] ? tbl.m[m - 1] : {};
+    CAL_FIELDS.forEach((f) => { o[f.varName] = numOf(src[f.k]); });
     return o;
   }
 
   function compileRules(rules, where, errs) {
-    return (rules || []).map(function (r) {
-      var out = { name: r.name, condFn: null, valFn: null, err: null };
+    return (rules || []).map((r) => {
+      const out = { name: r.name, condFn: null, valFn: null, err: null };
       if (r.cond && String(r.cond).trim()) {
-        var c = FX.tryCompile(r.cond);
+        const c = FX.tryCompile(r.cond);
         if (c.ok) out.condFn = c.fn; else out.err = t('engine.err.cond', { e: c.error });
       }
-      var f = FX.tryCompile(r.formula || '0');
+      const f = FX.tryCompile(r.formula || '0');
       if (f.ok) out.valFn = f.fn; else out.err = (out.err ? out.err + ' · ' : '') + t('engine.err.formula', { e: f.error });
       if (out.err && errs) errs.push({ where: where + ' › ' + (r.name || t('engine.rule.unnamed')), msg: out.err });
       return out;
@@ -269,115 +269,115 @@ var ENGINE = (function () {
 
   /* ---- Bốn tầng phân loại chi phí ---- */
   function buildMaps() {
-    var mp = S.maps || {};
-    var cc = {}, cen = {}, bud = {}, acc = {};
-    (mp.costCode || []).forEach(function (x) { cc[nkey(x.formulaCode)] = x; });
-    (mp.costCenter || []).forEach(function (x) { cen[nkey(x.unit)] = x; });
-    (mp.budgetCode || []).forEach(function (x) { bud[nkey(x.costCenter) + '|' + nkey(x.costCode) + '|' + nkey(x.unit)] = x; });
-    (mp.accountCode || []).forEach(function (x) { acc[nkey(x.costCode) + '|' + nkey(x.costCenter) + '|' + nkey(x.budgetCode)] = x; });
-    return { cc: cc, cen: cen, bud: bud, acc: acc };
+    const mp = S.maps || {};
+    const cc = {}, cen = {}, bud = {}, acc = {};
+    (mp.costCode || []).forEach((x) => { cc[nkey(x.formulaCode)] = x; });
+    (mp.costCenter || []).forEach((x) => { cen[nkey(x.unit)] = x; });
+    (mp.budgetCode || []).forEach((x) => { bud[nkey(x.costCenter) + '|' + nkey(x.costCode) + '|' + nkey(x.unit)] = x; });
+    (mp.accountCode || []).forEach((x) => { acc[nkey(x.costCode) + '|' + nkey(x.costCenter) + '|' + nkey(x.budgetCode)] = x; });
+    return { cc, cen, bud, acc };
   }
 
   /* ---------- CHẠY ---------- */
   function run() {
-    var t0 = Date.now();
-    var warnings = [], formulaErrors = [];
-    var rows = applyPolicies(applyClasses(buildRows(), warnings), warnings);
-    var nR = rows.length;
-    var params = buildParams();
-    var sh = buildShared();
-    var acc = buildAccruals();
-    sh.errors.forEach(function (e) {
+    const t0 = Date.now();
+    let warnings = []; const formulaErrors = [];
+    const rows = applyPolicies(applyClasses(buildRows(), warnings), warnings);
+    const nR = rows.length;
+    const params = buildParams();
+    const sh = buildShared();
+    const acc = buildAccruals();
+    sh.errors.forEach((e) => {
       formulaErrors.push({ where: t('engine.where.shared', { code: e.where }), msg: e.msg });
     });
-    var fieldIndex = {};
-    usableCols().forEach(function (c) { fieldIndex[String(c).toLowerCase().trim()] = c; });
-    var cal = buildCalendar();
-    var maps = buildMaps();
-    var idCol = roleCol('key'), posCol = roleCol('position'), unitCol = roleCol('unit');
-    var fcs = (S.formulas || []).filter(function (f) { return f.active !== false; });
-    var nF = fcs.length;
+    const fieldIndex = {};
+    usableCols().forEach((c) => { fieldIndex[String(c).toLowerCase().trim()] = c; });
+    const cal = buildCalendar();
+    const maps = buildMaps();
+    const idCol = roleCol('key'), posCol = roleCol('position'), unitCol = roleCol('unit');
+    const fcs = (S.formulas || []).filter((f) => { return f.active !== false; });
+    const nF = fcs.length;
 
     if (monthCols().length !== M) warnings.push({ type: 'month', msg: t('engine.warn.month') });
     if (!unitCol) warnings.push({ type: 'role', msg: t('engine.warn.unitcol') });
     if (!idCol) warnings.push({ type: 'role', msg: t('engine.warn.keycol') });
 
     /* tăng lương */
-    var raises = (S.raises || []).filter(function (r) { return r.active !== false; }).map(function (r) {
-      var condFn = null;
+    const raises = (S.raises || []).filter((r) => { return r.active !== false; }).map((r) => {
+      let condFn = null;
       if (r.cond && String(r.cond).trim()) {
-        var c = FX.tryCompile(r.cond);
+        const c = FX.tryCompile(r.cond);
         if (c.ok) condFn = c.fn; else formulaErrors.push({ where: t('engine.where.raise', { name: r.name || '' }), msg: c.error });
       }
-      return { from: +r.fromMonth || 1, pct: parseFloat(r.pct) || 0, condFn: condFn, codes: (r.formulas || []).map(nkey) };
+      return { from: +r.fromMonth || 1, pct: parseFloat(r.pct) || 0, condFn, codes: (r.formulas || []).map(nkey) };
     });
 
     /* tờ trình theo Formula Code */
-    var excByFc = {};
-    (S.exceptions || []).filter(function (e) { return e.active !== false; }).forEach(function (e) {
+    const excByFc = {};
+    (S.exceptions || []).filter((e) => { return e.active !== false; }).forEach((e) => {
       (excByFc[nkey(e.formulaCode)] = excByFc[nkey(e.formulaCode)] || []).push(e);
     });
 
     /* ngữ cảnh từng dòng */
-    var ctxRow = rows.map(function (r) {
-      var unitV = unitCol ? r[unitCol] : '';
-      var cen = maps.cen[nkey(unitV)];
+    const ctxRow = rows.map((r) => {
+      const unitV = unitCol ? r[unitCol] : '';
+      const cen = maps.cen[nkey(unitV)];
       return {
         row: r, id: idCol ? nkey(r[idCol]) : '', pos: posCol ? nkey(r[posCol]) : '',
         unit: unitV, cen: cen ? cen.costCenter : '', cal: cal.pick(r), m: r.__m
       };
     });
     if (unitCol) {
-      var missU = {};
-      ctxRow.forEach(function (c) { if (!c.cen && nkey(c.unit)) missU[c.unit] = 1; });
-      Object.keys(missU).slice(0, 30).forEach(function (u) { warnings.push({ type: 'cen', msg: t('engine.warn.cen.unmapped', { u: u }) }); });
+      const missU = {};
+      ctxRow.forEach((c) => { if (!c.cen && nkey(c.unit)) missU[c.unit] = 1; });
+      Object.keys(missU).slice(0, 30).forEach((u) => { warnings.push({ type: 'cen', msg: t('engine.warn.cen.unmapped', { u }) }); });
     }
 
-    var data = [], groupOf = [], conflicts = [], totalsByFc = new Array(nF).fill(0), monthTotals = new Array(M).fill(0);
-    var pivot = {}, missBC = {}, missAC = {}, missCC = {};
+    const data = [], groupOf = [], conflicts = [], totalsByFc = new Array(nF).fill(0), monthTotals = new Array(M).fill(0);
+    const pivot = {}, missBC = {}, missAC = {}, missCC = {};
 
-    for (var c = 0; c < nF; c++) {
-      var fc = fcs[c];
-      var rules = compileRules(fc.rules, fc.code, formulaErrors);
-      var msel = new Array(M + 1).fill(false), nSel = 0;
-      (fc.months || []).forEach(function (m) { m = +m; if (m >= 1 && m <= M && !msel[m]) { msel[m] = true; nSel++; } });
-      var alloc = (fc.mode === 'spread') ? (nSel ? 1 / nSel : 0) : 1;
-      var arr = new Float64Array(nR * M), gs = new Array(nR);
+    for (let c = 0; c < nF; c++) {
+      const fc = fcs[c];
+      const rules = compileRules(fc.rules, fc.code, formulaErrors);
+      const msel = new Array(M + 1).fill(false); let nSel = 0;
+      (fc.months || []).forEach((m) => { m = +m; if (m >= 1 && m <= M && !msel[m]) { msel[m] = true; nSel++; } });
+      const alloc = (fc.mode === 'spread') ? (nSel ? 1 / nSel : 0) : 1;
+      const arr = new Float64Array(nR * M), gs = new Array(nR);
 
-      var exList = excByFc[nkey(fc.code)] || [];
-      var exById = {}, exByPos = {};
-      exList.forEach(function (e) {
+      const exList = excByFc[nkey(fc.code)] || [];
+      const exById = {}, exByPos = {};
+      exList.forEach((e) => {
         if (nkey(e.id)) (exById[nkey(e.id)] = exById[nkey(e.id)] || []).push(e);
         else if (nkey(e.position)) (exByPos[nkey(e.position)] = exByPos[nkey(e.position)] || []).push(e);
       });
-      var myRaises = raises.filter(function (rz) { return !rz.codes.length || rz.codes.indexOf(nkey(fc.code)) >= 0; });
+      const myRaises = raises.filter((rz) => { return !rz.codes.length || rz.codes.indexOf(nkey(fc.code)) >= 0; });
 
-      var ccRec = maps.cc[nkey(fc.code)];
-      var costCode = ccRec ? ccRec.costCode : '';
+      const ccRec = maps.cc[nkey(fc.code)];
+      const costCode = ccRec ? ccRec.costCode : '';
       if (!costCode) missCC[fc.code] = 1;
 
-      for (var i = 0; i < nR; i++) {
-        var rc = ctxRow[i];
-        var ctx = { row: rc.row, fieldIndex: fieldIndex, params: params, lookups: {}, shared: sh.reg, vars: { THANG: 0, DINH_BIEN: 0, SO_THANG: nSel } };
-        var chosen = null;
-        for (var g = 0; g < rules.length; g++) {
-          var ru = rules[g]; if (ru.err) continue;
+      for (let i = 0; i < nR; i++) {
+        const rc = ctxRow[i];
+        const ctx = { row: rc.row, fieldIndex, params, lookups: {}, shared: sh.reg, vars: { THANG: 0, DINH_BIEN: 0, SO_THANG: nSel } };
+        let chosen = null;
+        for (let g = 0; g < rules.length; g++) {
+          const ru = rules[g]; if (ru.err) continue;
           if (!ru.condFn) { chosen = ru; break; }
-          var okv = ru.condFn.eval(ctx);
+          const okv = ru.condFn.eval(ctx);
           if (!FX.isErr(okv) && FX.toBool(okv) === true) { chosen = ru; break; }
         }
         gs[i] = chosen ? (chosen.name || t('engine.group.unnamed')) : null;
         if (!chosen || !chosen.valFn) continue;
 
-        var monthDep = fnMonthDep(chosen.valFn, sh);
-        var cache = null;
-        var exs = (exById[rc.id] || []).concat(exByPos[rc.pos] || []);
+        const monthDep = fnMonthDep(chosen.valFn, sh);
+        let cache = null;
+        const exs = (exById[rc.id] || []).concat(exByPos[rc.pos] || []);
 
-        for (var m = 1; m <= M; m++) {
+        for (let m = 1; m <= M; m++) {
           if (!msel[m]) continue;
-          var hcf = rc.m[m - 1]; if (!hcf) continue;
+          const hcf = rc.m[m - 1]; if (!hcf) continue;
           ctx.vars = Object.assign({ THANG: m, DINH_BIEN: hcf, SO_THANG: nSel }, calVars(rc.cal, m));
-          var base;
+          let base;
           if (monthDep) base = chosen.valFn.eval(ctx);
           else { if (cache === null) cache = chosen.valFn.eval(ctx); base = cache; }
           if (FX.isErr(base)) {
@@ -386,48 +386,48 @@ var ENGINE = (function () {
           }
           base = FX.toNum(base); if (FX.isErr(base)) continue;
 
-          var f = 1;
-          for (var k = 0; k < myRaises.length; k++) {
-            var rz = myRaises[k];
+          let f = 1;
+          for (let k = 0; k < myRaises.length; k++) {
+            const rz = myRaises[k];
             if (m < rz.from) continue;
-            if (rz.condFn) { var cv = rz.condFn.eval(ctx); if (FX.isErr(cv) || FX.toBool(cv) !== true) continue; }
+            if (rz.condFn) { const cv = rz.condFn.eval(ctx); if (FX.isErr(cv) || FX.toBool(cv) !== true) continue; }
             f *= (1 + rz.pct / 100);
           }
           /* Sau khi áp tăng lương thì làm tròn lên hàng nghìn */
-          var val = (f === 1) ? base : roundUpTo(base * f, 1000);
+          let val = (f === 1) ? base : roundUpTo(base * f, 1000);
 
-          for (var k2 = 0; k2 < exs.length; k2++) {
-            var e = exs[k2];
+          for (let k2 = 0; k2 < exs.length; k2++) {
+            const e = exs[k2];
             if (e.months && e.months.length && e.months.indexOf(m) < 0) continue;
-            var amt = numOf(e.amount), rule = (e.rule || 'MAX').toUpperCase(), before = val;
+            const amt = numOf(e.amount), rule = (e.rule || 'MAX').toUpperCase(), before = val;
             if (rule === 'OVERRIDE') val = amt;
             else if (rule === 'ADD') val = val + amt;
             else val = Math.max(val, amt);
             if (conflicts.length < 20000) {
               conflicts.push({
                 no: e.no || '', id: idCol ? rc.row[idCol] : '', position: posCol ? rc.row[posCol] : '', unit: rc.unit,
-                formulaCode: fc.code, costCode: costCode, month: m,
-                formula: Math.round(before), exception: Math.round(amt), rule: rule, final: Math.round(val),
+                formulaCode: fc.code, costCode, month: m,
+                formula: Math.round(before), exception: Math.round(amt), rule, final: Math.round(val),
                 diff: Math.abs(before - amt) > 0.5, won: Math.abs(val - amt) < 0.5 && Math.abs(before - amt) > 0.5
               });
             }
           }
 
-          var amount = Math.round(val * alloc * hcf * accrualFactor(acc, fc.code, rc.row, m));
+          const amount = Math.round(val * alloc * hcf * accrualFactor(acc, fc.code, rc.row, m));
           if (!isFinite(amount) || !amount) continue;
           arr[i * M + (m - 1)] = amount;
           totalsByFc[c] += amount; monthTotals[m - 1] += amount;
 
-          var cen = rc.cen;
-          var bRec = maps.bud[nkey(cen) + '|' + nkey(costCode) + '|' + nkey(rc.unit)];
-          var budgetCode = bRec ? bRec.budgetCode : '';
+          const cen = rc.cen;
+          const bRec = maps.bud[nkey(cen) + '|' + nkey(costCode) + '|' + nkey(rc.unit)];
+          const budgetCode = bRec ? bRec.budgetCode : '';
           if (!budgetCode && costCode) missBC[[cen || t('engine.map.none'), costCode, rc.unit].join(' × ')] = 1;
-          var aRec = maps.acc[nkey(costCode) + '|' + nkey(cen) + '|' + nkey(budgetCode)];
-          var accountCode = aRec ? aRec.accountCode : '';
+          const aRec = maps.acc[nkey(costCode) + '|' + nkey(cen) + '|' + nkey(budgetCode)];
+          const accountCode = aRec ? aRec.accountCode : '';
           if (!accountCode && budgetCode) missAC[[costCode, cen, budgetCode].join(' × ')] = 1;
 
-          var pk = [accountCode, budgetCode, costCode, cen, fc.code].join('|');
-          var pv = pivot[pk];
+          const pk = [accountCode, budgetCode, costCode, cen, fc.code].join('|');
+          let pv = pivot[pk];
           if (!pv) pv = pivot[pk] = {
             accountCode: accountCode || t('engine.map.undeclared'), budgetCode: budgetCode || t('engine.map.undeclared'),
             costCode: costCode || t('engine.map.undeclared'), costCenter: cen || t('engine.map.none'),
@@ -439,33 +439,33 @@ var ENGINE = (function () {
       }
       data.push(arr); groupOf.push(gs);
 
-      var noGroup = 0;
-      for (var q = 0; q < nR; q++) if (gs[q] === null) noGroup++;
+      let noGroup = 0;
+      for (let q = 0; q < nR; q++) if (gs[q] === null) noGroup++;
       if (noGroup) warnings.push({ type: 'nogroup', msg: t('engine.warn.nogroup', { code: fc.code, n: noGroup }) });
     }
 
-    Object.keys(missCC).slice(0, 30).forEach(function (k) { warnings.push({ type: 'map', msg: t('engine.warn.cc.unmapped', { k: k }) }); });
-    Object.keys(missBC).slice(0, 30).forEach(function (k) { warnings.push({ type: 'map', msg: t('engine.warn.bc.missing', { k: k }) }); });
-    Object.keys(missAC).slice(0, 30).forEach(function (k) { warnings.push({ type: 'map', msg: t('engine.warn.ac.missing', { k: k }) }); });
+    Object.keys(missCC).slice(0, 30).forEach((k) => { warnings.push({ type: 'map', msg: t('engine.warn.cc.unmapped', { k }) }); });
+    Object.keys(missBC).slice(0, 30).forEach((k) => { warnings.push({ type: 'map', msg: t('engine.warn.bc.missing', { k }) }); });
+    Object.keys(missAC).slice(0, 30).forEach((k) => { warnings.push({ type: 'map', msg: t('engine.warn.ac.missing', { k }) }); });
 
-    var seen = {}; warnings = warnings.filter(function (w) { var k = w.type + w.msg; if (seen[k]) return false; seen[k] = 1; return true; });
-    var grand = 0; totalsByFc.forEach(function (x) { grand += x; });
+    const seen = {}; warnings = warnings.filter((w) => { const k = w.type + w.msg; if (seen[k]) return false; seen[k] = 1; return true; });
+    let grand = 0; totalsByFc.forEach((x) => { grand += x; });
 
     return {
-      formulas: fcs, rows: rows, data: data, groupOf: groupOf,
-      totalsByFc: totalsByFc, monthTotals: monthTotals, grand: grand,
-      pivot: Object.keys(pivot).map(function (k) { return pivot[k]; }).sort(function (a, b) {
+      formulas: fcs, rows, data, groupOf,
+      totalsByFc, monthTotals, grand,
+      pivot: Object.keys(pivot).map((k) => { return pivot[k]; }).sort((a, b) => {
         return (a.accountCode + a.budgetCode + a.costCode) < (b.accountCode + b.budgetCode + b.costCode) ? -1 : 1;
       }),
-      conflicts: conflicts, warnings: warnings, formulaErrors: formulaErrors,
-      idCol: idCol, posCol: posCol, unitCol: unitCol, ms: Date.now() - t0
+      conflicts, warnings, formulaErrors,
+      idCol, posCol, unitCol, ms: Date.now() - t0
     };
   }
 
   /* ---------- Tiện ích cho UI ---------- */
-  var cacheRows = null, cacheKey = '';
+  let cacheRows = null, cacheKey = '';
   function previewRows() {
-    var key = JSON.stringify([S.cols, S.classes]).length + '|' + (S.hc.rows || []).length + '|' + (S.classes || []).length;
+    const key = JSON.stringify([S.cols, S.classes]).length + '|' + (S.hc.rows || []).length + '|' + (S.classes || []).length;
     if (cacheRows && cacheKey === key) return cacheRows;
     cacheKey = key; cacheRows = applyPolicies(applyClasses(buildRows(), null), null);
     return cacheRows;
@@ -473,90 +473,90 @@ var ENGINE = (function () {
   function invalidate() { cacheRows = null; }
 
   function ctxFor(row, month, nSel) {
-    var fieldIndex = {};
-    usableCols().forEach(function (c) { fieldIndex[String(c).toLowerCase().trim()] = c; });
-    var cal = buildCalendar();
+    const fieldIndex = {};
+    usableCols().forEach((c) => { fieldIndex[String(c).toLowerCase().trim()] = c; });
+    const cal = buildCalendar();
     return {
-      row: row, fieldIndex: fieldIndex, params: buildParams(), lookups: {}, shared: buildShared().reg,
+      row, fieldIndex, params: buildParams(), lookups: {}, shared: buildShared().reg,
       vars: Object.assign({ THANG: month || 1, DINH_BIEN: (row.__m || [])[(month || 1) - 1] || 0, SO_THANG: nSel || 12 },
         calVars(cal.pick(row), month || 1))
     };
   }
 
   function countMatch(cond) {
-    var rows = previewRows();
+    const rows = previewRows();
     if (!cond || !String(cond).trim()) return { n: rows.length, all: true };
-    var c = FX.tryCompile(cond);
+    const c = FX.tryCompile(cond);
     if (!c.ok) return { error: c.error };
-    var ctx = ctxFor(rows[0] || {}, 1, 12), n = 0;
-    for (var i = 0; i < rows.length; i++) {
+    const ctx = ctxFor(rows[0] || {}, 1, 12); let n = 0;
+    for (let i = 0; i < rows.length; i++) {
       ctx.row = rows[i];
-      var v = c.fn.eval(ctx);
+      const v = c.fn.eval(ctx);
       if (!FX.isErr(v) && FX.toBool(v) === true) n++;
     }
-    return { n: n };
+    return { n };
   }
 
   /* Thử một dòng cho cả 12 tháng, có cả tăng lương và tờ trình */
   function previewRow(fc, rowIdx) {
-    var rows = previewRows();
-    var row = rows[rowIdx];
+    const rows = previewRows();
+    const row = rows[rowIdx];
     if (!row) return { error: t('engine.err.norows') };
 
-    var msel = new Array(M + 1).fill(false), nSel = 0;
-    (fc.months || []).forEach(function (m) { m = +m; if (m >= 1 && m <= M && !msel[m]) { msel[m] = true; nSel++; } });
-    var alloc = (fc.mode === 'spread') ? (nSel ? 1 / nSel : 0) : 1;
+    const msel = new Array(M + 1).fill(false); let nSel = 0;
+    (fc.months || []).forEach((m) => { m = +m; if (m >= 1 && m <= M && !msel[m]) { msel[m] = true; nSel++; } });
+    const alloc = (fc.mode === 'spread') ? (nSel ? 1 / nSel : 0) : 1;
 
-    var rules = compileRules(fc.rules, fc.code, null);
-    var ctx = ctxFor(row, 1, nSel);
-    var chosen = null;
-    for (var g = 0; g < rules.length; g++) {
-      var ru = rules[g];
-      if (ru.err) return { error: ru.err, group: ru.name, row: row };
+    const rules = compileRules(fc.rules, fc.code, null);
+    const ctx = ctxFor(row, 1, nSel);
+    let chosen = null;
+    for (let g = 0; g < rules.length; g++) {
+      const ru = rules[g];
+      if (ru.err) return { error: ru.err, group: ru.name, row };
       if (!ru.condFn) { chosen = ru; break; }
-      var okv = ru.condFn.eval(ctx);
+      const okv = ru.condFn.eval(ctx);
       if (!FX.isErr(okv) && FX.toBool(okv) === true) { chosen = ru; break; }
     }
-    if (!chosen) return { group: null, row: row, months: [], total: 0 };
+    if (!chosen) return { group: null, row, months: [], total: 0 };
 
-    var idCol = roleCol('key'), posCol = roleCol('position');
-    var myRaises = (S.raises || []).filter(function (r) {
+    const idCol = roleCol('key'), posCol = roleCol('position');
+    const myRaises = (S.raises || []).filter((r) => {
       return r.active !== false && (!(r.formulas || []).length || (r.formulas || []).map(nkey).indexOf(nkey(fc.code)) >= 0);
-    }).map(function (r) {
-      var cf = null;
-      if (r.cond && String(r.cond).trim()) { var c = FX.tryCompile(r.cond); if (c.ok) cf = c.fn; }
+    }).map((r) => {
+      let cf = null;
+      if (r.cond && String(r.cond).trim()) { const c = FX.tryCompile(r.cond); if (c.ok) cf = c.fn; }
       return { from: +r.fromMonth || 1, pct: parseFloat(r.pct) || 0, condFn: cf, name: r.name };
     });
-    var exs = (S.exceptions || []).filter(function (e) {
+    const exs = (S.exceptions || []).filter((e) => {
       if (e.active === false || nkey(e.formulaCode) !== nkey(fc.code)) return false;
       if (nkey(e.id)) return idCol && nkey(row[idCol]) === nkey(e.id);
       if (nkey(e.position)) return posCol && nkey(row[posCol]) === nkey(e.position);
       return false;
     });
 
-    var cal = buildCalendar();
-    var accP = buildAccruals();
-    var hasAccrual = !!accP[nkey(fc.code)];
-    var out = [], total = 0, err = null;
-    for (var m = 1; m <= M; m++) {
-      var hcf = (row.__m || [])[m - 1] || 0;
-      var rec = { m: m, on: msel[m], hcf: hcf, raw: 0, raised: 0, afterExc: 0, amount: 0, exc: false };
+    const cal = buildCalendar();
+    const accP = buildAccruals();
+    const hasAccrual = !!accP[nkey(fc.code)];
+    const out = []; let total = 0, err = null;
+    for (let m = 1; m <= M; m++) {
+      const hcf = (row.__m || [])[m - 1] || 0;
+      const rec = { m, on: msel[m], hcf, raw: 0, raised: 0, afterExc: 0, amount: 0, exc: false };
       if (!msel[m]) { out.push(rec); continue; }
       ctx.vars = Object.assign({ THANG: m, DINH_BIEN: hcf, SO_THANG: nSel }, calVars(cal.pick(row), m));
-      var v = chosen.valFn.eval(ctx);
+      const v = chosen.valFn.eval(ctx);
       if (FX.isErr(v)) { err = t('engine.err.code.at', { e: v.__err, m: MONTHS[m - 1] }); out.push(rec); continue; }
       rec.raw = FX.toNum(v);
-      var f = 1;
-      myRaises.forEach(function (rz) {
+      let f = 1;
+      myRaises.forEach((rz) => {
         if (m < rz.from) return;
-        if (rz.condFn) { var cv = rz.condFn.eval(ctx); if (FX.isErr(cv) || FX.toBool(cv) !== true) return; }
+        if (rz.condFn) { const cv = rz.condFn.eval(ctx); if (FX.isErr(cv) || FX.toBool(cv) !== true) return; }
         f *= (1 + rz.pct / 100);
       });
       rec.raised = (f === 1) ? rec.raw : roundUpTo(rec.raw * f, 1000);
-      var val = rec.raised;
-      exs.forEach(function (e) {
+      let val = rec.raised;
+      exs.forEach((e) => {
         if (e.months && e.months.length && e.months.indexOf(m) < 0) return;
-        var amt = numOf(e.amount), rule = (e.rule || 'MAX').toUpperCase();
+        const amt = numOf(e.amount), rule = (e.rule || 'MAX').toUpperCase();
         if (rule === 'OVERRIDE') val = amt;
         else if (rule === 'ADD') val = val + amt;
         else val = Math.max(val, amt);
@@ -569,10 +569,10 @@ var ENGINE = (function () {
       out.push(rec);
     }
     return {
-      group: chosen.name || t('engine.group.unnamed'), row: row, months: out, total: total,
-      nSel: nSel, alloc: alloc, error: err,
+      group: chosen.name || t('engine.group.unnamed'), row, months: out, total,
+      nSel, alloc, error: err,
       id: idCol ? row[idCol] : '', hasRaise: myRaises.length > 0, hasExc: exs.length > 0,
-      hasAccrual: hasAccrual,
+      hasAccrual,
       refs: collectRefs([chosen.condFn, chosen.valFn], ctx, row, nSel, cal)
     };
   }
@@ -583,19 +583,19 @@ var ENGINE = (function () {
      công thức dùng chung. Nhờ vậy không có chuyện bảng đối chiếu hiển thị một
      đằng còn máy tính lại lấy một nẻo. */
   function collectRefs(fns, ctx, row, nSel, cal) {
-    var order = [], seen = {};
-    fns.forEach(function (f) {
+    const order = [], seen = {};
+    fns.forEach((f) => {
       if (!f) return;
-      f.info.fields.forEach(function (x) {
-        var k = '[' + x + ']'; if (!seen[k]) { seen[k] = 1; order.push({ key: k, raw: x, field: true }); }
+      f.info.fields.forEach((x) => {
+        const k = '[' + x + ']'; if (!seen[k]) { seen[k] = 1; order.push({ key: k, raw: x, field: true }); }
       });
-      f.info.names.forEach(function (x) {
+      f.info.names.forEach((x) => {
         if (!seen[x]) { seen[x] = 1; order.push({ key: x, raw: x, field: false }); }
       });
     });
 
     function kindOf(r) {
-      var up = nkey(r.raw);
+      const up = nkey(r.raw);
       if (!r.field) {
         if (ctx.vars && Object.prototype.hasOwnProperty.call(ctx.vars, up)) return 'monthvar';
         if (ctx.params && Object.prototype.hasOwnProperty.call(ctx.params, up)) return 'param';
@@ -604,46 +604,46 @@ var ENGINE = (function () {
       return r.field ? 'field' : 'unknown';
     }
 
-    var hcf0 = row.__m || [];
-    return order.map(function (r) {
-      var c = FX.tryCompile(r.key);
-      var vals = [], kind = kindOf(r);
-      if (!c.ok) return { key: r.key, kind: kind, error: c.error, constant: true, values: [] };
-      for (var m = 1; m <= M; m++) {
+    const hcf0 = row.__m || [];
+    return order.map((r) => {
+      const c = FX.tryCompile(r.key);
+      const vals = [], kind = kindOf(r);
+      if (!c.ok) return { key: r.key, kind, error: c.error, constant: true, values: [] };
+      for (let m = 1; m <= M; m++) {
         ctx.vars = Object.assign({ THANG: m, DINH_BIEN: hcf0[m - 1] || 0, SO_THANG: nSel }, calVars(cal.pick(row), m));
-        var v = c.fn.eval(ctx);
+        const v = c.fn.eval(ctx);
         vals.push(FX.isErr(v) ? { err: v.__err } : v);
       }
-      var first = JSON.stringify(vals[0]);
-      var constant = vals.every(function (v) { return JSON.stringify(v) === first; });
-      return { key: r.key, kind: kind, constant: constant, values: vals, value: vals[0] };
+      const first = JSON.stringify(vals[0]);
+      const constant = vals.every((v) => { return JSON.stringify(v) === first; });
+      return { key: r.key, kind, constant, values: vals, value: vals[0] };
     });
   }
 
   function preview(fc, rowIdx, month) {
-    var rows = previewRows();
-    var row = rows[rowIdx];
+    const rows = previewRows();
+    const row = rows[rowIdx];
     if (!row) return { error: t('engine.err.norows') };
-    var nSel = (fc.months || []).length;
-    var ctx = ctxFor(row, month, nSel);
-    var rules = compileRules(fc.rules, fc.code, null);
-    for (var g = 0; g < rules.length; g++) {
-      var ru = rules[g];
+    const nSel = (fc.months || []).length;
+    const ctx = ctxFor(row, month, nSel);
+    const rules = compileRules(fc.rules, fc.code, null);
+    for (let g = 0; g < rules.length; g++) {
+      const ru = rules[g];
       if (ru.err) return { error: ru.err, group: ru.name };
-      var ok = true;
-      if (ru.condFn) { var v = ru.condFn.eval(ctx); ok = !FX.isErr(v) && FX.toBool(v) === true; }
+      let ok = true;
+      if (ru.condFn) { const v = ru.condFn.eval(ctx); ok = !FX.isErr(v) && FX.toBool(v) === true; }
       if (ok) {
-        var val = ru.valFn.eval(ctx);
+        const val = ru.valFn.eval(ctx);
         if (FX.isErr(val)) return { error: t('engine.err.code', { e: val.__err }), group: ru.name };
-        return { group: ru.name, value: FX.toNum(val), row: row };
+        return { group: ru.name, value: FX.toNum(val), row };
       }
     }
-    return { group: null, value: 0, row: row };
+    return { group: null, value: 0, row };
   }
 
   return {
-    run: run, preview: preview, policyCols: policyCols, previewRow: previewRow, countMatch: countMatch, previewRows: previewRows, invalidate: invalidate,
-    usableCols: usableCols, attrCols: attrCols, monthCols: monthCols, roleCol: roleCol, M: M
+    run, preview, policyCols, previewRow, countMatch, previewRows, invalidate,
+    usableCols, attrCols, monthCols, roleCol, M
   };
 })();
 

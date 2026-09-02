@@ -20,30 +20,30 @@ const XLTABLE = window.XLTABLE;
    nhiều cột giá trị: mức lương, mức phụ cấp, hệ số thưởng…
    =========================================================== */
 function policyAvailableKeys(beforeIdx) {
-  var out = ENGINE.attrCols().map(function (c) { return c.alias; })
-    .concat((S.classes || []).map(function (c) { return c.name; }).filter(Boolean));
-  (S.policies || []).forEach(function (p, i) {
-    if (i < beforeIdx) (p.outs || []).forEach(function (o) { if (o && o.name) out.push(o.name); });
+  const out = ENGINE.attrCols().map((c) => { return c.alias; })
+    .concat((S.classes || []).map((c) => { return c.name; }).filter(Boolean));
+  (S.policies || []).forEach((p, i) => {
+    if (i < beforeIdx) (p.outs || []).forEach((o) => { if (o && o.name) out.push(o.name); });
   });
   return out;
 }
 
 function policyCombos(po) {
-  var rows = ENGINE.previewRows(), seen = {}, out = [];
-  rows.forEach(function (r) {
-    var vals = (po.keys || []).map(function (k) { return r[k] == null ? '' : String(r[k]).trim(); });
-    var k = vals.map(nkey).join('|');
+  const rows = ENGINE.previewRows(), seen = {}, out = [];
+  rows.forEach((r) => {
+    const vals = (po.keys || []).map((k) => { return r[k] == null ? '' : String(r[k]).trim(); });
+    const k = vals.map(nkey).join('|');
     if (seen[k]) return; seen[k] = 1;
-    var o = {};
-    (po.keys || []).forEach(function (kc, j) { o['k' + j] = vals[j]; });
-    (po.outs || []).forEach(function (oc, j) { o['v' + j] = ''; });
+    const o = {};
+    (po.keys || []).forEach((kc, j) => { o['k' + j] = vals[j]; });
+    (po.outs || []).forEach((oc, j) => { o['v' + j] = ''; });
     out.push(o);
   });
   return out.slice(0, 800);
 }
 
 function viewPolicies() {
-  var wrap = el('div');
+  const wrap = el('div');
 
   if (!S.cols.length) {
     wrap.appendChild(panel(t('pol.cai_dat_chinh_sach'), [], el('div', { class: 'empty' }, [
@@ -75,51 +75,51 @@ function viewPolicies() {
     })])
   ]));
 
-  (S.policies || []).forEach(function (po, idx) {
-    var keys = po.keys || [];
-    var outs = (po.outs || []).filter(function (o) { return o && o.name; });
-    var avail = policyAvailableKeys(idx);
+  (S.policies || []).forEach((po, idx) => {
+    const keys = po.keys || [];
+    const outs = (po.outs || []).filter((o) => { return o && o.name; });
+    const avail = policyAvailableKeys(idx);
 
     /* rows lưu dạng mảng: [...khoá, ...giá trị] */
-    var shape = keys.join('|') + '»' + outs.map(function (o) { return o.name; }).join('|');
+    const shape = keys.join('|') + '»' + outs.map((o) => { return o.name; }).join('|');
     function asObjs() {
       if (!po._objs || po._shape !== shape) {
-        po._objs = (po.rows || []).map(function (r) {
-          var o = {};
-          keys.forEach(function (_, j) { o['k' + j] = r[j] == null ? '' : r[j]; });
-          outs.forEach(function (_, j) { o['v' + j] = r[keys.length + j] == null ? '' : r[keys.length + j]; });
+        po._objs = (po.rows || []).map((r) => {
+          const o = {};
+          keys.forEach((_, j) => { o['k' + j] = r[j] == null ? '' : r[j]; });
+          outs.forEach((_, j) => { o['v' + j] = r[keys.length + j] == null ? '' : r[keys.length + j]; });
           return o;
         });
         po._shape = shape;
       }
       return po._objs;
     }
-    var stat = el('span', { class: 'tag' });
+    const stat = el('span', { class: 'tag' });
     function updateStat() {
       if (!keys.length || !outs.length) { stat.className = 'tag'; stat.textContent = t('cal.not_declared'); return; }
-      var miss = classMissCount({ name: po.name, keys: keys, rows: po.rows });
+      const miss = classMissCount({ name: po.name, keys, rows: po.rows });
       stat.className = 'tag ' + (miss ? 'o' : 'g');
       stat.textContent = miss ? t('cal.rows_unmatched', { n: fmt(miss) }) : t('cal.rows_all_matched', { n: fmt(ENGINE.previewRows().length) });
     }
-    var statT = null;
+    let statT = null;
     function syncBack() {
-      po.rows = asObjs().map(function (o) {
-        return keys.map(function (_, j) { return o['k' + j]; })
-          .concat(outs.map(function (_, j) { return o['v' + j]; }));
+      po.rows = asObjs().map((o) => {
+        return keys.map((_, j) => { return o['k' + j]; })
+          .concat(outs.map((_, j) => { return o['v' + j]; }));
       });
       ENGINE.invalidate(); setRESULT(null); touch();
       clearTimeout(statT); statT = setTimeout(updateStat, 250);
     }
     updateStat();
 
-    var editor = (keys.length && outs.length) ? dataTable({
-      columns: keys.map(function (k, j) { return { k: 'k' + j, label: k, key: true, type: 'text' }; })
-        .concat(outs.map(function (o, j) { return { k: 'v' + j, label: o.name, type: o.type === 'text' ? 'text' : 'num', w: 150 }; })),
+    const editor = (keys.length && outs.length) ? dataTable({
+      columns: keys.map((k, j) => { return { k: 'k' + j, label: k, key: true, type: 'text' }; })
+        .concat(outs.map((o, j) => { return { k: 'v' + j, label: o.name, type: o.type === 'text' ? 'text' : 'num', w: 150 }; })),
       rows: asObjs,
       blank: function () {
-        var o = {};
-        keys.forEach(function (_, j) { o['k' + j] = ''; });
-        outs.forEach(function (_, j) { o['v' + j] = ''; });
+        const o = {};
+        keys.forEach((_, j) => { o['k' + j] = ''; });
+        outs.forEach((_, j) => { o['v' + j] = ''; });
         return o;
       },
       onChange: syncBack,
@@ -138,10 +138,10 @@ function viewPolicies() {
     }) : el('div', { class: 'empty', text: t('pol.can_it_nhat_mot_cot_khoa_va_mot') });
 
     /* --- khai báo cột giá trị --- */
-    var outBox = el('div');
+    const outBox = el('div');
     function drawOuts() {
       outBox.innerHTML = '';
-      (po.outs || []).forEach(function (o, j) {
+      (po.outs || []).forEach((o, j) => {
         outBox.appendChild(el('div', { class: 'row', style: 'margin-bottom:6px' }, [
           el('input', {
             type: 'text', class: 'fx', style: 'width:230px', value: o.name || '', placeholder: t('pol.ten_cot_gia_tri'),
@@ -183,7 +183,7 @@ function viewPolicies() {
     }
     drawOuts();
 
-    var head = el('div', {}, [
+    const head = el('div', {}, [
       el('div', { class: 'row', style: 'margin-bottom:10px' }, [
         el('div', { style: 'width:230px' }, [el('label', { class: 'f', text: t('pol.ten_bang_chinh_sach') }),
         el('input', {
@@ -193,12 +193,12 @@ function viewPolicies() {
       ]),
       el('div', { style: 'margin-bottom:12px' }, [
         el('label', { class: 'f', text: t('cal.cot_khoa_bam_de_chon') }),
-        el('div', { class: 'chips' }, avail.map(function (a) {
-          var on = keys.indexOf(a) >= 0;
+        el('div', { class: 'chips' }, avail.map((a) => {
+          const on = keys.indexOf(a) >= 0;
           return el('span', {
             class: 'chip', style: on ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '',
             text: a, onclick: function () {
-              po.keys = on ? keys.filter(function (x) { return x !== a; }) : keys.concat([a]);
+              po.keys = on ? keys.filter((x) => { return x !== a; }) : keys.concat([a]);
               po._objs = null; po.rows = []; ENGINE.invalidate(); setRESULT(null); touch(); render();
             }
           });
@@ -214,9 +214,9 @@ function viewPolicies() {
       String(idx + 1).padStart(2, '0') + ' · ' + (po.name || t('cal.unnamed')),
       [stat],
       [
-        el('button', { class: 'btn sm', text: '↑', onclick: function () { if (idx > 0) { var t = S.policies[idx - 1]; S.policies[idx - 1] = po; S.policies[idx] = t; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
-        el('button', { class: 'btn sm', text: '↓', onclick: function () { if (idx < S.policies.length - 1) { var t = S.policies[idx + 1]; S.policies[idx + 1] = po; S.policies[idx] = t; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
-        el('button', { class: 'btn sm del', text: t('cal.xoa_bang'), onclick: function () { confirmBox(t('pol.confirm_delete', { name: po.name || '' }), function () { S.policies.splice(idx, 1); ENGINE.invalidate(); setRESULT(null); touch(); render(); }); } })
+        el('button', { class: 'btn sm', text: '↑', onclick: function () { if (idx > 0) { const t = S.policies[idx - 1]; S.policies[idx - 1] = po; S.policies[idx] = t; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
+        el('button', { class: 'btn sm', text: '↓', onclick: function () { if (idx < S.policies.length - 1) { const t = S.policies[idx + 1]; S.policies[idx + 1] = po; S.policies[idx] = t; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
+        el('button', { class: 'btn sm del', text: t('cal.xoa_bang'), onclick: function () { confirmBox(t('pol.confirm_delete', { name: po.name || '' }), () => { S.policies.splice(idx, 1); ENGINE.invalidate(); setRESULT(null); touch(); render(); }); } })
       ],
       el('div', {}, [head, editor])
     ));

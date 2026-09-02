@@ -8,7 +8,6 @@
 import { CAL_FIELDS, S, fmt } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
-import { FX } from '../core/expression.js';
 import { el, modal, toast } from './dom.js';
 
 /* Chữ ký hàm dựng từ FX_DOCS, tra lúc chạy nên t() đã sẵn sàng. */
@@ -17,7 +16,7 @@ function fxArgs(doc) { return t(doc.a).split('|'); }
 /* ===========================================================
    FX HELP — thư viện hàm + gợi ý khi gõ công thức
    =========================================================== */
-var FX_DOCS = [
+const FX_DOCS = [
   { c: 'fx.cat.cond', n: 'IF', a: 'fx.args.IF', d: 'fx.desc.IF', e: 'IF([Grade]="5A.12", 500000, 300000)' },
   { c: 'fx.cat.cond', n: 'IFS', a: 'fx.args.IFS', d: 'fx.desc.IFS', e: 'IFS([Grade]="6A.01",900000, [Grade]="5A.12",500000, TRUE,300000)' },
   { c: 'fx.cat.cond', n: 'SWITCH', a: 'fx.args.SWITCH', d: 'fx.desc.SWITCH', e: 'SWITCH([Dept], "AC",100000, "SL",200000, 0)' },
@@ -57,7 +56,7 @@ var FX_DOCS = [
   { c: 'fx.cat.check', n: 'ISNUMBER', a: 'fx.args.ISNUMBER', d: 'fx.desc.ISNUMBER', e: 'ISNUMBER([Coefficient])' }
 ];
 
-var FX_OPS = [
+const FX_OPS = [
   { n: '+  -  *  /', d: 'fx.op.0.desc', e: '[Coefficient]*LUONG_CO_SO' },
   { n: '^', d: 'fx.op.1.desc', e: '2^3' },
   { n: '%', d: 'fx.op.2.desc', e: 'TY_LE_BHXH_CTY% * 10000000' },
@@ -67,11 +66,11 @@ var FX_OPS = [
 
 function fxDocByName(n) {
   n = String(n).toUpperCase();
-  for (var i = 0; i < FX_DOCS.length; i++) if (FX_DOCS[i].n === n) return FX_DOCS[i];
+  for (let i = 0; i < FX_DOCS.length; i++) if (FX_DOCS[i].n === n) return FX_DOCS[i];
   return null;
 }
 function fxSignature(doc, argIdx) {
-  var parts = fxArgs(doc).map(function (a, i) {
+  const parts = fxArgs(doc).map((a, i) => {
     return (i === argIdx) ? '\u2039' + a + '\u203A' : a;
   });
   return doc.n + '(' + parts.join('; ') + ')';
@@ -79,15 +78,15 @@ function fxSignature(doc, argIdx) {
 
 /* ---------- Thư viện: modal tra cứu ---------- */
 function fxLibrary(target) {
-  var q = el('input', { type: 'text', placeholder: t('fx.search.placeholder'), style: 'margin-bottom:12px' });
-  var body = el('div', { style: 'max-height:52vh;overflow:auto' });
-  var tab = 'fn';
-  var tabs = el('div', { class: 'chips', style: 'margin-bottom:10px' });
+  const q = el('input', { type: 'text', placeholder: t('fx.search.placeholder'), style: 'margin-bottom:12px' });
+  const body = el('div', { style: 'max-height:52vh;overflow:auto' });
+  let tab = 'fn';
+  const tabs = el('div', { class: 'chips', style: 'margin-bottom:10px' });
 
   function ownFormulas() {
-    var out = [];
-    (S.formulas || []).forEach(function (f) {
-      (f.rules || []).forEach(function (r) {
+    const out = [];
+    (S.formulas || []).forEach((f) => {
+      (f.rules || []).forEach((r) => {
         if (!r.formula || !String(r.formula).trim()) return;
         out.push({ code: f.code, group: r.name || '', cond: r.cond || '', formula: r.formula });
       });
@@ -96,10 +95,10 @@ function fxLibrary(target) {
   }
 
   function draw() {
-    var kw = q.value.trim().toLowerCase();
+    const kw = q.value.trim().toLowerCase();
     body.innerHTML = '';
     tabs.innerHTML = '';
-    [['fn', 'fx.tab.fn'], ['op', 'fx.tab.op'], ['var', 'fx.tab.var'], ['own', 'fx.tab.own']].forEach(function (tabDef) {
+    [['fn', 'fx.tab.fn'], ['op', 'fx.tab.op'], ['var', 'fx.tab.var'], ['own', 'fx.tab.own']].forEach((tabDef) => {
       tabs.appendChild(el('span', {
         class: 'chip', style: tab === tabDef[0] ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '',
         text: t(tabDef[1]), onclick: function () { tab = tabDef[0]; draw(); }
@@ -118,34 +117,34 @@ function fxLibrary(target) {
     }
 
     if (tab === 'fn') {
-      var cat = '';
-      FX_DOCS.filter(function (f) {
+      let cat = '';
+      FX_DOCS.filter((f) => {
         return !kw || f.n.toLowerCase().indexOf(kw) >= 0 || t(f.d).toLowerCase().indexOf(kw) >= 0;
-      }).forEach(function (f) {
+      }).forEach((f) => {
         if (f.c !== cat) { cat = f.c; body.appendChild(el('div', { class: 'fx-cat', text: t(cat) })); }
         body.appendChild(item(f.n + '(' + fxArgs(f).join('; ') + ')', t(f.d), f.e, f.n + '('));
       });
     } else if (tab === 'op') {
-      FX_OPS.filter(function (o) { return !kw || o.n.indexOf(kw) >= 0 || t(o.d).toLowerCase().indexOf(kw) >= 0; })
-        .forEach(function (o) { body.appendChild(item(o.n, t(o.d), o.e, '')); });
+      FX_OPS.filter((o) => { return !kw || o.n.indexOf(kw) >= 0 || t(o.d).toLowerCase().indexOf(kw) >= 0; })
+        .forEach((o) => { body.appendChild(item(o.n, t(o.d), o.e, '')); });
     } else if (tab === 'var') {
       body.appendChild(el('div', { class: 'fx-cat', text: t('fx.cat.usableCols') }));
-      ENGINE.usableCols().filter(function (c) { return !kw || c.toLowerCase().indexOf(kw) >= 0; })
-        .forEach(function (c) { body.appendChild(item('[' + c + ']', t('fx.col.desc'), '', '[' + c + ']')); });
+      ENGINE.usableCols().filter((c) => { return !kw || c.toLowerCase().indexOf(kw) >= 0; })
+        .forEach((c) => { body.appendChild(item('[' + c + ']', t('fx.col.desc'), '', '[' + c + ']')); });
       body.appendChild(el('div', { class: 'fx-cat', text: t('fx.cat.params') }));
-      (S.params || []).filter(function (p) { return p.name && (!kw || p.name.toLowerCase().indexOf(kw) >= 0); })
-        .forEach(function (p) { body.appendChild(item(p.name, p.note || '', t('fx.param.current', { v: fmt(p.value) }), p.name)); });
+      (S.params || []).filter((p) => { return p.name && (!kw || p.name.toLowerCase().indexOf(kw) >= 0); })
+        .forEach((p) => { body.appendChild(item(p.name, p.note || '', t('fx.param.current', { v: fmt(p.value) }), p.name)); });
       body.appendChild(el('div', { class: 'fx-cat', text: t('fx.sysvar') }));
       [['THANG', t('fx.var.THANG')], ['DINH_BIEN', t('fx.var.DINH_BIEN')], ['SO_THANG', t('fx.var.SO_THANG')]]
-        .concat(CAL_FIELDS.map(function (f) { return [f.varName, t('fx.var.calField', { label: f.label })]; }))
-        .filter(function (v) { return !kw || v[0].toLowerCase().indexOf(kw) >= 0; })
-        .forEach(function (v) { body.appendChild(item(v[0], v[1], '', v[0])); });
+        .concat(CAL_FIELDS.map((f) => { return [f.varName, t('fx.var.calField', { label: f.label })]; }))
+        .filter((v) => { return !kw || v[0].toLowerCase().indexOf(kw) >= 0; })
+        .forEach((v) => { body.appendChild(item(v[0], v[1], '', v[0])); });
     } else {
-      var list = ownFormulas().filter(function (o) {
+      const list = ownFormulas().filter((o) => {
         return !kw || (o.code + ' ' + o.group + ' ' + o.formula).toLowerCase().indexOf(kw) >= 0;
       });
       if (!list.length) body.appendChild(el('div', { class: 'empty', text: t('fx.own.empty') }));
-      list.forEach(function (o) {
+      list.forEach((o) => {
         body.appendChild(item(o.code + ' › ' + o.group, o.cond ? t('engine.err.cond', { e: o.cond }) : t('fx.own.defaultGroup'), o.formula, o.formula));
       });
     }
@@ -153,38 +152,38 @@ function fxLibrary(target) {
   q.addEventListener('input', draw);
   draw();
   modal(t('fx.library.title'), el('div', {}, [q, tabs, body]), [{ label: t('btn.close') }]);
-  setTimeout(function () { q.focus(); }, 60);
+  setTimeout(() => { q.focus(); }, 60);
 }
 
 /* ---------- Gợi ý khi gõ ---------- */
 function fxAssist(ta, onChange, check) {
-  var hint = el('div', { class: 'fx-hint', style: 'display:none' });
-  var list = el('div', { class: 'fx-ac', style: 'display:none' });
-  var items = [], sel = -1;
+  const hint = el('div', { class: 'fx-hint', style: 'display:none' });
+  const list = el('div', { class: 'fx-ac', style: 'display:none' });
+  let items = [], sel = -1;
 
   function tokenBefore() {
-    var s = ta.value.slice(0, ta.selectionStart);
-    var mCol = /\[([^\]]*)$/.exec(s);
+    const s = ta.value.slice(0, ta.selectionStart);
+    const mCol = /\[([^\]]*)$/.exec(s);
     if (mCol) return { kind: 'col', text: mCol[1], start: ta.selectionStart - mCol[1].length };
-    var mId = /([A-Za-z_\u00C0-\u024F\u1E00-\u1EFF][A-Za-z0-9_\u00C0-\u024F\u1E00-\u1EFF]*)$/.exec(s);
+    const mId = /([A-Za-z_\u00C0-\u024F\u1E00-\u1EFF][A-Za-z0-9_\u00C0-\u024F\u1E00-\u1EFF]*)$/.exec(s);
     if (mId) return { kind: 'id', text: mId[1], start: ta.selectionStart - mId[1].length };
     return null;
   }
 
   /* Tìm hàm đang mở ngoặc gần nhất và vị trí đối số hiện tại */
   function activeCall() {
-    var s = ta.value.slice(0, ta.selectionStart);
-    var depth = 0, arg = 0, i = s.length - 1, inStr = false;
+    const s = ta.value.slice(0, ta.selectionStart);
+    let depth = 0, arg = 0, i = s.length - 1, inStr = false;
     for (; i >= 0; i--) {
-      var ch = s[i];
+      const ch = s[i];
       if (ch === '"') { inStr = !inStr; continue; }
       if (inStr) continue;
       if (ch === ')') depth++;
       else if (ch === '(') {
         if (depth === 0) {
-          var m = /([A-Za-z_][A-Za-z0-9_]*)$/.exec(s.slice(0, i));
+          const m = /([A-Za-z_][A-Za-z0-9_]*)$/.exec(s.slice(0, i));
           if (!m) return null;
-          return { name: m[1], arg: arg };
+          return { name: m[1], arg };
         }
         depth--;
       } else if ((ch === ',' || ch === ';') && depth === 0) arg++;
@@ -195,18 +194,18 @@ function fxAssist(ta, onChange, check) {
   function hideList() { list.style.display = 'none'; items = []; sel = -1; }
 
   function accept(i) {
-    var tok = tokenBefore(); if (!tok || !items[i]) return;
-    var ins = items[i].ins;
-    var a = ta.value.slice(0, tok.start), b = ta.value.slice(ta.selectionStart);
+    const tok = tokenBefore(); if (!tok || !items[i]) return;
+    const ins = items[i].ins;
+    const a = ta.value.slice(0, tok.start), b = ta.value.slice(ta.selectionStart);
     ta.value = a + ins + b;
-    var caret = a.length + ins.length;
+    const caret = a.length + ins.length;
     ta.focus(); ta.selectionStart = ta.selectionEnd = caret;
     hideList(); onChange(ta.value); check(); update();
   }
 
   function drawList() {
     list.innerHTML = '';
-    items.forEach(function (it, i) {
+    items.forEach((it, i) => {
       list.appendChild(el('div', {
         class: 'fx-ac-i' + (i === sel ? ' on' : ''),
         onmousedown: function (e) { e.preventDefault(); accept(i); }
@@ -217,33 +216,33 @@ function fxAssist(ta, onChange, check) {
 
   function update() {
     /* gợi ý đối số */
-    var call = activeCall();
-    var doc = call ? fxDocByName(call.name) : null;
+    const call = activeCall();
+    const doc = call ? fxDocByName(call.name) : null;
     if (doc) {
       hint.style.display = '';
       hint.textContent = fxSignature(doc, Math.min(call.arg, fxArgs(doc).length - 1)) + ' — ' + t(doc.d);
     } else hint.style.display = 'none';
 
     /* danh sách hoàn tất */
-    var tok = tokenBefore();
+    const tok = tokenBefore();
     if (!tok || tok.text.length < 1) { hideList(); return; }
-    var kw = tok.text.toLowerCase();
-    var out = [];
+    const kw = tok.text.toLowerCase();
+    const out = [];
     if (tok.kind === 'col') {
-      ENGINE.usableCols().forEach(function (c) {
+      ENGINE.usableCols().forEach((c) => {
         if (c.toLowerCase().indexOf(kw) >= 0) out.push({ label: '[' + c + ']', hint: t('fx.hint.col'), ins: c + ']' });
       });
     } else {
-      FX_DOCS.forEach(function (f) {
+      FX_DOCS.forEach((f) => {
         if (f.n.toLowerCase().indexOf(kw) === 0) out.push({ label: f.n + '(' + fxArgs(f).join('; ') + ')', hint: t(f.d), ins: f.n + '(' });
       });
-      (S.params || []).forEach(function (p) {
+      (S.params || []).forEach((p) => {
         if (p.name && p.name.toLowerCase().indexOf(kw) === 0) out.push({ label: p.name, hint: t('fx.hint.param', { v: fmt(p.value) }), ins: p.name });
       });
-      ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map(function (f) { return f.varName; })).forEach(function (v) {
+      ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map((f) => { return f.varName; })).forEach((v) => {
         if (v.toLowerCase().indexOf(kw) === 0) out.push({ label: v, hint: t('fx.sysvar'), ins: v });
       });
-      ENGINE.usableCols().forEach(function (c) {
+      ENGINE.usableCols().forEach((c) => {
         if (c.toLowerCase().indexOf(kw) === 0) out.push({ label: '[' + c + ']', hint: t('fx.hint.col'), ins: '[' + c + ']' });
       });
     }
@@ -254,8 +253,8 @@ function fxAssist(ta, onChange, check) {
 
   ta.addEventListener('input', update);
   ta.addEventListener('click', update);
-  ta.addEventListener('blur', function () { setTimeout(function () { hideList(); hint.style.display = 'none'; }, 120); });
-  ta.addEventListener('keydown', function (e) {
+  ta.addEventListener('blur', () => { setTimeout(() => { hideList(); hint.style.display = 'none'; }, 120); });
+  ta.addEventListener('keydown', (e) => {
     if (list.style.display === 'none' || !items.length) {
       if (e.key === 'Escape') hint.style.display = 'none';
       return;

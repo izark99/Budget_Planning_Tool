@@ -10,37 +10,37 @@ import { confirmBox, el, render, toast } from '../ui/dom.js';
 import { dataTable, foldPanel } from '../ui/widgets.js';
 
 function neededCombos() {
-  var rows = ENGINE.previewRows();
-  var unitCol = ENGINE.roleCol('unit');
-  var mp = S.maps;
-  var cenOf = {}; (mp.costCenter || []).forEach(function (x) { if (x.costCenter) cenOf[nkey(x.unit)] = x.costCenter; });
-  var ccOf = {}; (mp.costCode || []).forEach(function (x) { if (x.costCode) ccOf[nkey(x.formulaCode)] = x.costCode; });
-  var budOf = {}; (mp.budgetCode || []).forEach(function (x) { if (x.budgetCode) budOf[nkey(x.costCenter) + '|' + nkey(x.costCode) + '|' + nkey(x.unit)] = x.budgetCode; });
-  var accOf = {}; (mp.accountCode || []).forEach(function (x) { if (x.accountCode) accOf[nkey(x.costCode) + '|' + nkey(x.costCenter) + '|' + nkey(x.budgetCode)] = 1; });
+  const rows = ENGINE.previewRows();
+  const unitCol = ENGINE.roleCol('unit');
+  const mp = S.maps;
+  const cenOf = {}; (mp.costCenter || []).forEach((x) => { if (x.costCenter) cenOf[nkey(x.unit)] = x.costCenter; });
+  const ccOf = {}; (mp.costCode || []).forEach((x) => { if (x.costCode) ccOf[nkey(x.formulaCode)] = x.costCode; });
+  const budOf = {}; (mp.budgetCode || []).forEach((x) => { if (x.budgetCode) budOf[nkey(x.costCenter) + '|' + nkey(x.costCode) + '|' + nkey(x.unit)] = x.budgetCode; });
+  const accOf = {}; (mp.accountCode || []).forEach((x) => { if (x.accountCode) accOf[nkey(x.costCode) + '|' + nkey(x.costCenter) + '|' + nkey(x.budgetCode)] = 1; });
 
-  var units = unitCol ? distinctVals(rows, unitCol) : [];
-  var fcs = S.formulas.map(function (f) { return f.code; });
+  const units = unitCol ? distinctVals(rows, unitCol) : [];
+  const fcs = S.formulas.map((f) => { return f.code; });
 
-  var missFc = fcs.filter(function (c) { return !ccOf[nkey(c)]; });
-  var missUnit = units.filter(function (u) { return !cenOf[nkey(u)]; });
+  const missFc = fcs.filter((c) => { return !ccOf[nkey(c)]; });
+  const missUnit = units.filter((u) => { return !cenOf[nkey(u)]; });
 
-  var budSeen = {}, budNeed = [], budMiss = 0;
-  var accSeen = {}, accNeed = [], accMiss = 0;
-  units.forEach(function (u) {
-    var cen = cenOf[nkey(u)] || '';
-    fcs.forEach(function (fcCode) {
-      var cc = ccOf[nkey(fcCode)] || '';
+  const budSeen = {}, budNeed = []; let budMiss = 0;
+  const accSeen = {}, accNeed = []; let accMiss = 0;
+  units.forEach((u) => {
+    const cen = cenOf[nkey(u)] || '';
+    fcs.forEach((fcCode) => {
+      const cc = ccOf[nkey(fcCode)] || '';
       if (!cc || !cen) return;
-      var bk = nkey(cen) + '|' + nkey(cc) + '|' + nkey(u);
+      const bk = nkey(cen) + '|' + nkey(cc) + '|' + nkey(u);
       if (!budSeen[bk]) {
         budSeen[bk] = 1;
-        var bud = budOf[bk] || '';
+        const bud = budOf[bk] || '';
         budNeed.push({ costCenter: cen, costCode: cc, unit: u, budgetCode: '', name: '' });
         if (!bud) budMiss++;
       }
-      var bud2 = budOf[bk] || '';
+      const bud2 = budOf[bk] || '';
       if (!bud2) return;
-      var ak = nkey(cc) + '|' + nkey(cen) + '|' + nkey(bud2);
+      const ak = nkey(cc) + '|' + nkey(cen) + '|' + nkey(bud2);
       if (!accSeen[ak]) {
         accSeen[ak] = 1;
         accNeed.push({ costCode: cc, costCenter: cen, budgetCode: bud2, accountCode: '', name: '' });
@@ -49,29 +49,29 @@ function neededCombos() {
     });
   });
   return {
-    units: units, fcs: fcs, missFc: missFc, missUnit: missUnit,
-    budNeed: budNeed, budMiss: budMiss, budTotal: budNeed.length,
-    accNeed: accNeed, accMiss: accMiss, accTotal: accNeed.length,
-    unitCol: unitCol
+    units, fcs, missFc, missUnit,
+    budNeed, budMiss, budTotal: budNeed.length,
+    accNeed, accMiss, accTotal: accNeed.length,
+    unitCol
   };
 }
 
 function viewMaps() {
-  var wrap = el('div');
-  var mp = S.maps;
+  const wrap = el('div');
+  const mp = S.maps;
 
-  var badges = { cc: el('span', { class: 'tag' }), cen: el('span', { class: 'tag' }), bud: el('span', { class: 'tag' }), acc: el('span', { class: 'tag' }) };
-  var nc = neededCombos();
+  const badges = { cc: el('span', { class: 'tag' }), cen: el('span', { class: 'tag' }), bud: el('span', { class: 'tag' }), acc: el('span', { class: 'tag' }) };
+  let nc = neededCombos();
 
   function setBadge(node, miss, total, unitWord) {
     if (!total) { node.className = 'tag'; node.textContent = t('maps.badge_none', { w: unitWord }); return; }
     node.className = 'tag ' + (miss ? 'o' : 'g');
     node.textContent = miss ? t('maps.badge_missing', { miss: fmt(miss), total: fmt(total), w: unitWord }) : t('maps.badge_ok', { total: fmt(total), w: unitWord });
   }
-  var refT = null;
+  let refT = null;
   function refresh(now) {
     clearTimeout(refT);
-    var go = function () {
+    const go = function () {
       nc = neededCombos();
       setBadge(badges.cc, nc.missFc.length, nc.fcs.length, 'Formula Code');
       setBadge(badges.cen, nc.missUnit.length, nc.units.length, t('maps.word_unit'));
@@ -89,7 +89,7 @@ function viewMaps() {
       el('h3', { text: t('fm.bon_tang_phan_loai') }), el('div', { class: 'sp' }),
       el('button', {
         class: 'btn sm del', text: t('fm.xoa_sach_ca_bon_bang'), onclick: function () {
-          confirmBox(t('fm.xoa_sach_du_lieu_cua_ca_bon_bang'), function () {
+          confirmBox(t('fm.xoa_sach_du_lieu_cua_ca_bon_bang'), () => {
             mp.costCode.length = 0; mp.costCenter.length = 0; mp.budgetCode.length = 0; mp.accountCode.length = 0;
             setRESULT(null); touch(); render(); toast(t('fm.da_xoa_sach'));
           });
@@ -105,7 +105,7 @@ function viewMaps() {
   /* 1. Formula Code → Cost Code */
   wrap.appendChild(foldPanel('map_cc', '1 · Cost Code ← Formula Code', [badges.cc], [], dataTable({
     columns: [
-      { k: 'formulaCode', label: 'Formula Code', key: true, type: 'select', options: function () { return S.formulas.map(function (f) { return f.code; }); }, required: true, w: 190 },
+      { k: 'formulaCode', label: 'Formula Code', key: true, type: 'select', options: function () { return S.formulas.map((f) => { return f.code; }); }, required: true, w: 190 },
       { k: 'costCode', label: 'Cost Code', type: 'text', required: true, w: 160 },
       /* CHUỖI GIAO THỨC: label là header file mẫu .xlsx và khoá khớp khi nhập lại */
       { k: 'name', label: 'Tên Cost Code', type: 'text' }
@@ -114,7 +114,7 @@ function viewMaps() {
     blank: function () { return { formulaCode: '', costCode: '', name: '' }; },
     onChange: chg, onImported: chgNow,
     tableName: 'tblMapCostCode', sheetName: 'CostCode', title: 'Cost Code theo Formula Code',
-    prefill: function () { return S.formulas.map(function (f) { return { formulaCode: f.code, costCode: '', name: f.name || '' }; }); },
+    prefill: function () { return S.formulas.map((f) => { return { formulaCode: f.code, costCode: '', name: f.name || '' }; }); },
     guide: [t('maps.cc_guide')]
   }), t('maps.cc_note')));
 
@@ -130,14 +130,14 @@ function viewMaps() {
     blank: function () { return { unit: '', costCenter: '', name: '' }; },
     onChange: chg, onImported: chgNow,
     tableName: 'tblMapCostCenter', sheetName: 'CostCenter', title: t('fm.cost_center_theo_don_vi'),
-    prefill: function () { return neededCombos().units.map(function (u) { return { unit: u, costCenter: '', name: '' }; }); },
+    prefill: function () { return neededCombos().units.map((u) => { return { unit: u, costCenter: '', name: '' }; }); },
     guide: [t('maps.cen_guide')]
   }), nc.unitCol ? '' : t('maps.cen_no_unitcol')));
 
-  function ccList() { var s2 = {}; mp.costCode.forEach(function (x) { if (x.costCode) s2[x.costCode] = 1; }); return Object.keys(s2).sort(); }
-  function cenList() { var s2 = {}; mp.costCenter.forEach(function (x) { if (x.costCenter) s2[x.costCenter] = 1; }); return Object.keys(s2).sort(); }
+  function ccList() { const s2 = {}; mp.costCode.forEach((x) => { if (x.costCode) s2[x.costCode] = 1; }); return Object.keys(s2).sort(); }
+  function cenList() { const s2 = {}; mp.costCenter.forEach((x) => { if (x.costCenter) s2[x.costCenter] = 1; }); return Object.keys(s2).sort(); }
   function unitList() { return neededCombos().units; }
-  function budList() { var s2 = {}; mp.budgetCode.forEach(function (x) { if (x.budgetCode) s2[x.budgetCode] = 1; }); return Object.keys(s2).sort(); }
+  function budList() { const s2 = {}; mp.budgetCode.forEach((x) => { if (x.budgetCode) s2[x.budgetCode] = 1; }); return Object.keys(s2).sort(); }
 
   /* 3. (Cost Center, Cost Code, Unit) → Budget Code */
   wrap.appendChild(foldPanel('map_bud', t('maps.panel_bud'), [badges.bud], [], dataTable({

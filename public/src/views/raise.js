@@ -9,24 +9,24 @@ import { el } from '../ui/dom.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 
 function viewRaise() {
-  var wrap = el('div');
-  var box = el('div');
+  const wrap = el('div');
+  const box = el('div');
   function draw() {
     box.innerHTML = '';
-    S.raises.forEach(function (r, i) {
-      var condBox = fxField(r.cond, function (v) { r.cond = v; setRESULT(null); touch(); }, t('raise.cond_placeholder'), draw);
-      var mc = ENGINE.countMatch(r.cond);
-      var picker = el('div');
+    S.raises.forEach((r, i) => {
+      const condBox = fxField(r.cond, (v) => { r.cond = v; setRESULT(null); touch(); }, t('raise.cond_placeholder'), draw);
+      const mc = ENGINE.countMatch(r.cond);
+      const picker = el('div');
       function pickGroup(title, items, code, note) {
         if (!items.length) return;
-        var line = el('div', { class: 'chips' });
-        items.forEach(function (f) {
-          var c = code(f);
-          var on = (r.formulas || []).indexOf(c) >= 0;
+        const line = el('div', { class: 'chips' });
+        items.forEach((f) => {
+          const c = code(f);
+          const on = (r.formulas || []).indexOf(c) >= 0;
           line.appendChild(el('span', {
             class: 'chip', style: on ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '',
             text: c, title: f.name || '', onclick: function () {
-              r.formulas = on ? r.formulas.filter(function (x) { return x !== c; }) : (r.formulas || []).concat([c]);
+              r.formulas = on ? r.formulas.filter((x) => { return x !== c; }) : (r.formulas || []).concat([c]);
               setRESULT(null); touch(); draw();
             }
           }));
@@ -35,10 +35,10 @@ function viewRaise() {
         picker.appendChild(line);
         if (note) picker.appendChild(el('div', { class: 'fxok', text: note }));
       }
-      pickGroup(t('fm.raise.cost_group'), S.formulas, function (f) { return f.code; }, null);
+      pickGroup(t('fm.raise.cost_group'), S.formulas, (f) => { return f.code; }, null);
       pickGroup(t('fm.raise.shared_group'),
-        (S.shared || []).filter(function (x) { return x && x.code; }),
-        function (f) { return f.code; }, t('fm.raise.shared_note'));
+        (S.shared || []).filter((x) => { return x && x.code; }),
+        (f) => { return f.code; }, t('fm.raise.shared_note'));
       if (!(r.formulas || []).length) picker.appendChild(el('div', { class: 'fxok', text: t('fm.chua_chon_ap_cho_tat_ca_cong_thuc') }));
 
       box.appendChild(el('div', { class: 'rule' }, [
@@ -52,7 +52,7 @@ function viewRaise() {
         el('div', { class: 'b', style: 'grid-template-columns:150px 130px 1fr' }, [
           el('div', {}, [el('label', { class: 'f', text: t('fm.ap_dung_tu_thang') }),
           el('select', { onchange: function (e) { r.fromMonth = +e.target.value; setRESULT(null); touch(); } },
-            MONTHS.map(function (m, j) { return el('option', { value: j + 1, selected: (+r.fromMonth || 1) === j + 1, text: m }); }))]),
+            MONTHS.map((m, j) => { return el('option', { value: j + 1, selected: (+r.fromMonth || 1) === j + 1, text: m }); }))]),
           el('div', {}, [el('label', { class: 'f', text: t('fm.muc_tang') }),
           el('input', { type: 'number', step: '0.1', class: 'fx', style: 'text-align:right', value: r.pct, oninput: function (e) { r.pct = parseFloat(e.target.value) || 0; setRESULT(null); touch(); } })]),
           el('div', {}, [el('label', { class: 'f', text: t('fm.ap_cho_cong_thuc_nao') }), picker])

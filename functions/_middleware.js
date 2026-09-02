@@ -15,6 +15,9 @@ function base64UrlToBytes(b64url) {
   return bytes;
 }
 
+/* Giữ nguyên văn theo mã mẫu của brief dù middleware không dùng tới: chỉ
+   /api/login mới ký token. Xoá đi là lệch khỏi mẫu, nên để lại và tắt cảnh báo. */
+// eslint-disable-next-line no-unused-vars
 function bytesToBase64Url(bytes) {
   let bin = "";
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);

@@ -17,35 +17,35 @@ import { el, toast } from './dom.js';
 import { fxAssist, fxLibrary } from './fx-help.js';
 
 /* Ô công thức đang được chọn — hộp gợi ý chèn vào đúng ô này. */
-var activeFx = null;
+let activeFx = null;
 
 /* 'fx.args.IF' -> ['điều_kiện', 'giá_trị_nếu_đúng', 'giá_trị_nếu_sai'] */
 
 
 /* Ô nhập công thức có kiểm tra cú pháp tại chỗ */
 function fxField(value, onChange, placeholder, onBlur) {
-  var box = el('div', { class: 'fx-wrap' });
-  var ta = el('textarea', { class: 'fx', rows: 2, placeholder: placeholder || '' });
+  const box = el('div', { class: 'fx-wrap' });
+  const ta = el('textarea', { class: 'fx', rows: 2, placeholder: placeholder || '' });
   ta.value = value || '';
-  var msg = el('div', { class: 'fxok' });
+  const msg = el('div', { class: 'fxok' });
   function check() {
-    var v = ta.value.trim();
+    const v = ta.value.trim();
     if (!v) { msg.className = 'fxok'; msg.textContent = ''; return; }
-    var r = FX.tryCompile(v);
+    const r = FX.tryCompile(v);
     if (r.ok) {
       msg.className = 'fxok';
-      var f = r.fn.info.fields, n = r.fn.info.names;
+      const f = r.fn.info.fields, n = r.fn.info.names;
       msg.textContent = t('fx.valid') + (f.length ? ' ' + t('fx.valid.cols', { cols: f.join(', ') }) : '') + (n.length ? ' ' + t('fx.valid.vars', { vars: n.join(', ') }) : '');
     } else { msg.className = 'fxerr'; msg.textContent = '✕ ' + r.error; }
   }
-  ta.addEventListener('focus', function () { activeFx = box; if (box._onFocus) box._onFocus(); });
-  ta.addEventListener('input', function () { onChange(ta.value); check(); });
+  ta.addEventListener('focus', () => { activeFx = box; if (box._onFocus) box._onFocus(); });
+  ta.addEventListener('input', () => { onChange(ta.value); check(); });
   if (onBlur) ta.addEventListener('blur', onBlur);
   check();
-  var assist = fxAssist(ta, onChange, check);
+  const assist = fxAssist(ta, onChange, check);
   box.appendChild(ta); box.appendChild(assist); box.appendChild(msg);
   box._insert = function (txt) {
-    var s = ta.selectionStart, e = ta.selectionEnd;
+    const s = ta.selectionStart, e = ta.selectionEnd;
     ta.value = ta.value.slice(0, s) + txt + ta.value.slice(e);
     ta.focus(); ta.selectionStart = ta.selectionEnd = s + txt.length;
     onChange(ta.value); check();
@@ -58,21 +58,21 @@ function fxField(value, onChange, placeholder, onBlur) {
    bên trong khi danh sách dài. Chèn vào ô công thức được bấm gần nhất; chưa bấm
    ô nào thì chèn vào `fallback`. */
 function chipsPanel(fallback) {
-  var box = el('div', { class: 'chipbox' });
-  var where = el('span', { class: 'target' });
-  var chips = el('div', { class: 'chips' });
+  const box = el('div', { class: 'chipbox' });
+  const where = el('span', { class: 'target' });
+  const chips = el('div', { class: 'chips' });
 
   function pick() { return activeFx || fallback; }
   function refreshTarget() {
-    var tgt = pick();
+    const tgt = pick();
     where.textContent = tgt ? (tgt._label ? t('fx.chips.target', { name: tgt._label }) : t('fx.chips.target.any'))
                             : t('fx.chips.target.none');
   }
   function add(text, title, ins) {
     chips.appendChild(el('span', {
-      class: 'chip', text: text, title: title || '',
+      class: 'chip', text, title: title || '',
       onclick: function () {
-        var tgt = pick();
+        const tgt = pick();
         if (!tgt) { toast(t('fx.chips.no_target'), 'bad'); return; }
         tgt._insert(ins); refreshTarget();
       }
@@ -86,14 +86,14 @@ function chipsPanel(fallback) {
     text: t('fx.library.chip'), title: t('fx.library.chip.title'),
     onclick: function () { fxLibrary(pick()); }
   }));
-  (S.shared || []).forEach(function (sh) {
+  (S.shared || []).forEach((sh) => {
     if (!sh.code) return;
     add(sh.code, sh.name || t('fx.chips.shared'), sh.code);
   });
-  ENGINE.usableCols().forEach(function (col) { add('[' + col + ']', '', '[' + col + ']'); });
-  (S.params || []).forEach(function (p) { if (p.name) add(p.name, t('fx.cat.params'), p.name); });
-  ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map(function (f) { return f.varName; }))
-    .forEach(function (v) { add(v, t('fx.sysvar'), v); });
+  ENGINE.usableCols().forEach((col) => { add('[' + col + ']', '', '[' + col + ']'); });
+  (S.params || []).forEach((p) => { if (p.name) add(p.name, t('fx.cat.params'), p.name); });
+  ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map((f) => { return f.varName; }))
+    .forEach((v) => { add(v, t('fx.sysvar'), v); });
 
   box.appendChild(chips);
   refreshTarget();
@@ -102,20 +102,20 @@ function chipsPanel(fallback) {
 }
 
 function colChips(target) {
-  var c = el('div', { class: 'chips' });
+  const c = el('div', { class: 'chips' });
   c.appendChild(el('span', {
     class: 'chip', style: 'background:var(--ink);color:#fff;border-color:var(--ink)',
     text: t('fx.library.chip'), title: t('fx.library.chip.title'),
     onclick: function () { fxLibrary(target); }
   }));
-  ENGINE.usableCols().forEach(function (col) {
+  ENGINE.usableCols().forEach((col) => {
     c.appendChild(el('span', { class: 'chip', text: '[' + col + ']', onclick: function () { target._insert('[' + col + ']'); } }));
   });
-  (S.params || []).forEach(function (p) {
+  (S.params || []).forEach((p) => {
     if (p.name) c.appendChild(el('span', { class: 'chip', text: p.name, onclick: function () { target._insert(p.name); } }));
   });
-  ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map(function (f) { return f.varName; }))
-    .forEach(function (v) {
+  ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map((f) => { return f.varName; }))
+    .forEach((v) => {
       c.appendChild(el('span', { class: 'chip', title: t('fx.sysvar'), text: v, onclick: function () { target._insert(v); } }));
     });
   return c;

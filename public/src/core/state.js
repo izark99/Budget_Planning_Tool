@@ -8,17 +8,17 @@
 import { t } from './content.js';
 
 /* Báo cho tầng UI (app.js gắn toast vào đây) — tránh state.js phải import ui.js */
-var notify = function () { };
+let notify = function () { };
 function setNotifier(fn) { notify = fn; }
 
 /* ---------- Hằng số ---------- */
-var LS_KEY = 'dhg_budget_state_v2';
-var M = 12;
-var MONTHS = ['T01', 'T02', 'T03', 'T04', 'T05', 'T06', 'T07', 'T08', 'T09', 'T10', 'T11', 'T12'];
+const LS_KEY = 'dhg_budget_state_v2';
+const M = 12;
+const MONTHS = ['T01', 'T02', 'T03', 'T04', 'T05', 'T06', 'T07', 'T08', 'T09', 'T10', 'T11', 'T12'];
 
 /* `v` là định danh được ghi vào S.cols[].role — KHÔNG đổi.
    `t` là khoá tra trong content.md, phân giải lúc render (t(r.t)). */
-var ROLES = [
+const ROLES = [
   { v: 'attr', t: 'role.attr' },
   { v: 'key', t: 'role.key' },
   { v: 'position', t: 'role.position' },
@@ -32,7 +32,7 @@ var ROLES = [
    khớp cột khi nhập lại file đó (calImport). Đổi text = file mẫu đã tải
    về trước đây không nhập lại được nữa. `varName` là tên biến dùng trong
    công thức của người dùng — càng không được đổi. */
-var CAL_FIELDS = [
+const CAL_FIELDS = [
   { k: 'std', label: 'Ngày công chuẩn', varName: 'NGAY_CONG_CHUAN', def: 26 },
   { k: 'act', label: 'Ngày công làm việc thực tế', varName: 'NGAY_CONG_THUC_TE', def: 22 },
   { k: 'hol', label: 'Ngày nghỉ lễ', varName: 'NGAY_NGHI_LE', def: 1 },
@@ -46,8 +46,8 @@ function allMonths() { return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; }
 function blankCalTable(scope) {
   return {
     id: uid(), scope: scope || '*',
-    m: MONTHS.map(function () {
-      var o = {}; CAL_FIELDS.forEach(function (f) { o[f.k] = f.def; }); return o;
+    m: MONTHS.map(() => {
+      const o = {}; CAL_FIELDS.forEach((f) => { o[f.k] = f.def; }); return o;
     })
   };
 }
@@ -101,9 +101,9 @@ function defaultState() {
   };
 }
 
-var S = defaultState();
-var RESULT = null;
-var dirty = false;
+let S = defaultState();
+let RESULT = null;
+let dirty = false;
 
 /* ESM: binding đã import là bất biến ở phía import, nên mọi chỗ gán lại
    S/RESULT ở module khác phải đi qua hai hàm này. Chỗ ĐỌC vẫn viết
@@ -111,11 +111,11 @@ var dirty = false;
 function setS(next) { S = next; }
 function setRESULT(next) { RESULT = next; }
 
-function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); dirty = false; return true; } catch (e) { return false; } }
+function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); dirty = false; return true; } catch { return false; } }
 function load() {
   try {
-    var raw = localStorage.getItem(LS_KEY); if (!raw) return false;
-    var o = JSON.parse(raw); if (!o || o.v !== 2) return false;
+    const raw = localStorage.getItem(LS_KEY); if (!raw) return false;
+    const o = JSON.parse(raw); if (!o || o.v !== 2) return false;
     S = Object.assign(defaultState(), o);
     S.ui = S.ui || { view: 'hc' };
     S.ui.collapsed = S.ui.collapsed || {};
@@ -123,38 +123,38 @@ function load() {
     S.shared = S.shared || [];
     S.accruals = S.accruals || [];
     return true;
-  } catch (e) { return false; }
+  } catch { return false; }
 }
-var saveT = null, quotaWarned = false;
+let saveT = null, quotaWarned = false;
 function touch() {
   dirty = true; clearTimeout(saveT);
-  saveT = setTimeout(function () {
+  saveT = setTimeout(() => {
     if (!save() && !quotaWarned) { quotaWarned = true; notify(t('toast.autosave.fail'), 'bad'); }
   }, 700);
 }
 
 /* Trước đây đăng ký ngay ở cấp cao nhất của script; giờ app.js gọi tường minh. */
 function installAutosave() {
-  window.addEventListener('beforeunload', function () { if (dirty) save(); });
+  window.addEventListener('beforeunload', () => { if (dirty) save(); });
 }
 
 /* ---------- Số ---------- */
-var NF = new Intl.NumberFormat('vi-VN');
+const NF = new Intl.NumberFormat('vi-VN');
 function fmt(n) { if (n == null || n === '' || isNaN(n)) return ''; return NF.format(Math.round(n)); }
 function fmtShort(n) {
-  n = Math.round(n || 0); var a = Math.abs(n);
+  n = Math.round(n || 0); const a = Math.abs(n);
   if (a >= 1e9) return (n / 1e9).toFixed(a >= 1e10 ? 1 : 2).replace('.', ',') + ' ' + t('num.suffix.billion');
   if (a >= 1e6) return (n / 1e6).toFixed(a >= 1e8 ? 0 : 1).replace('.', ',') + ' ' + t('num.suffix.million');
   return NF.format(n);
 }
 function nkey(v) { return String(v == null ? '' : v).trim().toUpperCase(); }
-function numOf(v) { var n = parseFloat(String(v).replace(/[,\s]/g, '')); return isNaN(n) ? 0 : n; }
+function numOf(v) { const n = parseFloat(String(v).replace(/[,\s]/g, '')); return isNaN(n) ? 0 : n; }
 
 /* Hiển thị số có phân cách nghìn nhưng không cắt phần thập phân */
-var NF_NUM = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 6 });
+const NF_NUM = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 6 });
 function fmtNum(v) {
   if (v === '' || v === null || v === undefined) return '';
-  var n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[,\s]/g, ''));
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/[,\s]/g, ''));
   return isNaN(n) ? String(v) : NF_NUM.format(n);
 }
 

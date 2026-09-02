@@ -9,18 +9,18 @@ import { el, render, ribbon, toast } from '../ui/dom.js';
 import { downloadTemplate, importMapped } from '../ui/widgets.js';
 
 function viewExc() {
-  var wrap = el('div');
-  var codes = S.formulas.map(function (f) { return f.code; });
+  const wrap = el('div');
+  const codes = S.formulas.map((f) => { return f.code; });
 
-  var tb = el('tbody');
+  const tb = el('tbody');
   function draw() {
     tb.innerHTML = '';
-    S.exceptions.forEach(function (e, i) {
-      var mCell = el('td');
+    S.exceptions.forEach((e, i) => {
+      const mCell = el('td');
       mCell.appendChild(ribbon(e.months && e.months.length ? e.months : allMonths(), {
         pick: function (m, on) {
           if (!e.months || !e.months.length) e.months = allMonths();
-          e.months = on ? e.months.concat([m]).sort(function (a, b) { return a - b; }) : e.months.filter(function (x) { return x !== m; });
+          e.months = on ? e.months.concat([m]).sort((a, b) => { return a - b; }) : e.months.filter((x) => { return x !== m; });
           setRESULT(null); touch(); draw();
         }
       }));
@@ -31,7 +31,7 @@ function viewExc() {
         el('td', { style: 'width:95px' }, [el('input', { type: 'text', class: 'fx', value: e.id == null ? '' : e.id, oninput: function (ev) { e.id = ev.target.value; setRESULT(null); touch(); } })]),
         el('td', { style: 'width:120px' }, [el('input', { type: 'text', value: e.position || '', oninput: function (ev) { e.position = ev.target.value; setRESULT(null); touch(); } })]),
         el('td', { style: 'width:160px' }, [el('select', { onchange: function (ev) { e.formulaCode = ev.target.value; setRESULT(null); touch(); } },
-          [el('option', { value: '', text: '—' })].concat(codes.map(function (c) { return el('option', { value: c, selected: c === e.formulaCode, text: c }); })))]),
+          [el('option', { value: '', text: '—' })].concat(codes.map((c) => { return el('option', { value: c, selected: c === e.formulaCode, text: c }); })))]),
         el('td', { style: 'width:115px' }, [el('input', { type: 'text', class: 'fx', style: 'text-align:right', value: e.amount, oninput: function (ev) { e.amount = numOf(ev.target.value); setRESULT(null); touch(); } })]),
         mCell,
         el('td', { style: 'width:115px' }, [el('select', { onchange: function (ev) { e.rule = ev.target.value; setRESULT(null); touch(); } }, [
@@ -59,7 +59,7 @@ function viewExc() {
       html: t('exc.help')
     })]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
-      el('table', {}, [el('thead', {}, [el('tr', {}, ['', t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('exc.th_amount'), t('exc.th_months'), t('exc.th_rule'), t('export.audit.note'), ''].map(function (h) { return el('th', { text: h }); }))]), tb])
+      el('table', {}, [el('thead', {}, [el('tr', {}, ['', t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('exc.th_amount'), t('exc.th_months'), t('exc.th_rule'), t('export.audit.note'), ''].map((h) => { return el('th', { text: h }); }))]), tb])
     ])])
   ]));
   return wrap;
@@ -88,16 +88,16 @@ function excImport(file) {
     { k: 'no', label: 'So To Trinh' }, { k: 'id', label: 'ID' }, { k: 'position', label: 'Chuc Danh' },
     { k: 'formulaCode', label: 'Formula Code', required: true }, { k: 'amount', label: 'So Tien', required: true },
     { k: 'from', label: 'Tu Thang' }, { k: 'to', label: 'Den Thang' }, { k: 'rule', label: 'Quy Tac' }, { k: 'note', label: 'Ghi Chu' }
-  ], function (out) {
-    out.forEach(function (o) {
-      var a = parseInt(o.from, 10), b = parseInt(o.to, 10), months = [];
-      if (!isNaN(a)) { var s = Math.max(1, a), e2 = isNaN(b) ? s : Math.min(12, b); for (var m = s; m <= e2; m++) months.push(m); }
-      var rule = String(o.rule || 'MAX').toUpperCase().trim();
+  ], (out) => {
+    out.forEach((o) => {
+      const a = parseInt(o.from, 10), b = parseInt(o.to, 10), months = [];
+      if (!isNaN(a)) { const s = Math.max(1, a), e2 = isNaN(b) ? s : Math.min(12, b); for (let m = s; m <= e2; m++) months.push(m); }
+      let rule = String(o.rule || 'MAX').toUpperCase().trim();
       if (['MAX', 'OVERRIDE', 'ADD'].indexOf(rule) < 0) rule = 'MAX';
       S.exceptions.push({
         id2: uid(), no: String(o.no || ''), id: o.id, position: o.position,
         formulaCode: String(o.formulaCode || '').trim(), amount: numOf(o.amount),
-        months: months, rule: rule, note: String(o.note || ''), active: true
+        months, rule, note: String(o.note || ''), active: true
       });
     });
     setRESULT(null); touch(); render();

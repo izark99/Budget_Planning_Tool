@@ -9,9 +9,11 @@ import { dedupeHeaders, pickFile, readWorkbook, sheetAoa } from '../platform/io.
 import { el, modal, render, ribbon, toast } from '../ui/dom.js';
 import { downloadTemplate, panel, readTable } from '../ui/widgets.js';
 
-function guessRole(name, values) {
-  var s = String(name).toLowerCase().trim();
-  var m = /^(t|th|tháng|thang|m|month)?\s*0?([1-9]|1[0-2])$/.exec(s);
+/* `values` không dùng tới ở đây — vai trò đoán từ TÊN cột; kiểu dữ liệu thì
+   guessType() lo. Vẫn nhận tham số để hai hàm đoán có cùng chữ ký. */
+function guessRole(name, _values) {
+  const s = String(name).toLowerCase().trim();
+  const m = /^(t|th|tháng|thang|m|month)?\s*0?([1-9]|1[0-2])$/.exec(s);
   if (m) return { role: 'month', month: +m[2] };
   /* CHUỖI GIAO THỨC — đừng đưa sang content.md.
      Ba danh sách dưới đây so khớp với TÊN CỘT có thật trong file Excel định biên
@@ -22,8 +24,8 @@ function guessRole(name, values) {
   return { role: 'attr' };
 }
 function guessType(values) {
-  var n = 0, t = 0;
-  values.slice(0, 60).forEach(function (v) {
+  let n = 0, t = 0;
+  values.slice(0, 60).forEach((v) => {
     if (v === '' || v == null) return;
     t++; if (typeof v === 'number' || /^-?[\d.,]+$/.test(String(v).trim())) n++;
   });
@@ -31,20 +33,20 @@ function guessType(values) {
 }
 
 function importHeadcount(file) {
-  readWorkbook(file, function (err, wb) {
+  readWorkbook(file, (err, wb) => {
     if (err) { toast(t('hc.err_read', { e: err.message }), 'bad'); return; }
-    var st = { sheet: wb.SheetNames[0], hr: 1 };
-    var box = el('div');
+    const st = { sheet: wb.SheetNames[0], hr: 1 };
+    const box = el('div');
     function build() {
-      var aoa = sheetAoa(wb, st.sheet);
-      var hr = Math.max(1, Math.min(st.hr, aoa.length || 1));
-      var headers = dedupeHeaders(aoa[hr - 1] || []);
-      var nMonth = headers.filter(function (h) { return guessRole(h).role === 'month'; }).length;
+      const aoa = sheetAoa(wb, st.sheet);
+      const hr = Math.max(1, Math.min(st.hr, aoa.length || 1));
+      const headers = dedupeHeaders(aoa[hr - 1] || []);
+      const nMonth = headers.filter((h) => { return guessRole(h).role === 'month'; }).length;
       box.innerHTML = '';
       box.appendChild(el('div', { class: 'row', style: 'margin-bottom:10px' }, [
         el('div', { style: 'flex:1' }, [el('label', { class: 'f', text: 'Sheet' }),
         el('select', { onchange: function (e) { st.sheet = e.target.value; build(); } },
-          wb.SheetNames.map(function (s) { return el('option', { value: s, selected: s === st.sheet, text: s }); }))]),
+          wb.SheetNames.map((s) => { return el('option', { value: s, selected: s === st.sheet, text: s }); }))]),
         el('div', { style: 'width:140px' }, [el('label', { class: 'f', text: t('hc.dong_tieu_de') }),
         el('input', { type: 'number', min: 1, value: hr, onchange: function (e) { st.hr = +e.target.value || 1; build(); } })])
       ]));
@@ -53,11 +55,11 @@ function importHeadcount(file) {
           ? t('hc.months_ok')
           : t('hc.months_partial', { n: nMonth })
       }));
-      box.appendChild(readTable(headers.slice(0, 22), aoa.slice(hr, hr + 4).map(function (r) {
-        return headers.slice(0, 22).map(function (h, i) { return r[i]; });
+      box.appendChild(readTable(headers.slice(0, 22), aoa.slice(hr, hr + 4).map((r) => {
+        return headers.slice(0, 22).map((h, i) => { return r[i]; });
       }), { maxH: '230px' }));
       box.appendChild(el('p', { class: 'hint', style: 'margin-top:8px', text: t('hc.rows_cols', { rows: Math.max(0, aoa.length - hr), cols: headers.length }) }));
-      box._data = function () { return { aoa: aoa, hr: hr, headers: headers }; };
+      box._data = function () { return { aoa, hr, headers }; };
     }
     build();
 
@@ -65,22 +67,22 @@ function importHeadcount(file) {
       { label: t('btn.cancel') },
       {
         label: t('btn.import'), cls: 'pri', onclick: function () {
-          var d = box._data();
-          var rows = [];
-          for (var i = d.hr; i < d.aoa.length; i++) {
-            var raw = d.aoa[i];
-            if (!raw || raw.every(function (x) { return x === '' || x == null; })) continue;
-            var o = {};
-            d.headers.forEach(function (h, j) { o[h] = raw[j]; });
+          const d = box._data();
+          const rows = [];
+          for (let i = d.hr; i < d.aoa.length; i++) {
+            const raw = d.aoa[i];
+            if (!raw || raw.every((x) => { return x === '' || x == null; })) continue;
+            const o = {};
+            d.headers.forEach((h, j) => { o[h] = raw[j]; });
             rows.push(o);
           }
-          var prev = {};
-          (S.cols || []).forEach(function (c) { prev[c.src] = c; });
-          S.hc = { headers: d.headers, rows: rows, file: file.name, at: new Date().toLocaleString('vi-VN') };
-          S.cols = d.headers.map(function (h) {
+          const prev = {};
+          (S.cols || []).forEach((c) => { prev[c.src] = c; });
+          S.hc = { headers: d.headers, rows, file: file.name, at: new Date().toLocaleString('vi-VN') };
+          S.cols = d.headers.map((h) => {
             if (prev[h]) return prev[h];
-            var vals = rows.slice(0, 60).map(function (r) { return r[h]; });
-            var g = guessRole(h, vals);
+            const vals = rows.slice(0, 60).map((r) => { return r[h]; });
+            const g = guessRole(h, vals);
             return { src: h, alias: h, role: g.role, month: g.month || null, type: g.role === 'month' ? 'num' : guessType(vals) };
           });
           ENGINE.invalidate(); setRESULT(null); touch(); render();
@@ -111,7 +113,7 @@ function hcTemplate() {
 }
 
 function viewHC() {
-  var wrap = el('div');
+  const wrap = el('div');
   if (!S.hc.rows.length) {
     wrap.appendChild(panel(t('hc.nhap_bang_dinh_bien'), [
       el('button', { class: 'btn sm', text: t('table.downloadTemplate'), onclick: hcTemplate })
@@ -127,10 +129,10 @@ function viewHC() {
     return wrap;
   }
 
-  var rows = ENGINE.previewRows();
-  var per = new Array(M).fill(0);
-  rows.forEach(function (r) { for (var m = 0; m < M; m++) per[m] += (r.__m[m] || 0); });
-  var sum = per.reduce(function (a, b) { return a + b; }, 0);
+  const rows = ENGINE.previewRows();
+  const per = new Array(M).fill(0);
+  rows.forEach((r) => { for (let m = 0; m < M; m++) per[m] += (r.__m[m] || 0); });
+  const sum = per.reduce((a, b) => { return a + b; }, 0);
 
   wrap.appendChild(el('div', { class: 'stats' }, [
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('hc.dong_dinh_bien') }), el('div', { class: 'v', text: fmt(rows.length) })]),
@@ -140,17 +142,17 @@ function viewHC() {
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('hc.nguon') }), el('div', { class: 'v', style: 'font-size:13px;line-height:1.3', text: S.hc.file || '—' }), el('div', { class: 'u', text: S.hc.at })])
   ]));
 
-  var cols = ENGINE.attrCols();
-  var q = { t: '', lim: 100 };
-  var tb = el('tbody');
+  const cols = ENGINE.attrCols();
+  const q = { t: '', lim: 100 };
+  const tb = el('tbody');
   function fill() {
     tb.innerHTML = '';
-    var kw = q.t.trim().toLowerCase(), n = 0;
-    for (var i = 0; i < rows.length && n < q.lim; i++) {
-      var r = rows[i];
-      if (kw && !cols.some(function (c) { return String(r[c.alias]).toLowerCase().indexOf(kw) >= 0; })) continue;
+    const kw = q.t.trim().toLowerCase(); let n = 0;
+    for (let i = 0; i < rows.length && n < q.lim; i++) {
+      const r = rows[i];
+      if (kw && !cols.some((c) => { return String(r[c.alias]).toLowerCase().indexOf(kw) >= 0; })) continue;
       n++;
-      var tr = el('tr', {}, cols.map(function (c) { return el('td', { text: String(r[c.alias] == null ? '' : r[c.alias]) }); }));
+      const tr = el('tr', {}, cols.map((c) => { return el('td', { text: String(r[c.alias] == null ? '' : r[c.alias]) }); }));
       tr.appendChild(el('td', {}, [ribbon(r.__m, { factor: true })]));
       tb.appendChild(tr);
     }
@@ -167,7 +169,7 @@ function viewHC() {
       el('button', { class: 'btn sm', text: t('hc.nhap_lai'), onclick: function () { pickFile('.xlsx,.xls,.csv', importHeadcount); } })
     ]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
-      el('table', {}, [el('thead', {}, [el('tr', {}, cols.map(function (c) { return el('th', { text: c.alias }); })
+      el('table', {}, [el('thead', {}, [el('tr', {}, cols.map((c) => { return el('th', { text: c.alias }); })
         .concat([el('th', { text: t('hc.dinh_bien_t01_t12') })]))]), tb])
     ])])
   ]));

@@ -13,7 +13,7 @@ import { chipsPanel, fxField } from '../ui/formula-input.js';
 import { guessRole } from './headcount.js';
 
 function viewSetup() {
-  var wrap = el('div');
+  const wrap = el('div');
 
   wrap.appendChild(panel(t('export.audit.period'), [], el('div', { class: 'row' }, [
     el('div', { style: 'flex:1;min-width:220px' }, [el('label', { class: 'f', text: t('hc.ten_ky') }),
@@ -27,16 +27,15 @@ function viewSetup() {
       el('strong', { text: t('hc.chua_co_cot_nao') }), el('span', { text: t('hc.nhap_bang_dinh_bien_truoc') })
     ])));
   } else {
-    var rows = S.hc.rows;
-    var tb = el('tbody');
+    const rows = S.hc.rows;
+    const tb = el('tbody');
     function draw() {
       tb.innerHTML = '';
-      var monthUsed = {};
-      S.cols.forEach(function (c) { if (c.role === 'month' && c.month) monthUsed[c.month] = (monthUsed[c.month] || 0) + 1; });
-      S.cols.forEach(function (c, i) {
-        var vals = rows.slice(0, 40).map(function (r) { return r[c.src]; });
-        var dv = distinctVals(rows, c.src);
-        var dup = c.role === 'month' && c.month && monthUsed[c.month] > 1;
+      const monthUsed = {};
+      S.cols.forEach((c) => { if (c.role === 'month' && c.month) monthUsed[c.month] = (monthUsed[c.month] || 0) + 1; });
+      S.cols.forEach((c) => {
+        const dv = distinctVals(rows, c.src);
+        const dup = c.role === 'month' && c.month && monthUsed[c.month] > 1;
         tb.appendChild(el('tr', { style: c.role === 'skip' ? 'opacity:.5' : '' }, [
           el('td', { class: 'mono', style: 'width:150px', text: c.src }),
           el('td', { style: 'width:160px' }, [el('input', {
@@ -49,11 +48,11 @@ function viewSetup() {
               if (c.role === 'month' && !c.month) c.month = null;
               ENGINE.invalidate(); setRESULT(null); touch(); draw();
             }
-          }, ROLES.map(function (r) { return el('option', { value: r.v, selected: c.role === r.v, text: t(r.t) }); }))]),
+          }, ROLES.map((r) => { return el('option', { value: r.v, selected: c.role === r.v, text: t(r.t) }); }))]),
           el('td', { style: 'width:90px' }, [c.role === 'month' ? el('select', {
             style: dup ? 'border-color:var(--danger)' : '',
             onchange: function (e) { c.month = +e.target.value || null; ENGINE.invalidate(); setRESULT(null); touch(); draw(); }
-          }, [el('option', { value: '', text: '—' })].concat(MONTHS.map(function (mm, k) {
+          }, [el('option', { value: '', text: '—' })].concat(MONTHS.map((mm, k) => {
             return el('option', { value: k + 1, selected: c.month === k + 1, text: mm });
           }))) : el('span', { class: 'fxok', text: '' })]),
           el('td', { style: 'width:90px' }, [el('select', {
@@ -66,15 +65,15 @@ function viewSetup() {
     }
     draw();
 
-    var nMonth = S.cols.filter(function (c) { return c.role === 'month' && c.month; }).length;
+    const nMonth = S.cols.filter((c) => { return c.role === 'month' && c.month; }).length;
     wrap.appendChild(el('div', { class: 'panel' }, [
       el('header', {}, [
         el('h3', { text: t('hc.cot_cua_bang_dinh_bien') }),
         el('span', { class: 'tag' + (nMonth === 12 ? ' g' : ' o'), text: t('hc.month_cols_badge', { n: nMonth }) }),
         el('div', { class: 'sp' }),
         el('button', { class: 'btn sm', text: t('hc.doan_lai_vai_tro'), onclick: function () {
-          S.cols.forEach(function (c) {
-            var g = guessRole(c.src, rows.slice(0, 60).map(function (r) { return r[c.src]; }));
+          S.cols.forEach((c) => {
+            const g = guessRole(c.src, rows.slice(0, 60).map((r) => { return r[c.src]; }));
             c.role = g.role; c.month = g.month || null;
           });
           ENGINE.invalidate(); setRESULT(null); touch(); render();
@@ -86,16 +85,16 @@ function viewSetup() {
       })]),
       el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
         el('table', {}, [el('thead', {}, [el('tr', {}, [t('setup.th_file_col'), t('setup.th_formula_name'), t('setup.th_role'), t('export.audit.month'), t('setup.th_type'), t('setup.th_distinct'), t('setup.th_sample')]
-          .map(function (h, i) { return el('th', { class: i === 5 ? 'num' : '', text: h }); }))]), tb])
+          .map((h, i) => { return el('th', { class: i === 5 ? 'num' : '', text: h }); }))]), tb])
       ])])
     ]));
   }
 
   /* --- tham số --- */
-  var pb = el('tbody');
+  const pb = el('tbody');
   function fillP() {
     pb.innerHTML = '';
-    S.params.forEach(function (p, i) {
+    S.params.forEach((p, i) => {
       pb.appendChild(el('tr', {}, [
         el('td', {}, [el('input', {
           type: 'text', class: 'fx', value: p.name || '',
@@ -103,7 +102,7 @@ function viewSetup() {
         })]),
         el('td', { style: 'width:170px' }, [el('input', {
           type: 'text', class: 'fx', style: 'text-align:right', value: p.value,
-          oninput: function (e) { var n = parseFloat(e.target.value.replace(/[,\s]/g, '')); p.value = isNaN(n) ? e.target.value : n; setRESULT(null); touch(); }
+          oninput: function (e) { const n = parseFloat(e.target.value.replace(/[,\s]/g, '')); p.value = isNaN(n) ? e.target.value : n; setRESULT(null); touch(); }
         })]),
         el('td', {}, [el('input', { type: 'text', value: p.note || '', oninput: function (e) { p.note = e.target.value; touch(); } })]),
         el('td', { style: 'width:32px' }, [el('button', { class: 'btn sm del', text: '✕', onclick: function () { S.params.splice(i, 1); setRESULT(null); touch(); fillP(); } })])
@@ -117,17 +116,17 @@ function viewSetup() {
      Biểu thức đặt tên, tính lúc chạy theo từng dòng × tháng. Công thức chi phí
      gọi được bằng tên gọi (LUONG_CO_BAN) hoặc bằng diễn giải ([Lương cơ bản]).
      Khác tham số ở chỗ tham số là một con số cố định, còn cái này là biểu thức. */
-  var shBox = el('div');
+  const shBox = el('div');
   function drawShared() {
     shBox.innerHTML = '';
-    var seen = {};
-    (S.shared || []).forEach(function (sh, i) {
-      var code = nkey(sh.code);
-      var dup = code && seen[code];
+    const seen = {};
+    (S.shared || []).forEach((sh, i) => {
+      const code = nkey(sh.code);
+      const dup = code && seen[code];
       seen[code] = 1;
-      var fx = fxField(sh.formula, function (v) { sh.formula = v; setRESULT(null); touch(); }, '0', drawShared);
+      const fx = fxField(sh.formula, (v) => { sh.formula = v; setRESULT(null); touch(); }, '0', drawShared);
       fx._label = sh.code || t('setup.shared.untitled');
-      var chk = FX.tryCompile(String(sh.formula || '').trim() || '0');
+      const chk = FX.tryCompile(String(sh.formula || '').trim() || '0');
       shBox.appendChild(el('div', { class: 'rule' }, [
         el('div', { class: 'h' }, [
           el('span', { class: 'idx', text: String(i + 1).padStart(2, '0') }),

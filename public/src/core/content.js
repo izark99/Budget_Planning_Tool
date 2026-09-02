@@ -11,16 +11,16 @@
    =========================================================== */
 
 /* ---------- Text tách ngoài (content.md) ---------- */
-var STRINGS = {};
+let STRINGS = {};
 
 function parseContent(txt) {
-  var out = {};
-  String(txt).split(/\r?\n/).forEach(function (line) {
-    var s = line.trim();
+  const out = {};
+  String(txt).split(/\r?\n/).forEach((line) => {
+    const s = line.trim();
     if (!s || s.charAt(0) === '#') return;
-    var i = s.indexOf(':');
+    const i = s.indexOf(':');
     if (i < 0) return;
-    var k = s.slice(0, i).trim();
+    const k = s.slice(0, i).trim();
     if (!k) return;
     out[k] = s.slice(i + 1).trim().replace(/\\n/g, '\n');
   });
@@ -28,7 +28,7 @@ function parseContent(txt) {
 }
 
 async function loadContent(url) {
-  var res = await fetch(url || '/content.md', { credentials: 'same-origin', cache: 'no-store' });
+  const res = await fetch(url || '/content.md', { credentials: 'same-origin', cache: 'no-store' });
   if (!res.ok) throw new Error('content.md HTTP ' + res.status);
   STRINGS = parseContent(await res.text());
   return STRINGS;
@@ -37,9 +37,9 @@ async function loadContent(url) {
 /* t('toast.import.rows', { n: 128 }) — thiếu khoá thì trả về chính khoá
    để lỗi lộ ra ngay trên giao diện thay vì im lặng hiện rỗng. */
 function t(key, vars) {
-  var v = STRINGS[key];
+  let v = STRINGS[key];
   if (v == null) return key;
-  if (vars) v = v.replace(/\{(\w+)\}/g, function (m, n) { return vars[n] != null ? vars[n] : m; });
+  if (vars) v = v.replace(/\{(\w+)\}/g, (m, n) => { return vars[n] != null ? vars[n] : m; });
   return v;
 }
 

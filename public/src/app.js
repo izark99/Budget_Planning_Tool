@@ -22,7 +22,7 @@ import { viewResult, runBudget } from './views/result.js';
 import { viewDashboard } from './views/dashboard.js';
 import { viewAccrual } from './views/accrual.js';
 
-var VIEWS = [
+const VIEWS = [
   { k: 'hc', n: '1', t: 'dash.kind_row', title: 'hc.bang_dinh_bien', sub: 'view.hc.sub', fn: viewHC },
   { k: 'setup', n: '2', t: 'view.setup.tab', title: 'view.setup.tab', sub: 'view.setup.sub', fn: viewSetup },
   { k: 'class', n: '3', t: 'cal.phan_loai_nhom', title: 'cal.phan_loai_nhom', sub: 'view.class.sub', fn: viewClasses },
@@ -41,7 +41,7 @@ function badgeFor(k) {
   switch (k) {
     case 'hc': return S.hc.rows.length ? { t: fmt(S.hc.rows.length) } : { t: '0', warn: true };
     case 'setup': {
-      var n = S.cols.filter(function (c) { return c.role === 'month' && c.month; }).length;
+      const n = S.cols.filter((c) => { return c.role === 'month' && c.month; }).length;
       return S.cols.length ? (n === 12 ? null : { t: n + '/12', warn: true }) : null;
     }
     case 'class': return S.classes.length ? { t: String(S.classes.length) } : null;
@@ -49,13 +49,13 @@ function badgeFor(k) {
     case 'dash': return RESULT ? null : { t: '–' };
     case 'formula': return { t: String(S.formulas.length) };
     case 'accrual': {
-      var na = (S.accruals || []).filter(function (a) { return a.col && (a.rows || []).length; }).length;
+      const na = (S.accruals || []).filter((a) => { return a.col && (a.rows || []).length; }).length;
       return na ? { t: String(na) } : null;
     }
     case 'exc': return S.exceptions.length ? { t: String(S.exceptions.length) } : null;
     case 'maps': {
-      var miss = S.formulas.filter(function (f) {
-        return !(S.maps.costCode || []).some(function (x) { return nkey(x.formulaCode) === nkey(f.code) && x.costCode; });
+      const miss = S.formulas.filter((f) => {
+        return !(S.maps.costCode || []).some((x) => { return nkey(x.formulaCode) === nkey(f.code) && x.costCode; });
       }).length;
       return miss ? { t: String(miss), warn: true } : null;
     }
@@ -64,11 +64,11 @@ function badgeFor(k) {
 }
 
 function shellRender() {
-  var cur = VIEWS.filter(function (v) { return v.k === S.ui.view; })[0] || VIEWS[0];
-  var rail = el('aside', { class: 'rail' }, [
+  const cur = VIEWS.filter((v) => { return v.k === S.ui.view; })[0] || VIEWS[0];
+  const rail = el('aside', { class: 'rail' }, [
     el('div', { class: 'brand' }, [el('h1', { text: t('app.brand') }), el('p', { text: t('app.brand_sub') })]),
-    el('nav', { class: 'nav' }, VIEWS.map(function (v) {
-      var b = badgeFor(v.k);
+    el('nav', { class: 'nav' }, VIEWS.map((v) => {
+      const b = badgeFor(v.k);
       return el('button', {
         class: v.k === cur.k ? 'on' : '',
         onclick: function () { S.ui.view = v.k; save(); shellRender(); window.scrollTo(0, 0); }
@@ -84,7 +84,7 @@ function shellRender() {
     ])
   ]);
 
-  var main = el('main', { class: 'main' }, [
+  const main = el('main', { class: 'main' }, [
     el('div', { class: 'topbar' }, [
       el('div', { class: 'ttl' }, [el('h2', { text: t(cur.title) }), el('div', { class: 'sub', text: t(cur.sub) })]),
       el('span', { class: 'tag', text: (S.meta.name || '') + ' · ' + S.meta.year }),
@@ -103,15 +103,15 @@ function saveProject() {
   toast(t('toast.save_project'), 'good');
 }
 function openProject() {
-  pickFile('.json', function (f) {
-    var fr = new FileReader();
+  pickFile('.json', (f) => {
+    const fr = new FileReader();
     fr.onload = function (e) {
       try {
-        var o = JSON.parse(e.target.result);
+        const o = JSON.parse(e.target.result);
         if (!o || !o.hc) throw new Error(t('err.bad_project_file'));
         /* ESM không cho gán lại binding đã import: dựng object mới rồi setS().
            Các bước gán bên trong giữ nguyên thứ tự như bản gốc. */
-        var next = Object.assign(defaultState(), o);
+        const next = Object.assign(defaultState(), o);
         next.maps = Object.assign({ costCode: [], costCenter: [], budgetCode: [], accountCode: [] }, next.maps || {});
         next.policies = next.policies || [];
         next.shared = next.shared || [];
@@ -126,7 +126,7 @@ function openProject() {
   });
 }
 function resetAll() {
-  confirmBox(t('confirm.reset_all'), function () {
+  confirmBox(t('confirm.reset_all'), () => {
     setS(defaultState()); ENGINE.invalidate(); setRESULT(null); save(); shellRender(); toast(t('toast.reset_done'));
   });
 }
@@ -184,9 +184,9 @@ async function boot() {
 
   /* Dò xem trình duyệt có cho ghi localStorage không — giữ nguyên cảnh báo bản gốc */
   try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); }
-  catch (e) {
-    var b = el('div', { class: 'warnbox', style: 'margin:0 24px 12px', html: t('boot.no_localstorage') });
-    var c = document.querySelector('.content'); if (c) c.parentNode.insertBefore(b, c);
+  catch {
+    const b = el('div', { class: 'warnbox', style: 'margin:0 24px 12px', html: t('boot.no_localstorage') });
+    const c = document.querySelector('.content'); if (c) c.parentNode.insertBefore(b, c);
   }
 
   setInterval(checkSessionAlive, SESSION_CHECK_INTERVAL_MS);

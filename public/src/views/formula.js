@@ -12,39 +12,39 @@ import { panel } from '../ui/widgets.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 
 function currentFC() {
-  var f = S.formulas.filter(function (x) { return x.id === S.ui.fSel; })[0];
+  const f = S.formulas.filter((x) => { return x.id === S.ui.fSel; })[0];
   return f || S.formulas[0] || null;
 }
 
 function viewFormula() {
-  var wrap = el('div');
+  const wrap = el('div');
   if (!S.cols.length) {
     wrap.appendChild(panel(t('fm.cong_thuc_chi_phi'), [], el('div', { class: 'empty' }, [
       el('strong', { text: t('msg.no_hc') }), el('span', { text: t('fm.cong_thuc_can_biet_tham_chieu_cot') })
     ])));
     return wrap;
   }
-  var fc = currentFC();
-  var split = el('div', { class: 'split' });
+  const fc = currentFC();
+  const split = el('div', { class: 'split' });
 
   /* --- danh sách --- */
-  var list = el('div', { class: 'panel', style: 'margin:0' });
+  const list = el('div', { class: 'panel', style: 'margin:0' });
   list.appendChild(el('header', {}, [
     el('h3', { text: 'Formula Code' }), el('div', { class: 'sp' }),
     el('button', {
       class: 'btn sm', text: t('hc.them'), onclick: function () {
        
         /* GIÁ TRỊ MỒI (dữ liệu): ghi thẳng vào S, đi vào file dự án .json — giữ trong code. */
-        var n = { id: uid(), code: 'FC_MOI_' + (S.formulas.length + 1), name: 'Công thức mới', mode: 'monthly', months: allMonths(), rules: [{ id: uid(), name: 'Tất cả', cond: '', formula: '0' }] };
+        const n = { id: uid(), code: 'FC_MOI_' + (S.formulas.length + 1), name: 'Công thức mới', mode: 'monthly', months: allMonths(), rules: [{ id: uid(), name: 'Tất cả', cond: '', formula: '0' }] };
         S.formulas.push(n); S.ui.fSel = n.id; setRESULT(null); touch(); render();
       }
     })
   ]));
-  var ul = el('div', { class: 'body tight' });
-  var ccOf = {};
-  (S.maps.costCode || []).forEach(function (x) { ccOf[nkey(x.formulaCode)] = x.costCode; });
-  S.formulas.forEach(function (f) {
-    var on = fc && f.id === fc.id;
+  const ul = el('div', { class: 'body tight' });
+  const ccOf = {};
+  (S.maps.costCode || []).forEach((x) => { ccOf[nkey(x.formulaCode)] = x.costCode; });
+  S.formulas.forEach((f) => {
+    const on = fc && f.id === fc.id;
     ul.appendChild(el('div', {
       style: 'padding:9px 12px;border-bottom:1px solid var(--rule-2);cursor:pointer;' + (on ? 'background:var(--mineral-2);border-left:3px solid var(--mineral)' : 'border-left:3px solid transparent'),
       onclick: function () { S.ui.fSel = f.id; touch(); render(); }
@@ -61,12 +61,12 @@ function viewFormula() {
   });
   list.appendChild(ul);
   /* Cột trái: danh sách Formula Code, rồi tới hộp gợi ý ở khoảng trống bên dưới. */
-  var colLeft = el('div', { class: 'col-left' }, [list]);
+  const colLeft = el('div', { class: 'col-left' }, [list]);
   split.appendChild(colLeft);
 
   if (!fc) { split.appendChild(el('div', { class: 'panel' }, [el('div', { class: 'empty', text: t('fm.them_mot_formula_code') })])); wrap.appendChild(split); return wrap; }
 
-  var right = el('div');
+  const right = el('div');
 
   /* --- định nghĩa + phân bổ --- */
   right.appendChild(el('div', { class: 'panel' }, [
@@ -74,8 +74,8 @@ function viewFormula() {
       el('h3', { text: t('fm.dinh_nghia_phan_bo') }), el('div', { class: 'sp' }),
       el('button', {
         class: 'btn sm del', text: t('fm.xoa'), onclick: function () {
-          confirmBox(t('fm.confirm_delete_fc', { code: fc.code }), function () {
-            S.formulas = S.formulas.filter(function (x) { return x.id !== fc.id; });
+          confirmBox(t('fm.confirm_delete_fc', { code: fc.code }), () => {
+            S.formulas = S.formulas.filter((x) => { return x.id !== fc.id; });
             S.ui.fSel = null; setRESULT(null); touch(); render();
           });
         }
@@ -98,7 +98,7 @@ function viewFormula() {
         el('div', { class: 'row' }, [
           ribbon(fc.months, {
             lg: true, pick: function (m, on) {
-              fc.months = on ? (fc.months || []).concat([m]).sort(function (a, b) { return a - b; }) : (fc.months || []).filter(function (x) { return x !== m; });
+              fc.months = on ? (fc.months || []).concat([m]).sort((a, b) => { return a - b; }) : (fc.months || []).filter((x) => { return x !== m; });
               setRESULT(null); touch(); render();
             }
           }),
@@ -117,15 +117,15 @@ function viewFormula() {
   ]));
 
   /* --- nhóm & công thức --- */
-  var rulesBox = el('div');
-  var chips = chipsPanel(null);
+  const rulesBox = el('div');
+  const chips = chipsPanel(null);
   function drawRules() {
     rulesBox.innerHTML = '';
-    (fc.rules || []).forEach(function (r, i) {
-      var mc = ENGINE.countMatch(r.cond);
-      var condBox = fxField(r.cond, function (v) { r.cond = v; setRESULT(null); touch(); }, t('fm.cond_placeholder'), drawRules);
-      var fxBox = fxField(r.formula, function (v) { r.formula = v; setRESULT(null); touch(); }, '0');
-      var gname = r.name || (t('fm.nhom_thu') + ' ' + (i + 1));
+    (fc.rules || []).forEach((r, i) => {
+      const mc = ENGINE.countMatch(r.cond);
+      const condBox = fxField(r.cond, (v) => { r.cond = v; setRESULT(null); touch(); }, t('fm.cond_placeholder'), drawRules);
+      const fxBox = fxField(r.formula, (v) => { r.formula = v; setRESULT(null); touch(); }, '0');
+      const gname = r.name || (t('fm.nhom_thu') + ' ' + (i + 1));
       condBox._label = gname + ' · ' + t('fm.dieu_kien_nhom');
       fxBox._label = gname + ' · ' + t('fm.cong_thuc_tinh_tien');
       condBox._onFocus = fxBox._onFocus = function () { if (chips._refreshTarget) chips._refreshTarget(); };
@@ -136,8 +136,8 @@ function viewFormula() {
           mc.error ? el('span', { class: 'tag r', text: t('fm.dieu_kien_loi') })
             : el('span', { class: 'tag' + (mc.all ? '' : ' g'), text: mc.all ? t('fm.all_rows') : t('fm.n_rows_match', { n: fmt(mc.n) }) }),
           el('div', { class: 'sp' }),
-          el('button', { class: 'btn sm', text: '↑', onclick: function () { if (i > 0) { var t = fc.rules[i - 1]; fc.rules[i - 1] = r; fc.rules[i] = t; setRESULT(null); touch(); drawRules(); } } }),
-          el('button', { class: 'btn sm', text: '↓', onclick: function () { if (i < fc.rules.length - 1) { var t = fc.rules[i + 1]; fc.rules[i + 1] = r; fc.rules[i] = t; setRESULT(null); touch(); drawRules(); } } }),
+          el('button', { class: 'btn sm', text: '↑', onclick: function () { if (i > 0) { const t = fc.rules[i - 1]; fc.rules[i - 1] = r; fc.rules[i] = t; setRESULT(null); touch(); drawRules(); } } }),
+          el('button', { class: 'btn sm', text: '↓', onclick: function () { if (i < fc.rules.length - 1) { const t = fc.rules[i + 1]; fc.rules[i + 1] = r; fc.rules[i] = t; setRESULT(null); touch(); drawRules(); } } }),
           el('button', { class: 'btn sm del', text: '✕', onclick: function () { fc.rules.splice(i, 1); setRESULT(null); touch(); drawRules(); } })
         ]),
         el('div', { class: 'b' }, [
@@ -171,13 +171,13 @@ function viewFormula() {
 }
 
 function autoGroup(fc) {
-  var avail = ENGINE.usableCols();
-  var sel = el('select', {}, avail.map(function (c) { return el('option', { value: c, text: c }); }));
-  var info = el('p', { class: 'hint' });
-  var keep = el('input', { type: 'checkbox' });
+  const avail = ENGINE.usableCols();
+  const sel = el('select', {}, avail.map((c) => { return el('option', { value: c, text: c }); }));
+  const info = el('p', { class: 'hint' });
+  const keep = el('input', { type: 'checkbox' });
   function upd() {
-    var rows = ENGINE.previewRows();
-    var vals = distinctVals(rows, sel.value);
+    const rows = ENGINE.previewRows();
+    const vals = distinctVals(rows, sel.value);
     info.innerHTML = t('fm.autogroup_info', { col: esc(sel.value), n: vals.length, vals: esc(vals.slice(0, 15).join(' · ')) }) + (vals.length > 15 ? ' …' : '');
     info._vals = vals;
   }
@@ -190,10 +190,10 @@ function autoGroup(fc) {
     { label: t('btn.cancel') },
     {
       label: t('fm.create_groups'), cls: 'pri', onclick: function () {
-        var col = sel.value, vals = info._vals || [];
+        const col = sel.value, vals = info._vals || [];
         if (vals.length > 200) { toast(t('fm.too_many_values', { n: vals.length }), 'bad'); return false; }
-        var base = keep.checked ? fc.rules.slice() : [];
-        vals.forEach(function (v) {
+        const base = keep.checked ? fc.rules.slice() : [];
+        vals.forEach((v) => {
           base.push({ id: uid(), name: col + ' = ' + v, cond: '[' + col + ']="' + String(v).replace(/"/g, '""') + '"', formula: '0' });
         });
         /* GIÁ TRỊ MỒI (dữ liệu): ghi thẳng vào S, đi vào file dự án .json — giữ trong code. */
@@ -205,7 +205,7 @@ function autoGroup(fc) {
   ]);
 }
 
-var REF_KIND = {
+const REF_KIND = {
   field: 'fm.kind.field', param: 'fm.kind.param',
   monthvar: 'fm.kind.monthvar', shared: 'fm.kind.shared', unknown: 'fm.kind.unknown'
 };
@@ -220,15 +220,15 @@ function refVal(v) {
 }
 
 function refsTable(refs) {
-  var box = el('div', { style: 'margin-top:14px' });
+  const box = el('div', { style: 'margin-top:14px' });
   box.appendChild(el('h4', { class: 'sec', text: t('fm.refs.title') }));
   if (!refs.length) {
     box.appendChild(el('p', { class: 'hint', style: 'margin:0', text: t('fm.refs.empty') }));
     return box;
   }
 
-  var fixed = refs.filter(function (r) { return r.constant; });
-  var vary = refs.filter(function (r) { return !r.constant; });
+  const fixed = refs.filter((r) => { return r.constant; });
+  const vary = refs.filter((r) => { return !r.constant; });
 
   if (fixed.length) {
     box.appendChild(el('div', { class: 'tw', style: 'max-height:none' }, [
@@ -237,7 +237,7 @@ function refsTable(refs) {
           el('th', { text: t('fm.refs.name') }), el('th', { text: t('fm.refs.kind') }),
           el('th', { text: t('fm.refs.value') })
         ])]),
-        el('tbody', {}, fixed.map(function (r) {
+        el('tbody', {}, fixed.map((r) => {
           return el('tr', {}, [
             el('td', { class: 'mono', text: r.key }),
             el('td', { text: t(REF_KIND[r.kind] || 'fm.kind.unknown') }),
@@ -253,12 +253,12 @@ function refsTable(refs) {
     box.appendChild(el('div', { class: 'tw', style: 'max-height:none' }, [
       el('table', {}, [
         el('thead', {}, [el('tr', {}, [el('th', { text: t('fm.refs.name') }), el('th', { text: t('fm.refs.kind') })]
-          .concat(MONTHS.map(function (m) { return el('th', { class: 'num', text: m }); })))]),
-        el('tbody', {}, vary.map(function (r) {
+          .concat(MONTHS.map((m) => { return el('th', { class: 'num', text: m }); })))]),
+        el('tbody', {}, vary.map((r) => {
           return el('tr', {}, [
             el('td', { class: 'mono', text: r.key }),
             el('td', { text: t(REF_KIND[r.kind] || 'fm.kind.unknown') })
-          ].concat(r.values.map(function (v) {
+          ].concat(r.values.map((v) => {
             return el('td', { class: 'num', text: refVal(v) });
           })));
         }))
@@ -269,24 +269,24 @@ function refsTable(refs) {
 }
 
 function previewPanel(fc) {
-  var st = { idx: 0 };
-  var out = el('div');
-  var rows = ENGINE.previewRows();
-  var idCol = ENGINE.roleCol('key');
-  var cols = ENGINE.attrCols().slice(0, 4).map(function (c) { return c.alias; });
-  var search = el('input', { type: 'text', placeholder: idCol ? t('fm.search_by', { col: idCol }) : t('fm.search'), style: 'width:200px' });
-  var picker = el('select', { style: 'max-width:100%' });
+  const st = { idx: 0 };
+  const out = el('div');
+  const rows = ENGINE.previewRows();
+  const idCol = ENGINE.roleCol('key');
+  const cols = ENGINE.attrCols().slice(0, 4).map((c) => { return c.alias; });
+  const search = el('input', { type: 'text', placeholder: idCol ? t('fm.search_by', { col: idCol }) : t('fm.search'), style: 'width:200px' });
+  const picker = el('select', { style: 'max-width:100%' });
 
   function label(r) {
-    var head = idCol ? String(r[idCol]) : '';
-    var rest = cols.filter(function (c) { return c !== idCol; }).slice(0, 3).map(function (c) { return r[c]; }).join(' · ');
+    const head = idCol ? String(r[idCol]) : '';
+    const rest = cols.filter((c) => { return c !== idCol; }).slice(0, 3).map((c) => { return r[c]; }).join(' · ');
     return head ? head + ' — ' + rest : rest;
   }
   function fillPicker() {
-    var kw = search.value.trim().toLowerCase();
-    picker.innerHTML = ''; var n = 0, frag = document.createDocumentFragment();
-    for (var i = 0; i < rows.length && n < 300; i++) {
-      var lb = label(rows[i]);
+    const kw = search.value.trim().toLowerCase();
+    picker.innerHTML = ''; let n = 0; const frag = document.createDocumentFragment();
+    for (let i = 0; i < rows.length && n < 300; i++) {
+      const lb = label(rows[i]);
       if (kw && lb.toLowerCase().indexOf(kw) < 0) continue;
       n++; frag.appendChild(el('option', { value: i, selected: i === st.idx, text: lb }));
     }
@@ -295,13 +295,12 @@ function previewPanel(fc) {
   }
 
   function draw() {
-    var res = ENGINE.previewRow(fc, st.idx);
+    const res = ENGINE.previewRow(fc, st.idx);
     out.innerHTML = '';
     if (res.error && !res.months) {
       out.appendChild(el('div', { class: 'errbox', html: t('fm.preview_error', { e: esc(res.error) }) + (res.group ? ' ' + t('fm.preview_error_group', { g: esc(res.group) }) : '') }));
       return;
     }
-    var r = res.row || {};
     out.appendChild(el('div', { class: 'stats', style: 'margin:0 0 12px' }, [
       idCol ? el('div', { class: 'stat' }, [el('div', { class: 'k', text: idCol }), el('div', { class: 'v', style: 'font-size:17px', text: String(res.id == null ? '' : res.id) })]) : null,
       el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('fm.nhom_khop') }), el('div', { class: 'v', style: 'font-size:15px', text: res.group || t('fm.no_match') })]),
@@ -311,22 +310,22 @@ function previewPanel(fc) {
     ]));
     if (res.error) out.appendChild(el('div', { class: 'errbox', text: res.error }));
 
-    var lines = [
+    const lines = [
       { k: 'raw', t: t('fm.line_raw'), always: true },
       { k: 'raised', t: t('fm.line_raised'), when: res.hasRaise },
       { k: 'afterExc', t: t('fm.line_afterExc'), when: res.hasExc },
       { k: 'accrual', t: t('fm.line_accrual'), when: res.hasAccrual, pct: true },
       { k: 'amount', t: t('fm.line_amount'), always: true, strong: true }
-    ].filter(function (l) { return l.always || l.when; });
+    ].filter((l) => { return l.always || l.when; });
 
-    var head = [el('th', { text: '' })].concat(MONTHS.map(function (m, i) {
+    const head = [el('th', { text: '' })].concat(MONTHS.map((m, i) => {
       return el('th', { class: 'num', style: res.months[i] && res.months[i].on ? '' : 'color:#B7C0BB', text: m });
     })).concat([el('th', { class: 'num', text: t('fm.full_year') })]);
 
-    var body = lines.map(function (l) {
-      var sum = 0;
-      var tds = res.months.map(function (rec) {
-        var v = rec[l.k];
+    const body = lines.map((l) => {
+      let sum = 0;
+      const tds = res.months.map((rec) => {
+        const v = rec[l.k];
         /* Hàng % trích là tỷ lệ chứ không phải tiền — không cộng dồn, hiện kèm dấu %. */
         if (l.pct) {
           return el('td', {
@@ -347,7 +346,7 @@ function previewPanel(fc) {
     });
 
     body.push(el('tr', {}, [el('td', { text: t('fm.he_so_dinh_bien') })]
-      .concat(res.months.map(function (rec) {
+      .concat(res.months.map((rec) => {
         return el('td', { class: 'num' + (rec.hcf ? '' : ' zero'), text: String(rec.hcf) });
       })).concat([el('td', { class: 'num zero', text: '' })])));
 
@@ -363,7 +362,7 @@ function previewPanel(fc) {
 
   fillPicker(); draw();
   search.addEventListener('input', fillPicker);
-  picker.addEventListener('change', function () { st.idx = +picker.value; draw(); });
+  picker.addEventListener('change', () => { st.idx = +picker.value; draw(); });
 
   return el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('fm.thu_tren_mot_dong_that') })]),
