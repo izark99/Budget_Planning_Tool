@@ -1,0 +1,33 @@
+{
+  "name": "budget-planning-tool",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lập ngân sách định biên — Cloudflare Pages, chạy hoàn toàn trong trình duyệt",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "dev": "wrangler pages dev",
+    "dev:host": "node test/helpers/pages-host.mjs . 8788",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit -p jsconfig.json",
+    "check:keys": "node tools/check-content-keys.mjs",
+    "check:undef": "node tools/check-undefined.mjs",
+    "check:vi": "node tools/check-hardcoded-vi.mjs",
+    "checks": "npm run check:keys && npm run check:undef && npm run check:vi",
+    "test": "vitest run --project unit",
+    "test:e2e": "vitest run --project e2e",
+    "test:watch": "vitest --project unit",
+    "verify": "npm run lint && npm run typecheck && npm run checks && npm run test && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.14.0",
+    "acorn": "^8.14.0",
+    "acorn-globals": "^7.0.1",
+    "eslint": "^9.14.0",
+    "globals": "^15.12.0",
+    "playwright": "^1.49.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.5"
+  }
+}

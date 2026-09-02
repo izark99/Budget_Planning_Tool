@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      # ---- Rẻ và nhanh: chạy trước để hỏng thì biết ngay ----
+      - name: Lint
+        run: npm run lint
+
+      - name: Kiểm kiểu
+        run: npm run typecheck
+
+      - name: Ba cổng chất lượng (khoá nội dung, tên chưa phân giải, chuỗi cứng)
+        run: npm run checks
+
+      # ---- Golden master + máy biểu thức + Pages Functions: thuần Node ----
+      - name: Phép kiểm đơn vị
+        run: npm test
+
+      # ---- Chỉ tới đây mới cần trình duyệt ----
+      - name: Cài Chromium cho Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Phép kiểm đầu-cuối
+        run: npm run test:e2e
+
+      - name: Lưu dấu vết khi hỏng
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-artifacts
+          path: test-artifacts/
+          if-no-files-found: ignore

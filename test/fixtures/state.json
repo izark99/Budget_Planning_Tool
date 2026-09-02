@@ -1,0 +1,1048 @@
+{
+  "v": 2,
+  "meta": {
+    "name": "Ngân sách nhân sự",
+    "year": 2027
+  },
+  "hc": {
+    "headers": [
+      "Status",
+      "Dept",
+      "Unit",
+      "Position",
+      "Workplace Location",
+      "Grade",
+      "Coefficient",
+      "Gender",
+      "ID",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
+      "12"
+    ],
+    "rows": [
+      {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "AC",
+        "Unit": "AC",
+        "Position": "AC_100",
+        "Workplace Location": "DHG-CT",
+        "Grade": "5A.12",
+        "Coefficient": 0.9,
+        "Gender": "Female",
+        "ID": 1400
+      },
+      {
+        "1": 0,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "SL",
+        "Unit": "SL-HN",
+        "Position": "SL_101",
+        "Workplace Location": "DHG",
+        "Grade": "4B.03",
+        "Coefficient": 0.97,
+        "Gender": "Male",
+        "ID": 1401
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "PR",
+        "Unit": "PR-F1",
+        "Position": "PR_102",
+        "Workplace Location": "DHG",
+        "Grade": "6A.01",
+        "Coefficient": 1.04,
+        "Gender": "Female",
+        "ID": 1402
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 0.5,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "HR",
+        "Unit": "HR",
+        "Position": "HR_103",
+        "Workplace Location": "DHG-CT",
+        "Grade": "3C.07",
+        "Coefficient": 1.11,
+        "Gender": "Male",
+        "ID": 1403
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "AC",
+        "Unit": "AC",
+        "Position": "AC_104",
+        "Workplace Location": "DHG",
+        "Grade": "5A.12",
+        "Coefficient": 1.18,
+        "Gender": "Female",
+        "ID": 1404
+      },
+      {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "SL",
+        "Unit": "SL-HN",
+        "Position": "SL_105",
+        "Workplace Location": "DHG",
+        "Grade": "4B.03",
+        "Coefficient": 1.25,
+        "Gender": "Male",
+        "ID": 1405
+      },
+      {
+        "1": 0,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "PR",
+        "Unit": "PR-F1",
+        "Position": "PR_106",
+        "Workplace Location": "DHG-CT",
+        "Grade": "6A.01",
+        "Coefficient": 1.32,
+        "Gender": "Female",
+        "ID": 1406
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "HR",
+        "Unit": "HR",
+        "Position": "HR_107",
+        "Workplace Location": "DHG",
+        "Grade": "3C.07",
+        "Coefficient": 1.39,
+        "Gender": "Male",
+        "ID": 1407
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "AC",
+        "Unit": "AC",
+        "Position": "AC_108",
+        "Workplace Location": "DHG",
+        "Grade": "5A.12",
+        "Coefficient": 1.46,
+        "Gender": "Female",
+        "ID": 1408
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "SL",
+        "Unit": "SL-HN",
+        "Position": "SL_109",
+        "Workplace Location": "DHG-CT",
+        "Grade": "4B.03",
+        "Coefficient": 1.53,
+        "Gender": "Male",
+        "ID": 1409
+      },
+      {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 0.5,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "PR",
+        "Unit": "PR-F1",
+        "Position": "PR_110",
+        "Workplace Location": "DHG",
+        "Grade": "6A.01",
+        "Coefficient": 1.6,
+        "Gender": "Female",
+        "ID": 1410
+      },
+      {
+        "1": 0,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "HR",
+        "Unit": "HR",
+        "Position": "HR_111",
+        "Workplace Location": "DHG",
+        "Grade": "3C.07",
+        "Coefficient": 0.9,
+        "Gender": "Male",
+        "ID": 1411
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "AC",
+        "Unit": "AC",
+        "Position": "AC_112",
+        "Workplace Location": "DHG-CT",
+        "Grade": "5A.12",
+        "Coefficient": 0.97,
+        "Gender": "Female",
+        "ID": 1412
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "SL",
+        "Unit": "SL-HN",
+        "Position": "SL_113",
+        "Workplace Location": "DHG",
+        "Grade": "4B.03",
+        "Coefficient": 1.04,
+        "Gender": "Male",
+        "ID": 1413
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "PR",
+        "Unit": "PR-F1",
+        "Position": "PR_114",
+        "Workplace Location": "DHG",
+        "Grade": "6A.01",
+        "Coefficient": 1.11,
+        "Gender": "Female",
+        "ID": 1414
+      },
+      {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "HR",
+        "Unit": "HR",
+        "Position": "HR_115",
+        "Workplace Location": "DHG-CT",
+        "Grade": "3C.07",
+        "Coefficient": 1.18,
+        "Gender": "Male",
+        "ID": 1415
+      },
+      {
+        "1": 0,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "AC",
+        "Unit": "AC",
+        "Position": "AC_116",
+        "Workplace Location": "DHG",
+        "Grade": "5A.12",
+        "Coefficient": 1.25,
+        "Gender": "Female",
+        "ID": 1416
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 0.5,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "SL",
+        "Unit": "SL-HN",
+        "Position": "SL_117",
+        "Workplace Location": "DHG",
+        "Grade": "4B.03",
+        "Coefficient": 1.32,
+        "Gender": "Male",
+        "ID": 1417
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "PR",
+        "Unit": "PR-F1",
+        "Position": "PR_118",
+        "Workplace Location": "DHG-CT",
+        "Grade": "6A.01",
+        "Coefficient": 1.39,
+        "Gender": "Female",
+        "ID": 1418
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "HR",
+        "Unit": "HR",
+        "Position": "HR_119",
+        "Workplace Location": "DHG",
+        "Grade": "3C.07",
+        "Coefficient": 1.46,
+        "Gender": "Male",
+        "ID": 1419
+      },
+      {
+        "1": 1,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "AC",
+        "Unit": "AC",
+        "Position": "AC_120",
+        "Workplace Location": "DHG",
+        "Grade": "5A.12",
+        "Coefficient": 1.53,
+        "Gender": "Female",
+        "ID": 1420
+      },
+      {
+        "1": 0,
+        "2": 1,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "SL",
+        "Unit": "SL-HN",
+        "Position": "SL_121",
+        "Workplace Location": "DHG-CT",
+        "Grade": "4B.03",
+        "Coefficient": 1.6,
+        "Gender": "Male",
+        "ID": 1421
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "PR",
+        "Unit": "PR-F1",
+        "Position": "PR_122",
+        "Workplace Location": "DHG",
+        "Grade": "6A.01",
+        "Coefficient": 0.9,
+        "Gender": "Female",
+        "ID": 1422
+      },
+      {
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "11": 1,
+        "12": 1,
+        "Status": "01. Current Headcount",
+        "Dept": "HR",
+        "Unit": "HR",
+        "Position": "HR_123",
+        "Workplace Location": "DHG",
+        "Grade": "3C.07",
+        "Coefficient": 0.97,
+        "Gender": "Male",
+        "ID": 1423
+      }
+    ],
+    "file": "dinh-bien-mau.xlsx",
+    "at": "12:53:05 2/9/2026"
+  },
+  "cols": [
+    {
+      "src": "Status",
+      "alias": "Status",
+      "role": "attr",
+      "month": null,
+      "type": "text"
+    },
+    {
+      "src": "Dept",
+      "alias": "Dept",
+      "role": "attr",
+      "month": null,
+      "type": "text"
+    },
+    {
+      "src": "Unit",
+      "alias": "Unit",
+      "role": "unit",
+      "month": null,
+      "type": "text"
+    },
+    {
+      "src": "Position",
+      "alias": "Position",
+      "role": "position",
+      "month": null,
+      "type": "text"
+    },
+    {
+      "src": "Workplace Location",
+      "alias": "Workplace Location",
+      "role": "attr",
+      "month": null,
+      "type": "text"
+    },
+    {
+      "src": "Grade",
+      "alias": "Grade",
+      "role": "attr",
+      "month": null,
+      "type": "text"
+    },
+    {
+      "src": "Coefficient",
+      "alias": "Coefficient",
+      "role": "attr",
+      "month": null,
+      "type": "num"
+    },
+    {
+      "src": "Gender",
+      "alias": "Gender",
+      "role": "attr",
+      "month": null,
+      "type": "text"
+    },
+    {
+      "src": "ID",
+      "alias": "ID",
+      "role": "key",
+      "month": null,
+      "type": "num"
+    },
+    {
+      "src": "1",
+      "alias": "1",
+      "role": "month",
+      "month": 1,
+      "type": "num"
+    },
+    {
+      "src": "2",
+      "alias": "2",
+      "role": "month",
+      "month": 2,
+      "type": "num"
+    },
+    {
+      "src": "3",
+      "alias": "3",
+      "role": "month",
+      "month": 3,
+      "type": "num"
+    },
+    {
+      "src": "4",
+      "alias": "4",
+      "role": "month",
+      "month": 4,
+      "type": "num"
+    },
+    {
+      "src": "5",
+      "alias": "5",
+      "role": "month",
+      "month": 5,
+      "type": "num"
+    },
+    {
+      "src": "6",
+      "alias": "6",
+      "role": "month",
+      "month": 6,
+      "type": "num"
+    },
+    {
+      "src": "7",
+      "alias": "7",
+      "role": "month",
+      "month": 7,
+      "type": "num"
+    },
+    {
+      "src": "8",
+      "alias": "8",
+      "role": "month",
+      "month": 8,
+      "type": "num"
+    },
+    {
+      "src": "9",
+      "alias": "9",
+      "role": "month",
+      "month": 9,
+      "type": "num"
+    },
+    {
+      "src": "10",
+      "alias": "10",
+      "role": "month",
+      "month": 10,
+      "type": "num"
+    },
+    {
+      "src": "11",
+      "alias": "11",
+      "role": "month",
+      "month": 11,
+      "type": "num"
+    },
+    {
+      "src": "12",
+      "alias": "12",
+      "role": "month",
+      "month": 12,
+      "type": "num"
+    }
+  ],
+  "params": [
+    {
+      "name": "LUONG_CO_SO",
+      "value": 2340000,
+      "note": "Mức lương cơ sở nhân với hệ số"
+    },
+    {
+      "name": "DON_GIA_AN_CA",
+      "value": 35000,
+      "note": "Đơn giá một suất ăn ca"
+    },
+    {
+      "name": "TY_LE_BHXH_CTY",
+      "value": 21.5,
+      "note": "% công ty đóng — dùng dạng TY_LE_BHXH_CTY%"
+    }
+  ],
+  "classes": [],
+  "policies": [],
+  "shared": [
+    {
+      "id": "sh-luong",
+      "code": "LUONG_CO_BAN",
+      "name": "Lương cơ bản",
+      "formula": "ROUND([Coefficient]*LUONG_CO_SO,-3)"
+    }
+  ],
+  "accruals": [
+    {
+      "id": "ac-1",
+      "code": "FC_LUONG_HESO",
+      "col": "Dept",
+      "rows": [
+        {
+          "key": "AC",
+          "m": [
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            50,
+            50,
+            50,
+            50,
+            50,
+            50
+          ]
+        },
+        {
+          "key": "SL",
+          "m": [
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80
+          ]
+        },
+        {
+          "key": "PR",
+          "m": [
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            0
+          ]
+        }
+      ]
+    }
+  ],
+  "calendar": {
+    "groupCol": "",
+    "tables": [
+      {
+        "id": "ak3cprp",
+        "scope": "*",
+        "m": [
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          },
+          {
+            "std": 26,
+            "act": 22,
+            "hol": 1,
+            "leave": 1,
+            "other": 2
+          }
+        ]
+      }
+    ]
+  },
+  "formulas": [
+    {
+      "id": "qjq9rwx",
+      "code": "FC_LUONG_HESO",
+      "name": "Lương theo hệ số",
+      "mode": "monthly",
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "rules": [
+        {
+          "id": "n26nrqv",
+          "name": "Tất cả",
+          "cond": "",
+          "formula": "LUONG_CO_BAN * DINH_BIEN * NGAY_CONG_THUC_TE / NGAY_CONG_CHUAN"
+        }
+      ]
+    },
+    {
+      "id": "8njvfjc",
+      "code": "FC_BHXH",
+      "name": "BHXH-BHYT-BHTN phần công ty",
+      "mode": "monthly",
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "rules": [
+        {
+          "id": "cz3pbup",
+          "name": "Tất cả",
+          "cond": "",
+          "formula": "[Lương cơ bản] * TY_LE_BHXH_CTY% * DINH_BIEN"
+        }
+      ]
+    },
+    {
+      "id": "0uzerqv",
+      "code": "FC_DIENTHOAI",
+      "name": "Phụ cấp điện thoại",
+      "mode": "monthly",
+      "months": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "rules": [
+        {
+          "id": "7e5ibvo",
+          "name": "Mặc định",
+          "cond": "",
+          "formula": "300000"
+        }
+      ]
+    },
+    {
+      "id": "tkipewq",
+      "code": "FC_DULICH",
+      "name": "Du lịch nghỉ mát",
+      "mode": "spread",
+      "months": [
+        7,
+        9
+      ],
+      "rules": [
+        {
+          "id": "uvwj5dc",
+          "name": "Tất cả",
+          "cond": "",
+          "formula": "6000000"
+        }
+      ]
+    }
+  ],
+  "maps": {
+    "costCode": [],
+    "costCenter": [],
+    "budgetCode": [],
+    "accountCode": []
+  },
+  "exceptions": [],
+  "raises": [
+    {
+      "id": "r-shared",
+      "name": "Tăng lương định kỳ",
+      "fromMonth": 7,
+      "pct": 10,
+      "cond": "",
+      "formulas": [
+        "LUONG_CO_BAN"
+      ],
+      "active": true
+    }
+  ],
+  "ui": {
+    "view": "hc",
+    "fSel": null,
+    "collapsed": {}
+  }
+}

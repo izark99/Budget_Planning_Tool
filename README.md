@@ -26,12 +26,24 @@ public/
     formula.js          FX (máy công thức) + ENGINE (máy tính ngân sách)
     io.js               đọc/ghi file, gọi /api/*
     ui.js               el/toast/modal/bảng/panel — không biết màn hình cụ thể
-    views/              11 màn hình, mỗi nhóm một file
+    views/              12 màn hình, mỗi nhóm một file
   vendor/
     xlsx.min.js         SheetJS 0.18.5 — nguyên xi, không sửa
     xltable.js          XLTABLE — nguyên xi, không sửa
   content.md            toàn bộ text tiếng Việt hiển thị
   settings.md           cấu hình không nhạy cảm
+test/
+  unit/                 thuần Node, không trình duyệt — golden master, FX, auth
+  e2e/                  Chromium thật trên máy chủ mô phỏng Pages
+  helpers/              pages-host, vỏ Playwright, bộ đọc .xlsx, canonical
+  fixtures/             .xlsx mẫu + state + golden kết quả + golden file xuất
+tools/
+  check-content-keys.mjs   khoá t() và khoá nằm trong dữ liệu ↔ content.md
+  check-undefined.mjs      tên dùng mà không import/khai báo
+  check-hardcoded-vi.mjs   chuỗi tiếng Việt còn sót trong mã
+  regen-golden.mjs         sinh lại fixtures (chạy có chủ ý)
+.github/workflows/ci.yml
+package.json              CHỈ để chạy bộ kiểm — app vẫn zero-build, xem mục 7
 wrangler.toml
 ```
 
@@ -83,10 +95,17 @@ hoạt động bị vô hiệu lập tức — dùng khi cần "đăng xuất to
 
 ```bash
 cp .dev.vars.example .dev.vars     # rồi sửa giá trị bên trong
-npx wrangler pages dev
+npm run dev                        # = npx wrangler pages dev
 ```
 
 `.dev.vars` nằm trong `.gitignore`.
+
+Nếu `wrangler pages dev` không chạy được (workerd kén môi trường), dùng máy chủ
+mô phỏng của bộ kiểm — nó nạp **chính** các tệp trong `functions/`:
+
+```bash
+npm run dev:host                   # http://127.0.0.1:8788
+```
 
 ---
 
@@ -204,7 +223,47 @@ Mọi phần còn lại của `functions/` bám đúng code mẫu trong brief.
 
 ---
 
-## 7. Xử lý sự cố
+## 7. Bộ kiểm
+
+```bash
+npm ci                 # cài công cụ (chỉ devDependencies — app không có dependency)
+
+npm test               # 87 phép kiểm đơn vị, thuần Node, ~1 giây
+npm run lint           # ESLint (bỏ qua public/vendor/**)
+npm run typecheck      # tsc --noEmit, hiện checkJs tắt
+npm run checks         # ba cổng chất lượng trong tools/
+npm run test:e2e       # 35 phép kiểm Chromium thật, ~70 giây
+npm run verify         # tất cả những thứ trên, đúng thứ tự CI chạy
+```
+
+`npm test` **không cần trình duyệt**: `state.js` và `formula.js` chỉ chạm
+`localStorage`/`window` bên trong thân hàm nên nạp thẳng vào Node được. Nhờ vậy
+mốc quan trọng nhất — golden master — chạy trong mili-giây.
+
+**Ba mốc không được phép đổi:**
+
+| Mốc | Ở đâu | Ý nghĩa |
+|---|---|---|
+| Chuỗi canonical của `ENGINE.run()` | `test/fixtures/golden-result.json` | tổng năm, 12 tổng tháng, mảng người×tháng, pivot, cảnh báo — trùng **từng ký tự** |
+| File Excel xuất ra | `test/fixtures/golden-export.json` | 5 sheet, ~5.000 ô, khớp tất cả **trừ ô `BanKhaiBao!E2`** (giờ xuất) |
+| Checklist mục 11 của brief | `test/unit/auth.test.js` + `test/e2e/auth.test.js` | 10 mục bảo mật |
+
+Golden lệch nghĩa là **số liệu đã đổi**. Nếu đó là chủ ý, chạy
+`node tools/regen-golden.mjs` rồi soi diff trong pull request — diff ở dạng JSON
+đọc được, không phải tệp nhị phân.
+
+`test/helpers/pages-host.mjs` dựng lại hợp đồng của Pages Functions bằng **chính
+các tệp trong `functions/`, không sửa một ký tự** — kể cả
+`html_handling = "auto-trailing-slash"`, thứ đã gây vòng lặp chuyển hướng thật
+trên production (xem mục 8).
+
+Ba script trong `tools/` không phải trang trí: `check-undefined` đã bắt lỗi
+`render is not defined` sau một lần đổi tên hàm, `check-content-keys` đã bắt 6
+khoá `role.*` thiếu khiến giao diện hiện `role.attr` thay vì "Thuộc tính".
+
+---
+
+## 8. Xử lý sự cố
 
 ### Build hỏng: `Could not read package.json`
 
@@ -214,13 +273,17 @@ npm error enoent Could not read package.json
 Failed: build command exited with code: 1
 ```
 
-Project Pages đang có **build command** trong khi repo này thuần tĩnh — không có
-`package.json` và không cần build. Vào **Settings › Build**, **để trống ô Build
-command**, rồi **Retry deployment**. Bỏ build command không ảnh hưởng `functions/`:
-Pages biên dịch thư mục đó ở bước riêng.
+Project Pages đang có **build command** trong khi app này **không cần build**.
+Vào **Settings › Build**, **để trống ô Build command**, rồi **Retry deployment**.
+Bỏ build command không ảnh hưởng `functions/`: Pages biên dịch thư mục đó ở bước
+riêng.
 
-Repo này **không cần** `package.json`. Đừng thêm vào chỉ để làm vừa lòng một build
-command đặt nhầm.
+> ⚠️ **`package.json` ở gốc repo có thể khiến Pages tự đoán ra framework và đặt
+> lại build command** — đúng lỗi trên. Tệp đó có mặt **chỉ để chạy bộ kiểm**
+> (`vitest`, `eslint`, `playwright` đều là `devDependencies`); nó **không dựng ra
+> thứ gì** và `wrangler.toml` vẫn trỏ thẳng `pages_build_output_dir = "public"`.
+> Sau mỗi lần đụng tới `package.json`, mở lại **Settings › Build** và xác nhận ô
+> **Build command vẫn để trống**.
 
 ### Mở trang báo "Too many redirects"
 
@@ -252,7 +315,7 @@ Chưa khai `APP_PASSWORD`. `login.js` so với chuỗi rỗng nên từ chối m
 
 ---
 
-## 8. Lịch sử
+## 9. Lịch sử
 
 App vốn là một file HTML 1,1 MB dùng cơ chế xác thực giả: tải mật khẩu từ một
 file công khai trên GitHub rồi so khớp ngay trong trình duyệt, và nhớ hash trong
