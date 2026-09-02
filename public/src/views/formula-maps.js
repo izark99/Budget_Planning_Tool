@@ -3,11 +3,11 @@
    PHÂN LOẠI CHI PHÍ · DỰ KIẾN TĂNG LƯƠNG
    Tách nguyên văn từ khối 07-view-formula-maps.js.
    =========================================================== */
-import { MONTHS, S, allMonths, fmt, nkey, numOf, setRESULT, t, touch, uid } from '../state.js';
-import { ENGINE } from '../formula.js';
-import { distinctVals, pickFile } from '../io.js';
-import { confirmBox, dataTable, downloadTemplate, el, esc, foldPanel, importMapped, modal, panel, render, ribbon, toast } from '../ui.js';
-import { chipsPanel, fxField } from './fxhelp.js';
+import { MONTHS, S, allMonths, fmt, nkey, numOf, setRESULT, t, touch, uid } from '../core/state.js';
+import { ENGINE } from '../core/formula.js';
+import { distinctVals, pickFile } from '../platform/io.js';
+import { confirmBox, dataTable, downloadTemplate, el, esc, foldPanel, importMapped, modal, panel, render, ribbon, toast } from '../ui/ui.js';
+import { chipsPanel, fxField } from '../ui/fx-help.js';
 
 /* ==== 07-view-formula-maps.js ==== */
 /* ===========================================================

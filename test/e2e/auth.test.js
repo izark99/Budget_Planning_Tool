@@ -29,7 +29,7 @@ describe('[1] chưa đăng nhập thì không lấy được gì', () => {
   it('mọi tệp tĩnh bị đá 302 về /login', async () => {
     const ctx = await browser.newContext();
     for (const p of ['/', '/index.html', '/app.js', '/content.md', '/styles.css',
-      '/settings.md', '/modules/state.js', '/vendor/xlsx.min.js']) {
+      '/settings.md', '/src/core/state.js', '/vendor/xlsx.min.js']) {
       const r = await ctx.request.get(server.base + p, { maxRedirects: 0 });
       expect(r.status(), p).toBe(302);
       expect(new URL(r.headers().location).pathname, p).toBe('/login');

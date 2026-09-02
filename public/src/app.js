@@ -8,17 +8,17 @@ import {
   S, RESULT, setS, setRESULT, defaultState,
   save, load, touch, installAutosave, setNotifier,
   loadContent, t, fmt, nkey
-} from './modules/state.js';
-import { ENGINE } from './modules/formula.js';
-import { pickFile, downloadBlob, apiSession, apiLogout } from './modules/io.js';
-import { el, toast, confirmBox, setRenderer } from './modules/ui.js';
-import { viewHC, viewSetup } from './modules/views/hc-setup.js';
-import { viewClasses, viewCalendar } from './modules/views/class-cal.js';
-import { viewPolicies } from './modules/views/policy.js';
-import { viewFormula, viewExc, viewMaps, viewRaise } from './modules/views/formula-maps.js';
-import { viewResult, runBudget } from './modules/views/result.js';
-import { viewDashboard } from './modules/views/dashboard.js';
-import { viewAccrual } from './modules/views/accrual.js';
+} from './core/state.js';
+import { ENGINE } from './core/formula.js';
+import { pickFile, downloadBlob, apiSession, apiLogout } from './platform/io.js';
+import { el, toast, confirmBox, setRenderer } from './ui/ui.js';
+import { viewHC, viewSetup } from './views/hc-setup.js';
+import { viewClasses, viewCalendar } from './views/class-cal.js';
+import { viewPolicies } from './views/policy.js';
+import { viewFormula, viewExc, viewMaps, viewRaise } from './views/formula-maps.js';
+import { viewResult, runBudget } from './views/result.js';
+import { viewDashboard } from './views/dashboard.js';
+import { viewAccrual } from './views/accrual.js';
 
 var VIEWS = [
   { k: 'hc', n: '1', t: 'dash.kind_row', title: 'hc.bang_dinh_bien', sub: 'view.hc.sub', fn: viewHC },

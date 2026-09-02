@@ -6,9 +6,9 @@
 import {
   M, MONTHS, S, CAL_FIELDS, t,
   uid, nkey, numOf, fmtNum, touch
-} from './state.js';
-import { ENGINE } from './formula.js';
-import { pickFile, readWorkbook, sheetAoa, dedupeHeaders } from './io.js';
+} from '../core/state.js';
+import { ENGINE } from '../core/formula.js';
+import { pickFile, readWorkbook, sheetAoa, dedupeHeaders } from '../platform/io.js';
 
 const XLTABLE = window.XLTABLE;
 

@@ -2,10 +2,10 @@
    MÀN 3 & 5 — PHÂN LOẠI NHÓM và NGÀY CÔNG
    Tách nguyên văn từ khối 06-view-class-cal.js.
    =========================================================== */
-import { CAL_FIELDS, M, MONTHS, S, blankCalTable, fmt, fmtNum, nkey, numOf, setRESULT, t, touch, uid } from '../state.js';
-import { ENGINE } from '../formula.js';
-import { pickFile } from '../io.js';
-import { confirmBox, dataTable, downloadTemplate, el, esc, foldPanel, importMapped, panel, render, toast } from '../ui.js';
+import { CAL_FIELDS, M, MONTHS, S, blankCalTable, fmt, fmtNum, nkey, numOf, setRESULT, t, touch, uid } from '../core/state.js';
+import { ENGINE } from '../core/formula.js';
+import { pickFile } from '../platform/io.js';
+import { confirmBox, dataTable, downloadTemplate, el, esc, foldPanel, importMapped, panel, render, toast } from '../ui/ui.js';
 
 /* Thư viện gốc nạp bằng <script defer> cổ điển. Trỏ tường minh vào window
    thay vì dựa vào chuỗi scope — để công cụ tĩnh thấy được nguồn gốc. */

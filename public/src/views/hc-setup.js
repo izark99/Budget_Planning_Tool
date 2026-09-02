@@ -2,11 +2,11 @@
    MÀN 1 & 2 — BẢNG ĐỊNH BIÊN và THIẾT LẬP
    Tách nguyên văn từ khối 05-view-hc-setup.js.
    =========================================================== */
-import { M, MONTHS, ROLES, S, fmt, nkey, setRESULT, t, touch, uid } from '../state.js';
-import { ENGINE, FX } from '../formula.js';
-import { dedupeHeaders, distinctVals, pickFile, readWorkbook, sheetAoa } from '../io.js';
-import { downloadTemplate, el, modal, panel, readTable, render, ribbon, toast } from '../ui.js';
-import { chipsPanel, fxField } from './fxhelp.js';
+import { M, MONTHS, ROLES, S, fmt, nkey, setRESULT, t, touch, uid } from '../core/state.js';
+import { ENGINE, FX } from '../core/formula.js';
+import { dedupeHeaders, distinctVals, pickFile, readWorkbook, sheetAoa } from '../platform/io.js';
+import { downloadTemplate, el, modal, panel, readTable, render, ribbon, toast } from '../ui/ui.js';
+import { chipsPanel, fxField } from '../ui/fx-help.js';
 
 /* ==== 05-view-hc-setup.js ==== */
 /* ===========================================================

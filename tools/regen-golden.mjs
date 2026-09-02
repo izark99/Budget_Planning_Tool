@@ -33,16 +33,14 @@ import path from 'node:path';
 import { chromium } from 'playwright';
 import { FIXTURE_XLSX, GOLDEN, GOLDEN_EXPORT, LAUNCH, STATE_FIXTURE } from '../test/helpers/env.mjs';
 import { startServer } from '../test/helpers/server.mjs';
-import { exportWorkbook, loginToApp, importHeadcount } from '../test/helpers/browser.mjs';
+import { exportWorkbook, inPage, loginToApp, importHeadcount } from '../test/helpers/browser.mjs';
 import { canon } from '../test/helpers/canon.mjs';
 import { loadEngine, runOn } from '../test/helpers/load-engine.mjs';
 import { readCells } from '../test/helpers/xlsx-cells.mjs';
 
 /* Kịch bản: cố ý chạm tới mọi cơ chế mới thêm, để golden thật sự canh được chúng. */
 async function applyScenario(page) {
-  return page.evaluate(async () => {
-    const st = await import('/modules/state.js');
-
+  return inPage(page, `
     st.S.shared = [{
       id: 'sh-luong', code: 'LUONG_CO_BAN', name: 'Lương cơ bản',
       formula: 'ROUND([Coefficient]*LUONG_CO_SO,-3)',
@@ -71,7 +69,7 @@ async function applyScenario(page) {
 
     st.touch();
     return JSON.stringify(st.S);
-  });
+  `);
 }
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bpt-golden-'));

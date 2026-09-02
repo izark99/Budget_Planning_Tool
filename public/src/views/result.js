@@ -2,10 +2,10 @@
    MÀN 10 — KẾT QUẢ NGÂN SÁCH
    Tách nguyên văn từ khối 08-view-result-boot.js (phần kết quả).
    =========================================================== */
-import { M, MONTHS, RESULT, S, fmt, fmtShort, setRESULT, t } from '../state.js';
-import { ENGINE } from '../formula.js';
-import { exportBudget } from '../io.js';
-import { el, modal, render, ribbon, toast } from '../ui.js';
+import { M, MONTHS, RESULT, S, fmt, fmtShort, setRESULT, t } from '../core/state.js';
+import { ENGINE } from '../core/formula.js';
+import { exportBudget } from '../platform/io.js';
+import { el, modal, render, ribbon, toast } from '../ui/ui.js';
 
 /* ==== 08-view-result-boot.js ==== */
 /* ===========================================================

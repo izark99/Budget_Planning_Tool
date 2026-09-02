@@ -74,7 +74,7 @@ describe('_middleware — cổng chặn', () => {
   });
 
   it('không cookie: tệp tĩnh bị đá 302 về /login', async () => {
-    for (const p of ['/', '/index.html', '/app.js', '/content.md', '/modules/state.js', '/vendor/xlsx.min.js']) {
+    for (const p of ['/', '/index.html', '/src/app.js', '/content.md', '/src/core/state.js', '/vendor/xlsx.min.js']) {
       const r = await onRequest({ request: req(p), env: ENV, next: nextOk });
       expect(r.status, p).toBe(302);
       expect(new URL(r.headers.get('Location')).pathname, p).toBe('/login');

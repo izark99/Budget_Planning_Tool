@@ -2,9 +2,9 @@
    MÀN 4 — CÀI ĐẶT CHÍNH SÁCH
    Tách nguyên văn từ khối 06b-view-policy.js.
    =========================================================== */
-import { S, fmt, nkey, numOf, setRESULT, t, touch, uid } from '../state.js';
-import { ENGINE } from '../formula.js';
-import { confirmBox, dataTable, el, foldPanel, panel, render } from '../ui.js';
+import { S, fmt, nkey, numOf, setRESULT, t, touch, uid } from '../core/state.js';
+import { ENGINE } from '../core/formula.js';
+import { confirmBox, dataTable, el, foldPanel, panel, render } from '../ui/ui.js';
 import { classMissCount } from './class-cal.js';
 
 /* Thư viện gốc nạp bằng <script defer> cổ điển. Trỏ tường minh vào window

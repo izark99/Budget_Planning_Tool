@@ -6,10 +6,10 @@
    % nhân vào ở bước cuối, cùng chỗ với hệ số định biên.
    Chưa khai = 100%, nên màn này để trống thì kết quả không đổi.
    =========================================================== */
-import { M, MONTHS, S, fmt, nkey, numOf, setRESULT, t, touch, uid } from '../state.js';
-import { ENGINE } from '../formula.js';
-import { distinctVals, pickFile } from '../io.js';
-import { confirmBox, downloadTemplate, el, foldPanel, importMapped, panel, render, toast } from '../ui.js';
+import { M, MONTHS, S, fmt, nkey, numOf, setRESULT, t, touch, uid } from '../core/state.js';
+import { ENGINE } from '../core/formula.js';
+import { distinctVals, pickFile } from '../platform/io.js';
+import { confirmBox, downloadTemplate, el, foldPanel, importMapped, panel, render, toast } from '../ui/ui.js';
 
 /* CHUỖI GIAO THỨC — tên cột của file mẫu .xlsx, đồng thời là khoá khớp khi
    nhập lại. Đổi là hỏng chức năng nhập file. Để ASCII không dấu cho chắc. */

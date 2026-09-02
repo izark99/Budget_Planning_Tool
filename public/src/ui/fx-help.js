@@ -8,9 +8,9 @@
    tải xong — nên các trường c/a/d chứa KHOÁ, phân giải bằng t() tại
    chỗ render. Trường n (tên hàm) và e (ví dụ) là mã, giữ nguyên.
    =========================================================== */
-import { S, CAL_FIELDS, fmt, t } from '../state.js';
-import { FX, ENGINE } from '../formula.js';
-import { el, toast, modal } from '../ui.js';
+import { S, CAL_FIELDS, fmt, t } from '../core/state.js';
+import { FX, ENGINE } from '../core/formula.js';
+import { el, toast, modal } from './ui.js';
 
 /* Ô công thức được bấm vào gần nhất. Hộp gợi ý dùng chung một cái cho cả màn
    hình nên phải biết chèn vào đâu. */

@@ -98,8 +98,8 @@ export async function exportWorkbook(page, dir) {
    Mọi đoạn đều có sẵn `st` (state.js) và `fm` (formula.js), và một tham số `a`. */
 export function pageFn(body) {
   return `async (a) => {
-    const st = await import('/modules/state.js');
-    const fm = await import('/modules/formula.js');
+    const st = await import('/src/core/state.js');
+    const fm = await import('/src/core/formula.js');
     ${body}
   }`;
 }
