@@ -1,124 +1,19 @@
 /* ===========================================================
-   FX HELP — thư viện hàm, gợi ý khi gõ, ô nhập công thức
-   Ghép fxField/colChips (04-ui.js) với toàn bộ 04c-fxhelp.js.
-   Ở chung một file để đồ thị import giữ được một chiều:
-   ui.js không cần biết tới fxhelp, còn fxhelp dùng ui.js thoải mái.
+   FX-HELP — tra cứu và gợi ý cho máy biểu thức: danh mục hàm, chữ ký, modal
+   thư viện, bảng gợi ý khi gõ.
 
-   FX_DOCS/FX_OPS được dựng lúc nạp module — trước khi content.md kịp
-   tải xong — nên các trường c/a/d chứa KHOÁ, phân giải bằng t() tại
-   chỗ render. Trường n (tên hàm) và e (ví dụ) là mã, giữ nguyên.
+   FX_DOCS/FX_OPS dựng lúc NẠP MODULE — trước khi content.md kịp về — nên chúng
+   chỉ giữ KHOÁ nội dung; t() gọi lúc render.
    =========================================================== */
-import { S, CAL_FIELDS, fmt, t } from '../core/state.js';
-import { FX, ENGINE } from '../core/formula.js';
-import { el, toast, modal } from './ui.js';
+import { CAL_FIELDS, S, fmt } from '../core/state.js';
+import { t } from '../core/content.js';
+import { ENGINE } from '../core/engine.js';
+import { FX } from '../core/expression.js';
+import { el, modal, toast } from './dom.js';
 
-/* Ô công thức được bấm vào gần nhất. Hộp gợi ý dùng chung một cái cho cả màn
-   hình nên phải biết chèn vào đâu. */
-var activeFx = null;
-
-/* 'fx.args.IF' -> ['điều_kiện', 'giá_trị_nếu_đúng', 'giá_trị_nếu_sai'] */
+/* Chữ ký hàm dựng từ FX_DOCS, tra lúc chạy nên t() đã sẵn sàng. */
 function fxArgs(doc) { return t(doc.a).split('|'); }
 
-/* Ô nhập công thức có kiểm tra cú pháp tại chỗ */
-function fxField(value, onChange, placeholder, onBlur) {
-  var box = el('div', { class: 'fx-wrap' });
-  var ta = el('textarea', { class: 'fx', rows: 2, placeholder: placeholder || '' });
-  ta.value = value || '';
-  var msg = el('div', { class: 'fxok' });
-  function check() {
-    var v = ta.value.trim();
-    if (!v) { msg.className = 'fxok'; msg.textContent = ''; return; }
-    var r = FX.tryCompile(v);
-    if (r.ok) {
-      msg.className = 'fxok';
-      var f = r.fn.info.fields, n = r.fn.info.names;
-      msg.textContent = t('fx.valid') + (f.length ? ' ' + t('fx.valid.cols', { cols: f.join(', ') }) : '') + (n.length ? ' ' + t('fx.valid.vars', { vars: n.join(', ') }) : '');
-    } else { msg.className = 'fxerr'; msg.textContent = '✕ ' + r.error; }
-  }
-  ta.addEventListener('focus', function () { activeFx = box; if (box._onFocus) box._onFocus(); });
-  ta.addEventListener('input', function () { onChange(ta.value); check(); });
-  if (onBlur) ta.addEventListener('blur', onBlur);
-  check();
-  var assist = fxAssist(ta, onChange, check);
-  box.appendChild(ta); box.appendChild(assist); box.appendChild(msg);
-  box._insert = function (txt) {
-    var s = ta.selectionStart, e = ta.selectionEnd;
-    ta.value = ta.value.slice(0, s) + txt + ta.value.slice(e);
-    ta.focus(); ta.selectionStart = ta.selectionEnd = s + txt.length;
-    onChange(ta.value); check();
-  };
-  return box;
-}
-
-/* Chip chèn nhanh tên cột / tham số / biến hệ thống */
-/* Hộp gợi ý dùng chung cho cả màn hình: dính theo màn hình khi cuộn, tự cuộn
-   bên trong khi danh sách dài. Chèn vào ô công thức được bấm gần nhất; chưa bấm
-   ô nào thì chèn vào `fallback`. */
-function chipsPanel(fallback) {
-  var box = el('div', { class: 'chipbox' });
-  var where = el('span', { class: 'target' });
-  var chips = el('div', { class: 'chips' });
-
-  function pick() { return activeFx || fallback; }
-  function refreshTarget() {
-    var tgt = pick();
-    where.textContent = tgt ? (tgt._label ? t('fx.chips.target', { name: tgt._label }) : t('fx.chips.target.any'))
-                            : t('fx.chips.target.none');
-  }
-  function add(text, title, ins) {
-    chips.appendChild(el('span', {
-      class: 'chip', text: text, title: title || '',
-      onclick: function () {
-        var tgt = pick();
-        if (!tgt) { toast(t('fx.chips.no_target'), 'bad'); return; }
-        tgt._insert(ins); refreshTarget();
-      }
-    }));
-  }
-
-  box.appendChild(el('h4', { text: t('fx.chips.title') }));
-  box.appendChild(where);
-  chips.appendChild(el('span', {
-    class: 'chip', style: 'background:var(--ink);color:#fff;border-color:var(--ink)',
-    text: t('fx.library.chip'), title: t('fx.library.chip.title'),
-    onclick: function () { fxLibrary(pick()); }
-  }));
-  (S.shared || []).forEach(function (sh) {
-    if (!sh.code) return;
-    add(sh.code, sh.name || t('fx.chips.shared'), sh.code);
-  });
-  ENGINE.usableCols().forEach(function (col) { add('[' + col + ']', '', '[' + col + ']'); });
-  (S.params || []).forEach(function (p) { if (p.name) add(p.name, t('fx.cat.params'), p.name); });
-  ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map(function (f) { return f.varName; }))
-    .forEach(function (v) { add(v, t('fx.sysvar'), v); });
-
-  box.appendChild(chips);
-  refreshTarget();
-  box._refreshTarget = refreshTarget;
-  return box;
-}
-
-function colChips(target) {
-  var c = el('div', { class: 'chips' });
-  c.appendChild(el('span', {
-    class: 'chip', style: 'background:var(--ink);color:#fff;border-color:var(--ink)',
-    text: t('fx.library.chip'), title: t('fx.library.chip.title'),
-    onclick: function () { fxLibrary(target); }
-  }));
-  ENGINE.usableCols().forEach(function (col) {
-    c.appendChild(el('span', { class: 'chip', text: '[' + col + ']', onclick: function () { target._insert('[' + col + ']'); } }));
-  });
-  (S.params || []).forEach(function (p) {
-    if (p.name) c.appendChild(el('span', { class: 'chip', text: p.name, onclick: function () { target._insert(p.name); } }));
-  });
-  ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map(function (f) { return f.varName; }))
-    .forEach(function (v) {
-      c.appendChild(el('span', { class: 'chip', title: t('fx.sysvar'), text: v, onclick: function () { target._insert(v); } }));
-    });
-  return c;
-}
-
-/* ==== 04c-fxhelp.js ==== */
 /* ===========================================================
    FX HELP — thư viện hàm + gợi ý khi gõ công thức
    =========================================================== */
@@ -374,7 +269,4 @@ function fxAssist(ta, onChange, check) {
   return el('div', { class: 'fx-assist' }, [hint, list]);
 }
 
-
-
-
-export { FX_DOCS, FX_OPS, fxDocByName, fxSignature, fxLibrary, fxAssist, fxField, colChips, chipsPanel };
+export { FX_DOCS, FX_OPS, fxArgs, fxDocByName, fxSignature, fxLibrary, fxAssist };

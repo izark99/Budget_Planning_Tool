@@ -1,0 +1,142 @@
+/* ===========================================================
+   MÀN 4 — NGÀY CÔNG & NGÀY NGHỈ
+   Bảng ngày công theo tháng, dùng làm biến trong công thức chi phí.
+   =========================================================== */
+import { CAL_FIELDS, M, MONTHS, S, blankCalTable, numOf, setRESULT, touch } from '../core/state.js';
+import { t } from '../core/content.js';
+import { ENGINE } from '../core/engine.js';
+import { pickFile } from '../platform/io.js';
+import { el, esc, render, toast } from '../ui/dom.js';
+import { downloadTemplate, importMapped, panel } from '../ui/widgets.js';
+
+function viewCalendar() {
+  var wrap = el('div');
+  var cal = S.calendar;
+
+  var groupOpts = [''].concat(ENGINE.usableCols());
+  wrap.appendChild(panel(t('cal.lich_ap_cho_ai'), [], el('div', { class: 'row' }, [
+    el('div', { style: 'width:280px' }, [
+      el('label', { class: 'f', text: t('cal.phan_lich_theo_cot') }),
+      el('select', {
+        onchange: function (e) { cal.groupCol = e.target.value; setRESULT(null); touch(); render(); }
+      }, groupOpts.map(function (c) {
+        return el('option', { value: c, selected: cal.groupCol === c, text: c || t('cal.one_calendar_for_all') });
+      }))
+    ]),
+    el('div', { style: 'flex:1' }, [el('p', {
+      class: 'hint', style: 'margin:18px 0 0',
+      html: cal.groupCol
+        ? t('cal.per_group_help', { col: esc(cal.groupCol) })
+        : t('cal.shared_help')
+    })])
+  ])));
+
+  (cal.tables || []).forEach(function (tbl, idx) {
+    var tb = el('tbody');
+    function draw() {
+      tb.innerHTML = '';
+      MONTHS.forEach(function (mn, k) {
+        var rec = tbl.m[k];
+        var used = CAL_FIELDS.slice(1).reduce(function (s, f) { return s + numOf(rec[f.k]); }, 0);
+        var gap = numOf(rec.std) - used;
+        tb.appendChild(el('tr', {}, [el('td', { class: 'mono', style: 'width:60px', text: mn })]
+          .concat(CAL_FIELDS.map(function (f) {
+            return el('td', { style: 'width:150px' }, [el('input', {
+              type: 'text', class: 'fx', style: 'text-align:right', value: rec[f.k],
+              oninput: function (e) { rec[f.k] = numOf(e.target.value); setRESULT(null); touch(); draw2(); }
+            })]);
+          }))
+          .concat([el('td', {}, [gap === 0
+            ? el('span', { class: 'tag g', text: t('cal.khop') })
+            : el('span', { class: 'tag o', text: (gap > 0 ? t('cal.gap_short', { n: Math.abs(gap) }) : t('cal.gap_over', { n: Math.abs(gap) })) })])])));
+      });
+    }
+    var t2 = null;
+    function draw2() { clearTimeout(t2); t2 = setTimeout(draw, 500); }
+    draw();
+
+    wrap.appendChild(el('div', { class: 'panel' }, [
+      el('header', {}, [
+        el('h3', { text: t('cal.lich_ngay_cong') }),
+        cal.groupCol
+          ? el('input', {
+            type: 'text', class: 'fx', style: 'width:170px', value: tbl.scope || '*', title: t('cal.scope_title', { col: cal.groupCol }),
+            oninput: function (e) { tbl.scope = e.target.value; setRESULT(null); touch(); }
+          })
+          : el('span', { class: 'tag g', text: t('cal.ap_cho_tat_ca') }),
+        el('div', { class: 'sp' }),
+        el('button', { class: 'btn sm', text: t('cal.dien_deu_12_thang'), onclick: function () {
+          var first = tbl.m[0];
+          for (var k = 1; k < M; k++) CAL_FIELDS.forEach(function (f) { tbl.m[k][f.k] = first[f.k]; });
+          setRESULT(null); touch(); render();
+        } }),
+        cal.tables.length > 1 ? el('button', { class: 'btn sm del', text: t('cal.xoa_lich'), onclick: function () { cal.tables.splice(idx, 1); setRESULT(null); touch(); render(); } }) : null
+      ]),
+      el('div', { class: 'body' }, [el('p', {
+        class: 'hint',
+        html: t('cal.vars_help', { vars: CAL_FIELDS.map(function (f) { return '<code>' + f.varName + '</code>'; }).join(' · ') })
+      })]),
+      el('div', { class: 'body tight' }, [el('div', { class: 'tw', style: 'max-height:none' }, [
+        el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: t('export.audit.month') })]
+          .concat(CAL_FIELDS.map(function (f) { return el('th', { class: 'num', text: f.label }); }))
+          .concat([el('th', { text: t('cal.doi_chieu') })]))]), tb])
+      ])])
+    ]));
+  });
+
+  wrap.appendChild(el('div', { class: 'panel' }, [
+    el('div', { class: 'body' }, [el('div', { class: 'row' }, [
+      cal.groupCol ? el('button', {
+        class: 'btn', text: t('cal.them_lich_cho_mot_nhom'), onclick: function () {
+          cal.tables.push(blankCalTable('')); setRESULT(null); touch(); render();
+        }
+      }) : null,
+      el('button', { class: 'btn', text: t('table.downloadTemplate'), onclick: calTemplate }),
+      el('button', { class: 'btn pri', text: t('table.importExcel'), onclick: function () { pickFile('.xlsx,.xls,.csv', calImport); } })
+    ])])
+  ]));
+
+  return wrap;
+}
+
+function calTemplate() {
+  var rows = [];
+  (S.calendar.tables || []).forEach(function (tbl) {
+    MONTHS.forEach(function (mn, k) {
+      rows.push([tbl.scope || '*', k + 1].concat(CAL_FIELDS.map(function (f) { return numOf(tbl.m[k][f.k]); })));
+    });
+  });
+  downloadTemplate({
+    tableName: 'tblNgayCong', title: t('cal.ngay_cong_chuan_tung_thang'), sheetName: 'NgayCong',
+    headers: ['Nhom', 'Thang'].concat(CAL_FIELDS.map(function (f) { return f.label; })),
+    rows: rows,
+    guide: [
+      t('cal.guide_1'),
+      t('cal.guide_2'),
+      t('cal.guide_3')
+    ],
+    file: 'mau-ngay-cong.xlsx'
+  });
+}
+
+function calImport(file) {
+  var fields = [{ k: 'scope', label: 'Nhom' }, { k: 'month', label: 'Thang', required: true }]
+    .concat(CAL_FIELDS.map(function (f) { return { k: f.k, label: f.label }; }));
+  importMapped(file, t('cal.import_title'), fields, function (out) {
+    var byScope = {};
+    out.forEach(function (o) {
+      var sc = String(o.scope == null || o.scope === '' ? '*' : o.scope).trim();
+      var m = parseInt(o.month, 10);
+      if (!(m >= 1 && m <= 12)) return;
+      if (!byScope[sc]) byScope[sc] = blankCalTable(sc);
+      CAL_FIELDS.forEach(function (f) { byScope[sc].m[m - 1][f.k] = numOf(o[f.k]); });
+    });
+    var keys = Object.keys(byScope);
+    if (!keys.length) { toast(t('cal.khong_doc_duoc_dong_hop_le_nao'), 'bad'); return; }
+    S.calendar.tables = keys.map(function (k) { return byScope[k]; });
+    setRESULT(null); touch(); render();
+    toast(t('cal.imported', { n: keys.length }), 'good');
+  });
+}
+
+export { viewCalendar, calTemplate, calImport };

@@ -3,8 +3,9 @@
    Nguyên thủy vào/ra thuần: không dựng DOM, không gọi toast.
    Lỗi được ném lên cho tầng UI bắt và hiển thị.
    =========================================================== */
-import { M, MONTHS, S, RESULT, nkey, t } from '../core/state.js';
-import { ENGINE } from '../core/formula.js';
+import { M, MONTHS, S, RESULT, nkey } from '../core/state.js';
+import { t } from '../core/content.js';
+import { ENGINE } from '../core/engine.js';
 
 /* Nạp bằng <script defer> cổ điển trong index.html, chạy trước mọi module. */
 const XLSX = window.XLSX;

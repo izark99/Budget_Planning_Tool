@@ -4,18 +4,20 @@
    lấy nguyên văn từ khối SHELL của 08-view-result-boot.js.
    Phần xác thực thay hẳn cho AUTH_URL + localStorage cũ.
    =========================================================== */
-import {
-  S, RESULT, setS, setRESULT, defaultState,
-  save, load, touch, installAutosave, setNotifier,
-  loadContent, t, fmt, nkey
-} from './core/state.js';
-import { ENGINE } from './core/formula.js';
+import { S, RESULT, setS, setRESULT, defaultState, save, load, touch, installAutosave, setNotifier, fmt, nkey } from './core/state.js';
+import { loadContent, t } from './core/content.js';
+import { ENGINE } from './core/engine.js';
 import { pickFile, downloadBlob, apiSession, apiLogout } from './platform/io.js';
-import { el, toast, confirmBox, setRenderer } from './ui/ui.js';
-import { viewHC, viewSetup } from './views/hc-setup.js';
-import { viewClasses, viewCalendar } from './views/class-cal.js';
+import { confirmBox, el, setRenderer, toast } from './ui/dom.js';
+import { viewHC } from './views/headcount.js';
+import { viewSetup } from './views/setup.js';
+import { viewClasses } from './views/classes.js';
+import { viewCalendar } from './views/calendar.js';
 import { viewPolicies } from './views/policy.js';
-import { viewFormula, viewExc, viewMaps, viewRaise } from './views/formula-maps.js';
+import { viewFormula } from './views/formula.js';
+import { viewExc } from './views/exceptions.js';
+import { viewMaps } from './views/cost-map.js';
+import { viewRaise } from './views/raise.js';
 import { viewResult, runBudget } from './views/result.js';
 import { viewDashboard } from './views/dashboard.js';
 import { viewAccrual } from './views/accrual.js';

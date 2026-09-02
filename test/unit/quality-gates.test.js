@@ -45,22 +45,22 @@ describe('content.md', () => {
   /* Bộ đọc của tools/ và bộ đọc thật trong state.js phải hiểu content.md GIỐNG
      NHAU. Lệch một chút là mọi bảo đảm của script kiểm khoá thành vô nghĩa. */
   it('tools/ đọc content.md y hệt state.js đọc lúc chạy', async () => {
-    const { state } = await loadEngine();
+    const { content } = await loadEngine();
     const { keys } = parseContent(fs.readFileSync(path.join(ROOT, 'public/content.md'), 'utf8'));
-    expect(Object.keys(state.STRINGS).sort()).toEqual([...keys.keys()].sort());
+    expect(Object.keys(content.STRINGS).sort()).toEqual([...keys.keys()].sort());
     for (const [k, v] of keys) {
-      expect(state.t(k), k).toBe(v.value.replace(/\\n/g, '\n'));
+      expect(content.t(k), k).toBe(v.value.replace(/\\n/g, '\n'));
     }
   });
 
   it('khoá thiếu thì t() trả về chính khoá, để lỗi lộ ra trên giao diện', async () => {
-    const { state } = await loadEngine();
-    expect(state.t('khoa.khong.he.ton.tai')).toBe('khoa.khong.he.ton.tai');
+    const { content } = await loadEngine();
+    expect(content.t('khoa.khong.he.ton.tai')).toBe('khoa.khong.he.ton.tai');
   });
 
   it('thay {placeholder} bằng giá trị truyền vào', async () => {
-    const { state } = await loadEngine();
-    expect(state.t('toast.import.rows', { n: 128 })).toContain('128');
+    const { content } = await loadEngine();
+    expect(content.t('toast.import.rows', { n: 128 })).toContain('128');
   });
 });
 

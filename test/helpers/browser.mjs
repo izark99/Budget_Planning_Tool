@@ -99,7 +99,7 @@ export async function exportWorkbook(page, dir) {
 export function pageFn(body) {
   return `async (a) => {
     const st = await import('/src/core/state.js');
-    const fm = await import('/src/core/formula.js');
+    const fm = await import('/src/core/engine.js');
     ${body}
   }`;
 }

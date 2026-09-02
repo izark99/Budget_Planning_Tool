@@ -20,13 +20,24 @@ public/
   login.html            trang đăng nhập — Pages phục vụ ở /login
   index.html            khung app
   styles.css            toàn bộ CSS
-  app.js                điểm vào, dựng vỏ, giữ nhịp phiên
-  modules/
-    state.js            hằng số, trạng thái S/RESULT, lưu trữ, t()
-    formula.js          FX (máy công thức) + ENGINE (máy tính ngân sách)
-    io.js               đọc/ghi file, gọi /api/*
-    ui.js               el/toast/modal/bảng/panel — không biết màn hình cụ thể
-    views/              12 màn hình, mỗi nhóm một file
+  src/
+    app.js              điểm vào, dựng vỏ, giữ nhịp phiên
+    core/
+      content.js        t() / loadContent — text lấy từ content.md
+      state.js          hằng số, trạng thái S/RESULT, lưu trữ
+      expression.js     FX — máy biểu thức, không biết gì về ngân sách
+      engine.js         ENGINE — nghiệp vụ tính ngân sách
+    platform/
+      io.js             đọc/ghi file, gọi /api/*
+    ui/
+      dom.js            el/esc/toast/modal/confirmBox/dải 12 tháng
+      widgets.js        bảng, panel, tải mẫu .xlsx, trình nhập Excel
+      formula-input.js  ô nhập công thức + hộp gợi ý chèn cột
+      fx-help.js        danh mục hàm, thư viện tra cứu, gợi ý khi gõ
+    views/              12 màn hình, MỖI MÀN MỘT FILE:
+                        headcount · setup · classes · calendar · formula
+                        exceptions · cost-map · raise · policy · accrual
+                        result · dashboard
   vendor/
     xlsx.min.js         SheetJS 0.18.5 — nguyên xi, không sửa
     xltable.js          XLTABLE — nguyên xi, không sửa
@@ -47,7 +58,22 @@ package.json              CHỈ để chạy bộ kiểm — app vẫn zero-buil
 wrangler.toml
 ```
 
-Đồ thị import một chiều: `state ← formula ← io ← ui ← views/* ← app`.
+Đồ thị import **một chiều**, không có vòng:
+
+```
+core/content ← core/state ← core/expression ← core/engine
+                    ↑                              ↑
+              platform/io ─────────────────────────┘
+                    ↑
+      ui/dom ← ui/widgets ← ui/fx-help ← ui/formula-input
+                                ↑
+                            views/*  ←  app.js
+```
+
+`tools/check-undefined.mjs` canh chiều này: module nào quên import là lộ ra ngay.
+Hai chỗ cố tình đi ngược đều qua móc gián tiếp thay vì import ngược —
+`ui/dom.js: setRenderer()` (app.js cấp thân thật cho `render()`) và
+`core/state.js: setNotifier()` (app.js cấp `toast`).
 
 ---
 

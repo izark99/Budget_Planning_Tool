@@ -2,9 +2,10 @@
    MÀN 11 — DASHBOARD SOÁT SỐ
    Tách nguyên văn từ khối 07b-view-dashboard.js.
    =========================================================== */
-import { M, MONTHS, RESULT, S, fmt, fmtShort, nkey, t, touch } from '../core/state.js';
-import { ENGINE } from '../core/formula.js';
-import { el, render } from '../ui/ui.js';
+import { M, MONTHS, RESULT, S, fmt, fmtShort, nkey, touch } from '../core/state.js';
+import { t } from '../core/content.js';
+import { ENGINE } from '../core/engine.js';
+import { el, render } from '../ui/dom.js';
 import { runBudget } from './result.js';
 
 /* ==== 07b-view-dashboard.js ==== */

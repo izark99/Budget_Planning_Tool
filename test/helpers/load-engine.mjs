@@ -13,11 +13,16 @@ export async function loadEngine() {
     const p = path.join(ROOT, 'public', String(url).replace(/^\//, ''));
     return new Response(fs.readFileSync(p, 'utf8'), { status: 200 });
   };
+  const content = await import('../../public/src/core/content.js');
   const state = await import('../../public/src/core/state.js');
-  const formula = await import('../../public/src/core/formula.js');
-  await state.loadContent('/content.md');
+  const expression = await import('../../public/src/core/expression.js');
+  const engine = await import('../../public/src/core/engine.js');
+  await content.loadContent('/content.md');
   globalThis.fetch = real;
-  return { state, formula };
+  /* Trả về CHÍNH các namespace của module — không sao chép, không trải ({...}),
+     để live binding của S/RESULT/STRINGS còn nguyên. `formula` là ngoại lệ duy
+     nhất: một bó tiện tay gộp FX với ENGINE, cả hai đều là hằng. */
+  return { content, state, expression, engine, formula: { FX: expression.FX, ENGINE: engine.ENGINE } };
 }
 
 /** Nạp một state đã ghi sẵn rồi chạy tính. */

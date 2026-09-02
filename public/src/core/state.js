@@ -1,42 +1,11 @@
 /* ===========================================================
    STATE — hằng số, trạng thái, lưu trữ, tiện ích số học
    Tách từ khối 02-core.js của lap-ngan-sach-dinh-bien.html.
-   Logic giữ nguyên; chỉ thêm setS/setRESULT (ESM không cho gán
-   lại binding đã import) và bộ nạp text t()/loadContent().
+   Logic giữ nguyên; chỉ thêm setS/setRESULT — ESM không cho gán lại một binding
+   đã import, nên chỗ GHI phải đi qua hai hàm này; chỗ ĐỌC vẫn viết S.hc.rows
+   như cũ nhờ live binding.
    =========================================================== */
-
-/* ---------- Text tách ngoài (content.md) ---------- */
-var STRINGS = {};
-
-function parseContent(txt) {
-  var out = {};
-  String(txt).split(/\r?\n/).forEach(function (line) {
-    var s = line.trim();
-    if (!s || s.charAt(0) === '#') return;
-    var i = s.indexOf(':');
-    if (i < 0) return;
-    var k = s.slice(0, i).trim();
-    if (!k) return;
-    out[k] = s.slice(i + 1).trim().replace(/\\n/g, '\n');
-  });
-  return out;
-}
-
-async function loadContent(url) {
-  var res = await fetch(url || '/content.md', { credentials: 'same-origin', cache: 'no-store' });
-  if (!res.ok) throw new Error('content.md HTTP ' + res.status);
-  STRINGS = parseContent(await res.text());
-  return STRINGS;
-}
-
-/* t('toast.import.rows', { n: 128 }) — thiếu khoá thì trả về chính khoá
-   để lỗi lộ ra ngay trên giao diện thay vì im lặng hiện rỗng. */
-function t(key, vars) {
-  var v = STRINGS[key];
-  if (v == null) return key;
-  if (vars) v = v.replace(/\{(\w+)\}/g, function (m, n) { return vars[n] != null ? vars[n] : m; });
-  return v;
-}
+import { t } from './content.js';
 
 /* Báo cho tầng UI (app.js gắn toast vào đây) — tránh state.js phải import ui.js */
 var notify = function () { };
@@ -190,7 +159,7 @@ function fmtNum(v) {
 }
 
 export {
-  STRINGS, loadContent, t, setNotifier,
+  setNotifier,
   LS_KEY, M, MONTHS, ROLES, CAL_FIELDS,
   uid, allMonths, blankCalTable, defaultState,
   S, RESULT, dirty, setS, setRESULT,
