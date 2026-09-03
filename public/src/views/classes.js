@@ -197,8 +197,8 @@ function viewClasses() {
       String(idx + 1).padStart(2, '0') + ' · ' + (cl.name || t('cal.unnamed')),
       [stat],
       [
-        el('button', { class: 'btn sm', text: '↑', onclick: function () { if (idx > 0) { const t = S.classes[idx - 1]; S.classes[idx - 1] = cl; S.classes[idx] = t; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
-        el('button', { class: 'btn sm', text: '↓', onclick: function () { if (idx < S.classes.length - 1) { const t = S.classes[idx + 1]; S.classes[idx + 1] = cl; S.classes[idx] = t; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
+        el('button', { class: 'btn sm', text: '↑', onclick: function () { if (idx > 0) { const other = S.classes[idx - 1]; S.classes[idx - 1] = cl; S.classes[idx] = other; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
+        el('button', { class: 'btn sm', text: '↓', onclick: function () { if (idx < S.classes.length - 1) { const other = S.classes[idx + 1]; S.classes[idx + 1] = cl; S.classes[idx] = other; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
         el('button', { class: 'btn sm del', text: t('cal.xoa_bang'), onclick: function () { confirmBox(t('cal.confirm_delete_class', { name: cl.name || '' }), () => { S.classes.splice(idx, 1); ENGINE.invalidate(); setRESULT(null); touch(); render(); }); } })
       ],
       el('div', {}, [head, editor])));

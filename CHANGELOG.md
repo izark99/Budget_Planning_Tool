@@ -4,6 +4,51 @@ Gộp theo đợt việc, mới nhất ở trên. Dự án chưa đánh số phi
 
 ---
 
+## Đợt 5 — Dùng thật rồi báo lại · 2026-09-03
+
+Bốn đợt góp ý từ người dùng sau khi mang app vào việc thật. Phần lớn là giao diện,
+nhưng lần nào cũng lôi ra một lỗi thật ở dưới.
+
+### Số hiện sai và bảng lệch font `0ddb0ee`
+- **Sửa lỗi:** bảng "Thông tin dùng trong công thức" dùng `fmt()` — bộ định dạng cho
+  **tiền đồng**, có `Math.round`. Nhưng bảng đó liệt kê **đầu vào** của công thức: hệ số
+  1,5 hiện thành "2"; tỷ lệ 0,215 hiện thành "0". Đúng cái bảng người ta mở ra để đối
+  chiếu. Đổi sang `fmtNum()`; quét thêm thì cùng lỗi có ở thư viện FX và bảng gợi ý.
+- `td.num, th.num` gộp chung nên mọi tiêu đề cột số ăn luôn font mono, rơi khỏi cỡ chữ
+  của các tiêu đề khác. Tách rule: `th.num` chỉ còn căn lề.
+- Nút **"⤒ Xuất dữ liệu"** cho cả 7 màn có nhập Excel — có nhập thì phải có xuất để tải
+  lại mà sửa. `downloadData()` dùng chung đường ghi file với `downloadTemplate()`.
+
+### Sinh sẵn bỏ sót và phân trang `88f5389`
+- **Sửa lỗi:** `classCombos()` kết thúc bằng `return out.slice(0, 800)` — cắt cụt và
+  **không báo gì**. Một cột khoá thì không chạm trần; từ hai cột trở lên tích chéo vượt
+  800 nên phần dư bị vứt, màn hình hiện "xxx dòng định biên chưa khớp" mà không ai hiểu
+  vì sao. Trần cứng thay bằng **ô nhập của người dùng** (để trống = không giới hạn), và
+  cắt thì phải nói.
+- **Sửa lỗi:** khoá bộ nhớ đệm của `previewRows()` dùng `JSON.stringify(...).length` —
+  hai cấu hình khác nhau mà chuỗi bằng độ dài thì đụng khoá. Dùng thẳng chuỗi.
+- **Sửa lỗi:** `excImport` **nối thêm** thay vì thay thế, khác mọi màn còn lại; và tháng
+  ngắt quãng bị mất khi xuất (chỉ ghi được một khoảng liền). Sửa cả hai.
+- **Phân trang dùng chung** cho mọi bảng dài, cỡ trang do người dùng chọn và sống qua
+  lần mở sau. Lọc trước, phân trang sau.
+
+### Bốn điểm chạm giao diện `1bc0985`
+- Tiêu đề hộp gợi ý chèn `position: sticky` — cuộn xuống vẫn biết đang xem hộp gì.
+- "Thử trên một dòng" thêm một thẻ cho **mỗi cột thuộc tính** của dòng đang thử, đặt
+  ngay sau thẻ ID. Đọc từ cột thật của file chứ không viết cứng tên cột.
+- **Sửa lỗi:** `pg.node` bị nhét thẳng vào `.body.tight` (đệm 0) ở năm màn nên thanh
+  phân trang dính sát góc panel. Đưa ra một `.body` riêng, khớp đúng bảng Phân loại nhóm.
+
+### Đổi thứ tự Formula Code
+- Danh sách Formula Code có **↑ ↓** trên từng dòng, giống bảng Phân loại nhóm. Thứ tự
+  này là thứ tự cột ở màn Kết quả và trong file Excel xuất ra, nên đổi xong bỏ kết quả
+  đã tính. Bấm ↑/↓ không nhảy sang soạn công thức khác.
+- Đổi tên biến tạm `t` trong hai nút đổi thứ tự của Phân loại nhóm — nó che hàm dịch
+  `t()`, đúng cái bẫy đã một lần làm mọi lỗi cú pháp công thức báo ra
+  `"t is not a function"`.
+
+---
+
 ## Đợt 4 — Kiến trúc và hạ tầng kỹ thuật · 2026-09-02 → 09-03
 
 App vốn đã chạy đúng, nhưng hạ tầng thì trống: 0 test trong repo, không CI, không lint,

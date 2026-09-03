@@ -240,6 +240,81 @@ describe('danh sách Formula Code', () => {
       return true;
     `, saved);
   });
+
+  /* Thứ tự Formula Code là thứ tự cột ở màn Kết quả và trong file Excel xuất ra,
+     nên phải sửa được — giống hệt cách bảng Phân loại nhóm cho đổi thứ tự. */
+  describe('đổi thứ tự bằng ↑ ↓', () => {
+    const codes = () => page.evaluate(() =>
+      [...document.querySelectorAll('.fclist .fcrow .fcmain > div:first-child')]
+        .map((x) => x.textContent));
+
+    /* Bấm nút thứ n (0 = ↑, 1 = ↓) của dòng thứ `row`. */
+    const move = async (row, n) => {
+      await page.evaluate(([r, i]) => {
+        document.querySelectorAll('.fclist .fcrow')[r].querySelectorAll('.fcmove button')[i].click();
+      }, [row, n]);
+      await page.waitForTimeout(350);
+    };
+
+    let saved;
+    beforeAll(async () => {
+      saved = await inPage(page, 'return JSON.stringify({ f: st.S.formulas, sel: st.S.ui.fSel });');
+      await inPage(page, `
+        st.S.formulas = ['A', 'B', 'C'].map((c, i) => {
+          return { id: 'f' + c, code: 'FC_' + c, name: 'Công thức ' + c, mode: 'monthly',
+            months: [1,2,3,4,5,6,7,8,9,10,11,12],
+            rules: [{ id: 'r' + i, name: 'Tất cả', cond: '', formula: '1' }] };
+        });
+        st.S.ui.fSel = 'fB'; fm.ENGINE.invalidate(); st.setRESULT(null);
+        return true;
+      `);
+      await goToView(page, 'Công thức chi phí');
+    });
+    afterAll(async () => {
+      await inPage(page, `
+        const old = JSON.parse(a);
+        st.S.formulas = old.f; st.S.ui.fSel = old.sel;
+        fm.ENGINE.invalidate(); st.setRESULT(null);
+        return true;
+      `, saved);
+    });
+
+    it('↓ đẩy xuống, ↑ kéo lên, và S.formulas đổi theo', async () => {
+      expect(await codes()).toEqual(['FC_A', 'FC_B', 'FC_C']);
+
+      await move(0, 1);                                  /* A đi xuống */
+      expect(await codes()).toEqual(['FC_B', 'FC_A', 'FC_C']);
+
+      await move(2, 0);                                  /* C đi lên */
+      expect(await codes()).toEqual(['FC_B', 'FC_C', 'FC_A']);
+
+      /* Thứ tự trên màn hình phải là thứ tự thật trong state, không phải trò của DOM. */
+      const inState = await inPage(page, 'return st.S.formulas.map((f) => f.code);');
+      expect(inState).toEqual(['FC_B', 'FC_C', 'FC_A']);
+    });
+
+    it('đổi thứ tự KHÔNG làm nhảy sang Formula Code khác', async () => {
+      const before = await inPage(page, 'return st.S.ui.fSel;');
+      await move(0, 1);
+      expect(await inPage(page, 'return st.S.ui.fSel;')).toBe(before);
+    });
+
+    it('bỏ kết quả đã tính, vì thứ tự cột trong file xuất ra đã khác', async () => {
+      await inPage(page, 'st.setRESULT({ fake: 1 }); return true;');
+      await move(0, 1);
+      expect(await inPage(page, 'return st.RESULT;')).toBeNull();
+    });
+
+    it('dòng đầu không có ↑, dòng cuối không có ↓ để bấm', async () => {
+      const ends = await page.evaluate(() => {
+        const rs = [...document.querySelectorAll('.fclist .fcrow')];
+        const btn = (r, i) => r.querySelectorAll('.fcmove button')[i].disabled;
+        return { firstUp: btn(rs[0], 0), firstDown: btn(rs[0], 1),
+          lastUp: btn(rs[rs.length - 1], 0), lastDown: btn(rs[rs.length - 1], 1) };
+      });
+      expect(ends).toEqual({ firstUp: true, firstDown: false, lastUp: false, lastDown: true });
+    });
+  });
 });
 
 describe('bảng "Cột của bảng định biên"', () => {

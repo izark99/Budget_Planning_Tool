@@ -43,19 +43,36 @@ function viewFormula() {
   const ul = el('div', { class: 'body tight fclist' });
   const ccOf = {};
   (S.maps.costCode || []).forEach((x) => { ccOf[nkey(x.formulaCode)] = x.costCode; });
-  S.formulas.forEach((f) => {
+  S.formulas.forEach((f, idx) => {
     const on = fc && f.id === fc.id;
+    /* ↑ ↓ đổi chỗ hai Formula Code trong S.formulas — giống hệt bảng Phân loại nhóm.
+       Thứ tự này chính là thứ tự cột ở màn Kết quả và trong file Excel xuất ra, nên đổi
+       xong phải bỏ kết quả đã tính. Không chạm tới định nghĩa của công thức nào nên
+       không cần ENGINE.invalidate() — bộ nhớ đệm của ENGINE không dính tới S.formulas. */
+    function move(to) {
+      if (to < 0 || to >= S.formulas.length) return;
+      const other = S.formulas[to];
+      S.formulas[to] = f; S.formulas[idx] = other;
+      setRESULT(null); touch(); render();
+    }
     ul.appendChild(el('div', {
-      style: 'padding:9px 12px;border-bottom:1px solid var(--rule-2);cursor:pointer;' + (on ? 'background:var(--mineral-2);border-left:3px solid var(--mineral)' : 'border-left:3px solid transparent'),
-      onclick: function () { S.ui.fSel = f.id; touch(); render(); }
+      class: 'fcrow' + (on ? ' on' : ''),
+      /* Bấm ↑/↓ thì chỉ đổi thứ tự, không nhảy sang soạn Formula Code khác. */
+      onclick: function (e) { if (e.target.closest('button')) return; S.ui.fSel = f.id; touch(); render(); }
     }, [
-      el('div', { style: 'font:600 12px var(--mono)', text: f.code }),
-      el('div', { style: 'font-size:12.5px;color:var(--soft)', text: f.name || '' }),
-      el('div', { style: 'margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, [
-        ribbon(f.months),
-        el('span', { class: 'tag' + (f.mode === 'spread' ? ' o' : ''), text: f.mode === 'spread' ? t('fm.mode_spread_short') : t('fm.mode_monthly_short') }),
-        el('span', { class: 'tag', text: t('fm.n_groups', { n: (f.rules || []).length }) }),
-        ccOf[nkey(f.code)] ? el('span', { class: 'tag g', text: '→ ' + ccOf[nkey(f.code)] }) : el('span', { class: 'tag o', text: t('fm.chua_map') })
+      el('div', { class: 'fcmain' }, [
+        el('div', { style: 'font:600 12px var(--mono)', text: f.code }),
+        el('div', { style: 'font-size:12.5px;color:var(--soft)', text: f.name || '' }),
+        el('div', { style: 'margin-top:4px;display:flex;gap:6px;align-items:center;flex-wrap:wrap' }, [
+          ribbon(f.months),
+          el('span', { class: 'tag' + (f.mode === 'spread' ? ' o' : ''), text: f.mode === 'spread' ? t('fm.mode_spread_short') : t('fm.mode_monthly_short') }),
+          el('span', { class: 'tag', text: t('fm.n_groups', { n: (f.rules || []).length }) }),
+          ccOf[nkey(f.code)] ? el('span', { class: 'tag g', text: '→ ' + ccOf[nkey(f.code)] }) : el('span', { class: 'tag o', text: t('fm.chua_map') })
+        ])
+      ]),
+      el('div', { class: 'fcmove' }, [
+        el('button', { class: 'btn sm', text: '↑', disabled: idx === 0, onclick: function () { move(idx - 1); } }),
+        el('button', { class: 'btn sm', text: '↓', disabled: idx === S.formulas.length - 1, onclick: function () { move(idx + 1); } })
       ])
     ]));
   });

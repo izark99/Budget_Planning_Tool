@@ -238,6 +238,17 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 /* Danh sách Formula Code: nhiều công thức thì tự cuộn trong khung, không đẩy
    hộp gợi ý bên dưới ra khỏi màn hình. */
 .fclist { max-height: 46vh; overflow: auto; }
+/* Mỗi dòng Formula Code: thông tin bên trái, cặp nút đổi thứ tự nép bên phải.
+   Cặp nút thấp hơn .btn thường để hai cái xếp chồng vẫn vừa chiều cao một dòng. */
+.fcrow {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 9px 12px; border-bottom: 1px solid var(--rule-2);
+  border-left: 3px solid transparent; cursor: pointer;
+}
+.fcrow.on { background: var(--mineral-2); border-left-color: var(--mineral); }
+.fcrow > .fcmain { flex: 1; min-width: 0; }
+.fcmove { display: flex; flex-direction: column; gap: 3px; }
+.fcmove .btn { height: 20px; padding: 0 7px; font-size: 11px; }
 /* Thanh phân trang dưới mỗi bảng dài. */
 .pager { display: flex; align-items: center; gap: 8px; padding: 7px 2px 0; flex-wrap: wrap; }
 .pager .muted { color: var(--soft); font-size: 12px; }
