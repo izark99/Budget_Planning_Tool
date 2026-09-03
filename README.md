@@ -6,6 +6,12 @@ Toàn bộ **nghiệp vụ chạy trong trình duyệt** — engine công thức
 đọc/xuất Excel. Dữ liệu định biên **không bao giờ rời khỏi máy người dùng**.
 Server chỉ làm đúng một việc: kiểm mật khẩu và cấp phiên.
 
+| | |
+|---|---|
+| [`docs/architecture.md`](docs/architecture.md) | vì sao các mảnh xếp như vậy, và những cái bẫy đã làm hỏng production |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md) | cách chạy bộ kiểm, ba mốc bất biến, vùng cấm |
+| [`CHANGELOG.md`](CHANGELOG.md) | lịch sử theo đợt việc |
+
 ---
 
 ## 1. Cấu trúc
