@@ -9,7 +9,7 @@
    Dựng trên fx-help.js (fxAssist, fxLibrary); fx-help.js không biết gì về nơi
    này — một chiều, không vòng.
    =========================================================== */
-import { CAL_FIELDS, S } from '../core/state.js';
+import { CAL_FIELDS, S, SYS_VARS } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { FX } from '../core/expression.js';
@@ -18,6 +18,21 @@ import { fxAssist, fxLibrary } from './fx-help.js';
 
 /* Ô công thức đang được chọn — hộp gợi ý chèn vào đúng ô này. */
 let activeFx = null;
+
+/* Chốt chặn: ô đang chọn có thể đã bị một lần dựng lại vứt khỏi DOM. Ghi vào ô
+   ma đó thì onChange vẫn sửa dữ liệu nhưng màn hình không đổi — đúng lỗi
+   "nhấn vài lần mới hiện, hiện bằng số lần nhấn" đã báo. */
+function liveFx() {
+  if (activeFx && !document.contains(activeFx)) activeFx = null;
+  return activeFx;
+}
+
+/* Chip không được cướp con trỏ khỏi ô công thức: chuỗi sự kiện thật là
+   mousedown -> blur -> mouseup -> click, và có ô lấy chính việc blur làm cớ dựng
+   lại cả khối (drawShared ở màn Thiết lập). Chặn ngay từ mousedown thì không có
+   blur, ô đang chọn còn sống, chèn vào đúng chỗ đang nhìn. Bảng gợi ý khi gõ ở
+   fx-help.js đã làm đúng như vậy từ đầu. */
+function keepFocus(e) { e.preventDefault(); }
 
 /* 'fx.args.IF' -> ['điều_kiện', 'giá_trị_nếu_đúng', 'giá_trị_nếu_sai'] */
 
@@ -62,7 +77,7 @@ function chipsPanel(fallback) {
   const where = el('span', { class: 'target' });
   const chips = el('div', { class: 'chips' });
 
-  function pick() { return activeFx || fallback; }
+  function pick() { return liveFx() || fallback; }
   function refreshTarget() {
     const tgt = pick();
     where.textContent = tgt ? (tgt._label ? t('fx.chips.target', { name: tgt._label }) : t('fx.chips.target.any'))
@@ -70,7 +85,7 @@ function chipsPanel(fallback) {
   }
   function add(text, title, ins) {
     chips.appendChild(el('span', {
-      class: 'chip', text, title: title || '',
+      class: 'chip', text, title: title || '', onmousedown: keepFocus,
       onclick: function () {
         const tgt = pick();
         if (!tgt) { toast(t('fx.chips.no_target'), 'bad'); return; }
@@ -83,7 +98,7 @@ function chipsPanel(fallback) {
   box.appendChild(where);
   chips.appendChild(el('span', {
     class: 'chip', style: 'background:var(--ink);color:#fff;border-color:var(--ink)',
-    text: t('fx.library.chip'), title: t('fx.library.chip.title'),
+    text: t('fx.library.chip'), title: t('fx.library.chip.title'), onmousedown: keepFocus,
     onclick: function () { fxLibrary(pick()); }
   }));
   (S.shared || []).forEach((sh) => {
@@ -92,7 +107,7 @@ function chipsPanel(fallback) {
   });
   ENGINE.usableCols().forEach((col) => { add('[' + col + ']', '', '[' + col + ']'); });
   (S.params || []).forEach((p) => { if (p.name) add(p.name, t('fx.cat.params'), p.name); });
-  ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map((f) => { return f.varName; }))
+  SYS_VARS.concat(CAL_FIELDS.map((f) => { return f.varName; }))
     .forEach((v) => { add(v, t('fx.sysvar'), v); });
 
   box.appendChild(chips);
@@ -105,18 +120,18 @@ function colChips(target) {
   const c = el('div', { class: 'chips' });
   c.appendChild(el('span', {
     class: 'chip', style: 'background:var(--ink);color:#fff;border-color:var(--ink)',
-    text: t('fx.library.chip'), title: t('fx.library.chip.title'),
+    text: t('fx.library.chip'), title: t('fx.library.chip.title'), onmousedown: keepFocus,
     onclick: function () { fxLibrary(target); }
   }));
   ENGINE.usableCols().forEach((col) => {
-    c.appendChild(el('span', { class: 'chip', text: '[' + col + ']', onclick: function () { target._insert('[' + col + ']'); } }));
+    c.appendChild(el('span', { class: 'chip', text: '[' + col + ']', onmousedown: keepFocus, onclick: function () { target._insert('[' + col + ']'); } }));
   });
   (S.params || []).forEach((p) => {
-    if (p.name) c.appendChild(el('span', { class: 'chip', text: p.name, onclick: function () { target._insert(p.name); } }));
+    if (p.name) c.appendChild(el('span', { class: 'chip', text: p.name, onmousedown: keepFocus, onclick: function () { target._insert(p.name); } }));
   });
-  ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map((f) => { return f.varName; }))
+  SYS_VARS.concat(CAL_FIELDS.map((f) => { return f.varName; }))
     .forEach((v) => {
-      c.appendChild(el('span', { class: 'chip', title: t('fx.sysvar'), text: v, onclick: function () { target._insert(v); } }));
+      c.appendChild(el('span', { class: 'chip', title: t('fx.sysvar'), text: v, onmousedown: keepFocus, onclick: function () { target._insert(v); } }));
     });
   return c;
 }

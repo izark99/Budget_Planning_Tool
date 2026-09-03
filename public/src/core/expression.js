@@ -2,7 +2,7 @@
    EXPRESSION — máy biểu thức FX, cú pháp tương đương Excel 365 (tập con)
      - Tham chiếu cột định biên:  [Dept], [Coefficient]
      - Hằng số toàn cục:          LUONG_CO_SO
-     - Biến hệ thống:             THANG, DINH_BIEN, SO_THANG
+     - Biến hệ thống:             THANG, DINH_BIEN, SO_THANG, TONG_THANG, THANG_BAT_DAU
 
    Tầng CORE thấp nhất: KHÔNG biết gì về ngân sách, định biên hay Formula Code.
    Nó nhận một biểu thức cùng một `ctx` rồi trả ra giá trị. Toàn bộ nghiệp vụ
@@ -13,7 +13,8 @@
      row        {}   một dòng định biên
      fieldIndex {}   tên cột viết thường -> tên cột thật, cho cú pháp [Cột]
      params     {}   hằng số toàn cục: LUONG_CO_SO, DON_GIA_AN_CA, ...
-     vars       {}   biến theo tháng: THANG, DINH_BIEN, SO_THANG, ngày công
+     vars       {}   biến hệ thống: THANG, DINH_BIEN, SO_THANG, ngày công (đổi theo
+                     tháng) và TONG_THANG, THANG_BAT_DAU (hằng của từng dòng)
      shared     {}   công thức dùng chung đã biên dịch, tra theo tên viết hoa
      lookups    {}   bảng tra cho VLOOKUP
    =========================================================== */
@@ -64,6 +65,17 @@ const FX = (function () {
       }
       if (/[0-9]/.test(ch) || (ch === '.' && /[0-9]/.test(src[i + 1] || ''))) {
         const m = /^[0-9]*\.?[0-9]+([eE][+-]?[0-9]+)?/.exec(src.slice(i));
+        /* Ngay sau con số mà còn ký tự tên thì cả cụm là TÊN, không phải số:
+           ô nhập tên tham số và mã công thức dùng chung đều lọc [^A-Z0-9_], tức
+           app CHO PHÉP đặt 13TH_LUONG. Không có nhánh này thì nó tách thành số
+           13 rồi tên TH_LUONG, và người dùng nhận "Thừa ký tự sau biểu thức".
+           2e3 khớp trọn quy tắc số nên không rơi vào đây; 100% cũng không, vì %
+           không phải ký tự tên. */
+        if (isIdentChar(src[i + m[0].length] || '')) {
+          let j3 = i;
+          while (j3 < n && isIdentChar(src[j3])) j3++;
+          toks.push({ t: 'id', v: src.slice(i, j3) }); i = j3; continue;
+        }
         toks.push({ t: 'num', v: parseFloat(m[0]) }); i += m[0].length; continue;
       }
       if (isIdentStart(ch)) {

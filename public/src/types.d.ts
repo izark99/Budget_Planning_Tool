@@ -216,7 +216,8 @@ interface FxCtx {
   fieldIndex: Record<string, string>;
   /** Hằng số toàn cục: LUONG_CO_SO, DON_GIA_AN_CA... */
   params: Record<string, number>;
-  /** Biến đổi theo tháng: THANG, DINH_BIEN, SO_THANG, các trường ngày công. */
+  /** THANG, DINH_BIEN, SO_THANG và các trường ngày công đổi theo tháng;
+   *  TONG_THANG, THANG_BAT_DAU là hằng của từng dòng. */
   vars: Record<string, number>;
   /** Công thức dùng chung, tra bằng tên viết HOA (cả code lẫn name). */
   shared: Record<string, SharedRecord>;

@@ -65,6 +65,41 @@ describe('hằng số, biến tháng, cú pháp %', () => {
   it('tên không có nguồn ra #NAME?', () => expect(FX.errText(ev('KHONG_CO_TEN_NAY'))).toBe('#NAME?'));
 });
 
+/* LỖI ĐÃ BÁO: ô nhập tên tham số và mã công thức dùng chung đều lọc [^A-Z0-9_],
+   tức app CHO PHÉP đặt tên 13TH_LUONG. Nhưng tokenize() thử số TRƯỚC khi thử
+   tên, còn isIdentStart không nhận chữ số — nên 13TH_LUONG tách thành số 13 rồi
+   tên TH_LUONG. App hứa một đằng, máy đọc một nẻo. */
+describe('tên bắt đầu bằng chữ số', () => {
+  const ctxNum = () => {
+    const c = CTX();
+    c.params = { '13TH_LUONG': 5000000, '3M_THUONG': 300, LUONG_CO_SO: 2340000 };
+    return c;
+  };
+
+  it('là MỘT tên, không phải số rồi tên', () => {
+    const info = FX.compile('13TH_LUONG').info;
+    expect(info.names).toEqual(['13TH_LUONG']);
+  });
+
+  it('tính ra đúng giá trị của tham số', () => {
+    expect(num('13TH_LUONG', ctxNum())).toBe(5000000);
+    expect(num('3M_THUONG * 2', ctxNum())).toBe(600);
+  });
+
+  it('tên bắt đầu bằng số mà không khai ra #NAME?, không âm thầm ra số', () => {
+    expect(FX.errText(ev('99KHONG_KHAI'))).toBe('#NAME?');
+  });
+
+  /* Ranh giới: những thứ ĐANG chạy đúng phải giữ nguyên là số. */
+  it.each([
+    ['2e3', 2000],
+    ['1.5', 1.5],
+    ['2*3', 6],
+    ['10%', 0.1],
+    ['.5+1', 1.5],
+  ])('%s vẫn là số', (src, want) => expect(num(src)).toBeCloseTo(want, 10));
+});
+
 describe('hàm', () => {
   it.each([
     ['ROUND(1234.567, -3)', 1000],

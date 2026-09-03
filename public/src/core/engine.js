@@ -31,6 +31,20 @@ const ENGINE = (function () {
     return (S.cols || []).filter((x) => { return x.role === 'month' && x.month >= 1 && x.month <= M; })
       .sort((a, b) => { return a.month - b.month; });
   }
+  /* Hai biến hệ thống của TỪNG DÒNG, đọc từ mảng định biên 12 tháng:
+       TONG_THANG    số tháng có định biên > 0
+       THANG_BAT_DAU tháng đầu tiên có định biên > 0 (0 nếu dòng trống)
+     Hằng theo tháng — tính một lần mỗi dòng, và KHÔNG nằm trong MONTH_VARS của
+     expression.js, nếu không mọi công thức dùng chúng đều mất bộ nhớ đệm eval. */
+  function rowVars(hcArr) {
+    const a = hcArr || []; let n = 0, first = 0;
+    for (let m = 0; m < M; m++) {
+      if (!a[m]) continue;
+      n++; if (!first) first = m + 1;
+    }
+    return { TONG_THANG: n, THANG_BAT_DAU: first };
+  }
+
   function attrCols() {
     return (S.cols || []).filter((x) => { return x.role !== 'skip' && x.role !== 'month'; });
   }
@@ -338,7 +352,7 @@ const ENGINE = (function () {
       const cen = maps.cen[nkey(unitV)];
       return {
         row: r, id: idCol ? nkey(r[idCol]) : '', pos: posCol ? nkey(r[posCol]) : '',
-        unit: unitV, cen: cen ? cen.costCenter : '', cal: cal.pick(r), m: r.__m
+        unit: unitV, cen: cen ? cen.costCenter : '', cal: cal.pick(r), m: r.__m, rv: rowVars(r.__m)
       };
     });
     if (unitCol) {
@@ -372,7 +386,7 @@ const ENGINE = (function () {
 
       for (let i = 0; i < nR; i++) {
         const rc = ctxRow[i];
-        const ctx = { row: rc.row, fieldIndex, params, lookups: {}, shared: sh.reg, vars: { THANG: 0, DINH_BIEN: 0, SO_THANG: nSel } };
+        const ctx = { row: rc.row, fieldIndex, params, lookups: {}, shared: sh.reg, vars: Object.assign({ THANG: 0, DINH_BIEN: 0, SO_THANG: nSel }, rc.rv) };
         let chosen = null;
         for (let g = 0; g < rules.length; g++) {
           const ru = rules[g]; if (ru.err) continue;
@@ -390,7 +404,7 @@ const ENGINE = (function () {
         for (let m = 1; m <= M; m++) {
           if (!msel[m]) continue;
           const hcf = rc.m[m - 1]; if (!hcf) continue;
-          ctx.vars = Object.assign({ THANG: m, DINH_BIEN: hcf, SO_THANG: nSel }, calVars(rc.cal, m));
+          ctx.vars = Object.assign({ THANG: m, DINH_BIEN: hcf, SO_THANG: nSel }, rc.rv, calVars(rc.cal, m));
           let base;
           if (monthDep) base = chosen.valFn.eval(ctx);
           else { if (cache === null) cache = chosen.valFn.eval(ctx); base = cache; }
@@ -498,7 +512,7 @@ const ENGINE = (function () {
     const cal = buildCalendar();
     return {
       row, fieldIndex, params: buildParams(), lookups: {}, shared: buildShared().reg,
-      vars: Object.assign({ THANG: month || 1, DINH_BIEN: (row.__m || [])[(month || 1) - 1] || 0, SO_THANG: nSel || 12 },
+      vars: Object.assign({ THANG: month || 1, DINH_BIEN: (row.__m || [])[(month || 1) - 1] || 0, SO_THANG: nSel || 12 }, rowVars(row.__m),
         calVars(cal.pick(row), month || 1))
     };
   }
@@ -569,7 +583,7 @@ const ENGINE = (function () {
       const hcf = (row.__m || [])[m - 1] || 0;
       const rec = { m, on: msel[m], hcf, raw: 0, raised: 0, afterExc: 0, amount: 0, exc: false };
       if (!msel[m]) { out.push(rec); continue; }
-      ctx.vars = Object.assign({ THANG: m, DINH_BIEN: hcf, SO_THANG: nSel }, calVars(cal.pick(row), m));
+      ctx.vars = Object.assign({ THANG: m, DINH_BIEN: hcf, SO_THANG: nSel }, rowVars(row.__m), calVars(cal.pick(row), m));
       const v = chosen.valFn.eval(ctx);
       if (FX.isErr(v)) { err = t('engine.err.code.at', { e: v.__err, m: MONTHS[m - 1] }); out.push(rec); continue; }
       rec.raw = FX.toNum(v);
@@ -637,7 +651,7 @@ const ENGINE = (function () {
       const vals = [], kind = kindOf(r);
       if (!c.ok) return { key: r.key, kind, error: c.error, constant: true, values: [] };
       for (let m = 1; m <= M; m++) {
-        ctx.vars = Object.assign({ THANG: m, DINH_BIEN: hcf0[m - 1] || 0, SO_THANG: nSel }, calVars(cal.pick(row), m));
+        ctx.vars = Object.assign({ THANG: m, DINH_BIEN: hcf0[m - 1] || 0, SO_THANG: nSel }, rowVars(hcf0), calVars(cal.pick(row), m));
         const v = c.fn.eval(ctx);
         vals.push(FX.isErr(v) ? { err: v.__err } : v);
       }

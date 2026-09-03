@@ -273,6 +273,8 @@ fx.valid.vars: · biến: {vars}
 fx.var.DINH_BIEN: Hệ số định biên của tháng đó
 fx.var.SO_THANG: Số tháng trích của công thức này
 fx.var.THANG: Tháng đang tính, 1 đến 12
+fx.var.THANG_BAT_DAU: Tháng đầu tiên dòng này có định biên, 0 nếu cả năm trống
+fx.var.TONG_THANG: Số tháng dòng này có định biên, không phụ thuộc tháng đang tính
 fx.var.calField: {label} của tháng đang tính
 fx.chips.title: Gợi ý chèn
 fx.chips.target: Chèn vào: {name}

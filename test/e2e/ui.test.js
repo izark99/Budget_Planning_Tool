@@ -317,6 +317,70 @@ describe('danh sách Formula Code', () => {
   });
 });
 
+/* LỖI ĐÃ BÁO: "nhấn vào tự điền, nhấn vài lần mới xuất hiện, số lần xuất hiện =
+   số lần nhấn".
+   Nguyên nhân: ô công thức dùng chung lấy drawShared làm onBlur. Bấm chip là một
+   mousedown trên <span> nên textarea BLUR TRƯỚC -> drawShared() dựng lại cả khối
+   -> activeFx (mức module) trỏ vào ô đã rời DOM. Tới lượt click của chip thì
+   _insert() ghi vào ô ma đó, mà onChange vẫn ghi thẳng vào S.shared[i].formula.
+   Màn hình không đổi vì nó dựng xong từ trước; bấm N lần thì tới lần dựng lại
+   sau, cả N đoạn hiện ra một lượt. */
+describe('chip chèn ở công thức dùng chung', () => {
+  beforeAll(async () => {
+    await inPage(page, `
+      st.S.shared = [{ id: 'sh1', code: 'CT_THU', name: '', formula: '0' }];
+      st.setRESULT(null);
+      return true;
+    `);
+    await goToView(page, 'Thiết lập');
+  });
+
+  /* Bấm bằng CHUỘT THẬT, không phải el.click(): chuỗi sự kiện thật là
+     mousedown -> blur -> mouseup -> click, mà chính cái blur mới gây ra lỗi.
+     el.click() chỉ bắn mỗi sự kiện click nên không tái hiện được gì. */
+  const clickOneChip = async () => {
+    const chip = page.locator('.chipbox .chip').filter({ hasText: /^\[/ }).first();
+    const label = (await chip.textContent()).trim();
+    await chip.click();
+    return label;
+  };
+
+  it('một lần bấm ra đúng một lần chèn, hiện ngay trên ô đang soạn', async () => {
+    /* Bấm vào ô để nó thành ô đang chọn — đúng thao tác thật của người dùng. */
+    await page.click('.panel .fx-wrap textarea');
+    await page.waitForTimeout(150);
+
+    const chip = await clickOneChip();
+    await page.waitForTimeout(300);
+
+    const inState = await inPage(page, 'return st.S.shared[0].formula;');
+    const onScreen = await page.evaluate(() =>
+      document.querySelector('.panel .fx-wrap textarea').value);
+
+    const name = chip.slice(1, -1);
+    /* Đúng MỘT lần, và thứ nhìn thấy khớp thứ đã lưu. */
+    expect(inState.split(name).length - 1).toBe(1);
+    expect(onScreen).toBe(inState);
+  });
+
+  it('bấm ba lần ra đúng ba lần chèn, không dồn lại', async () => {
+    await inPage(page, "st.S.shared[0].formula = '0'; return true;");
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Thiết lập');
+    await page.click('.panel .fx-wrap textarea');
+    await page.waitForTimeout(150);
+
+    let chip = '';
+    for (let i = 0; i < 3; i++) { chip = await clickOneChip(); await page.waitForTimeout(120); }
+    await page.waitForTimeout(250);
+
+    const inState = await inPage(page, 'return st.S.shared[0].formula;');
+    expect(inState.split(chip.slice(1, -1)).length - 1).toBe(3);
+    expect(await page.evaluate(() =>
+      document.querySelector('.panel .fx-wrap textarea').value)).toBe(inState);
+  });
+});
+
 describe('bảng "Cột của bảng định biên"', () => {
   it('gấp lại được, và trạng thái gấp sống qua lần render lại', async () => {
     await goToView(page, 'Thiết lập');

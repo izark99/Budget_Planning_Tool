@@ -33,6 +33,13 @@ const ROLES = [
    khớp cột khi nhập lại file đó (calImport). Đổi text = file mẫu đã tải
    về trước đây không nhập lại được nữa. `varName` là tên biến dùng trong
    công thức của người dùng — càng không được đổi. */
+/* Biến hệ thống dùng được trong công thức. Trước đây bộ ba đầu chép tay ở BỐN
+   chỗ (fx-help hai lần, formula-input hai lần) — thêm biến mới là sót một chỗ.
+   THANG và DINH_BIEN đổi theo tháng; TONG_THANG và THANG_BAT_DAU là hằng của
+   từng DÒNG, không đổi theo tháng, nên tuyệt đối không thêm vào MONTH_VARS của
+   expression.js — nhét vào đó là giết bộ nhớ đệm eval của mọi công thức dùng chúng. */
+const SYS_VARS = ['THANG', 'DINH_BIEN', 'SO_THANG', 'TONG_THANG', 'THANG_BAT_DAU'];
+
 const CAL_FIELDS = [
   { k: 'std', label: 'Ngày công chuẩn', varName: 'NGAY_CONG_CHUAN', def: 26 },
   { k: 'act', label: 'Ngày công làm việc thực tế', varName: 'NGAY_CONG_THUC_TE', def: 22 },
@@ -165,7 +172,7 @@ function fmtNum(v) {
 
 export {
   setNotifier,
-  LS_KEY, M, MONTHS, ROLES, CAL_FIELDS,
+  LS_KEY, M, MONTHS, ROLES, CAL_FIELDS, SYS_VARS,
   uid, allMonths, blankCalTable, defaultState,
   S, RESULT, dirty, setS, setRESULT,
   save, load, touch, installAutosave,
