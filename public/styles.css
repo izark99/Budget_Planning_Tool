@@ -107,7 +107,6 @@ button, input, select, textarea { font: inherit; color: inherit; }
    Trước đây panel dùng 13px/.08em, chipbox 11px/.06em, bảng đối chiếu lại đặt
    style thẳng trong JS — ba nơi ba kiểu. Giờ gom về đây. */
 .panel > header h3,
-.chipbox > h4,
 h4.sec { margin: 0; font: 600 13px var(--disp); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
 h4.sec { margin: 0 0 8px; }
 .panel > header .sp { flex: 1; }
@@ -202,6 +201,11 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 
 /* ============ Stat strip ============ */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: var(--r); overflow: hidden; margin-bottom: 18px; }
+/* Chia hàng cho đều: số cột do nơi dựng tính rồi truyền qua --cols, thay cho
+   auto-fit vốn nhét được bao nhiêu thì nhét (12 thẻ ra 7+5 lệch). Màn hẹp thì
+   trả về auto-fit, vì ép 6 cột trên 700px là bóp bẹp. */
+.stats.even { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); }
+@media (max-width: 1100px) { .stats.even { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } }
 .stat { background: var(--panel); padding: 12px 14px; }
 .stat .k { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--soft); }
 .stat .v { font: 600 21px/1.2 var(--disp); margin-top: 3px; font-variant-numeric: tabular-nums; }
@@ -229,12 +233,11 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .chip { font: 11px var(--mono); background: var(--bone-2); border: 1px solid var(--rule-2); border-radius: 2px; padding: 1px 5px; cursor: pointer; }
 .chip:hover { border-color: var(--ink-3); background: #fff; }
 
-/* Hộp gợi ý cột: dính theo màn hình khi cuộn, tự cuộn bên trong khi danh sách dài */
-.chipbox {
-  position: sticky; top: 10px; align-self: start;
-  border: 1px solid var(--rule-2); border-radius: var(--r); background: var(--bone-2);
-  padding: 9px 10px; max-height: 260px; overflow: auto;
-}
+/* Hộp gợi ý cột là .panel thật, giống hệt danh sách Formula Code: thanh tiêu đề
+   riêng, thân cuộn bên dưới. Ở đây chỉ còn phần bố cục của riêng nó — dính theo
+   màn hình khi cuộn — còn vỏ để .panel lo, cuộn để .chipbody lo. */
+.chipbox { position: sticky; top: 10px; align-self: start; margin-bottom: 0; }
+.chipbody { max-height: 260px; overflow: auto; padding: 9px 10px; }
 /* Danh sách Formula Code: nhiều công thức thì tự cuộn trong khung, không đẩy
    hộp gợi ý bên dưới ra khỏi màn hình. */
 .fclist { max-height: 46vh; overflow: auto; }
@@ -255,16 +258,9 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .pager select { width: auto; }
 /* Ô nhập trần sinh combo, nằm cạnh nút "Sinh sẵn từ định biên". */
 .lim { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--soft); }
-/* Tiêu đề dính đỉnh vùng cuộn của hộp — cuộn xuống vẫn biết đang xem hộp gì,
-   giống cách th của bảng đã làm. Lề âm cho nền phủ hết bề ngang, không để nội
-   dung cuộn lòi ra hai bên phần đệm của hộp. */
-.chipbox > h4 {
-  position: sticky; top: 0; z-index: 1;
-  background: var(--bone-2);
-  margin: -9px -10px 7px; padding: 9px 10px 7px;
-}
 .chipbox .chips { margin-top: 0; }
-.chipbox .target { font: 11px var(--mono); color: var(--mineral); margin-bottom: 7px; display: block; }
+/* "Đang chèn vào …" đẩy sang phải trên thanh tiêu đề, như badge của panel khác. */
+.chipbox .target { font: 11px var(--mono); color: var(--mineral); }
 /* Khu soạn công thức: danh sách nhóm bên trái, hộp gợi ý dính bên phải */
 .fxlayout { display: grid; grid-template-columns: minmax(0, 1fr) 250px; gap: 14px; align-items: start; }
 /* Ở màn Công thức chi phí, hộp gợi ý xuống cột trái dưới danh sách Formula Code
@@ -275,7 +271,7 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 /* Ô lưới mặc định min-width:auto nên không co nhỏ hơn nội dung — bảng rộng sẽ
    đẩy tràn cả trang thay vì tự cuộn bên trong. min-width:0 trả quyền co lại. */
 .fxlayout > *, .split > *, .rule > .b > * { min-width: 0; }
-@media (max-width: 1240px) { .fxlayout { grid-template-columns: 1fr; } .chipbox { position: static; max-height: 210px; } }
+@media (max-width: 1240px) { .fxlayout { grid-template-columns: 1fr; } .chipbox { position: static; } .chipbody { max-height: 210px; } }
 
 /* ============ Import wizard ============ */
 .drop {

@@ -36,7 +36,12 @@ function viewFormula() {
        
         /* GIÁ TRỊ MỒI (dữ liệu): ghi thẳng vào S, đi vào file dự án .json — giữ trong code. */
         const n = { id: uid(), code: 'FC_MOI_' + (S.formulas.length + 1), name: 'Công thức mới', mode: 'monthly', months: allMonths(), rules: [{ id: uid(), name: 'Tất cả', cond: '', formula: '0' }] };
-        S.formulas.push(n); S.ui.fSel = n.id; setRESULT(null); touch(); render();
+        /* Chèn ngay SAU công thức đang chọn, không dồn xuống cuối: người dùng
+           thường thêm một công thức họ hàng với cái đang mở. Chưa chọn gì thì
+           vào cuối như cũ. */
+        const at = S.formulas.findIndex((x) => { return x.id === S.ui.fSel; });
+        S.formulas.splice(at < 0 ? S.formulas.length : at + 1, 0, n);
+        S.ui.fSel = n.id; setRESULT(null); touch(); render();
       }
     })
   ]));
@@ -334,14 +339,24 @@ function previewPanel(fc) {
         ]);
       });
 
-    out.appendChild(el('div', { class: 'stats', style: 'margin:0 0 12px' }, [
+    const tiles = [
       idCol ? el('div', { class: 'stat' }, [el('div', { class: 'k', text: idCol }), el('div', { class: 'v', style: 'font-size:17px', text: String(res.id == null ? '' : res.id) })]) : null,
     ].concat(rowInfo).concat([
       el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('fm.nhom_khop') }), el('div', { class: 'v', style: 'font-size:15px', text: res.group || t('fm.no_match') })]),
       el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('fm.ca_nam_dong_nay') }), el('div', { class: 'v money', text: fmt(res.total) })]),
       el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('export.audit.monthsPicked') }), el('div', { class: 'v', style: 'font-size:15px', text: res.nSel + '/12' }),
         el('div', { class: 'u', text: fc.mode === 'spread' ? t('fm.mode_spread_short') : t('fm.mode_monthly_long') })])
-    ])));
+    ]).filter(Boolean);
+
+    /* Chia hàng cho ĐỀU. Lưới auto-fit mặc định nhét được bao nhiêu thì nhét, nên
+       12 thẻ ra 7+5 lệch. Số thẻ = số cột thuộc tính + 3, đổi theo từng file định
+       biên, nên không viết cứng 6 cột: chia số thẻ cho số hàng cần thiết.
+       12 -> 6+6 · 10 -> 5+5 · 9 -> 5+4 */
+    const nT = tiles.length, per = Math.min(6, nT) || 1;
+    const cols = Math.ceil(nT / Math.ceil(nT / per));
+    out.appendChild(el('div', {
+      class: 'stats even', style: 'margin:0 0 12px;--cols:' + cols
+    }, tiles));
     if (res.error) out.appendChild(el('div', { class: 'errbox', text: res.error }));
 
     const lines = [

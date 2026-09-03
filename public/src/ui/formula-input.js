@@ -73,7 +73,11 @@ function fxField(value, onChange, placeholder, onBlur) {
    bên trong khi danh sách dài. Chèn vào ô công thức được bấm gần nhất; chưa bấm
    ô nào thì chèn vào `fallback`. */
 function chipsPanel(fallback) {
-  const box = el('div', { class: 'chipbox' });
+  /* Dựng đúng hình của danh sách Formula Code: .panel thật, thanh tiêu đề riêng,
+     thân cuộn bên dưới. Nhờ tiêu đề nằm NGOÀI vùng cuộn nên không cần
+     position:sticky + lề âm như bản trước. Giữ class .chipbox trên nút gốc để
+     mọi luật bố cục cũ (dính theo màn hình, .fxlayout, .col-left) còn hiệu lực. */
+  const box = el('div', { class: 'panel chipbox' });
   const where = el('span', { class: 'target' });
   const chips = el('div', { class: 'chips' });
 
@@ -94,8 +98,9 @@ function chipsPanel(fallback) {
     }));
   }
 
-  box.appendChild(el('h4', { text: t('fx.chips.title') }));
-  box.appendChild(where);
+  box.appendChild(el('header', {}, [
+    el('h3', { text: t('fx.chips.title') }), el('div', { class: 'sp' }), where
+  ]));
   chips.appendChild(el('span', {
     class: 'chip', style: 'background:var(--ink);color:#fff;border-color:var(--ink)',
     text: t('fx.library.chip'), title: t('fx.library.chip.title'), onmousedown: keepFocus,
@@ -110,7 +115,7 @@ function chipsPanel(fallback) {
   SYS_VARS.concat(CAL_FIELDS.map((f) => { return f.varName; }))
     .forEach((v) => { add(v, t('fx.sysvar'), v); });
 
-  box.appendChild(chips);
+  box.appendChild(el('div', { class: 'body tight chipbody' }, [chips]));
   refreshTarget();
   box._refreshTarget = refreshTarget;
   return box;

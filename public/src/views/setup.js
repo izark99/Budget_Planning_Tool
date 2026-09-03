@@ -155,34 +155,26 @@ function viewSetup() {
   }
   drawShared();
 
-  wrap.appendChild(el('div', { class: 'panel' }, [
-    el('header', {}, [
-      el('h3', { text: t('setup.shared.title') }), el('div', { class: 'sp' }),
-      el('button', {
-        class: 'btn sm', text: t('setup.shared.add'),
-        onclick: function () {
-          S.shared = S.shared || [];
-          S.shared.push({ id: uid(), code: 'CT_MOI_' + (S.shared.length + 1), name: '', formula: '0' });
-          setRESULT(null); touch(); drawShared();
-        }
-      })
-    ]),
-    el('div', { class: 'body' }, [el('p', { class: 'hint', html: t('setup.shared.help') })]),
-    el('div', { class: 'body' }, [
-      el('div', { class: 'fxlayout' }, [shBox, chipsPanel(null)])
-    ])
-  ]));
+  /* foldPanel như mọi bảng khác: khai nhiều công thức dùng chung thì gấp lại
+     được, và trạng thái gấp sống qua lần render lại (nhớ ở S.ui.collapsed). */
+  wrap.appendChild(foldPanel('setup_shared', t('setup.shared.title'), [],
+    [el('button', {
+      class: 'btn sm', text: t('setup.shared.add'),
+      onclick: function () {
+        S.shared = S.shared || [];
+        S.shared.push({ id: uid(), code: 'CT_MOI_' + (S.shared.length + 1), name: '', formula: '0' });
+        setRESULT(null); touch(); drawShared();
+      }
+    })],
+    el('div', { class: 'fxlayout' }, [shBox, chipsPanel(null)]),
+    t('setup.shared.help')));
 
-  wrap.appendChild(el('div', { class: 'panel' }, [
-    el('header', {}, [
-      el('h3', { text: t('hc.tham_so_dung_chung') }), el('div', { class: 'sp' }),
-      el('button', { class: 'btn sm', text: t('hc.them'), onclick: function () { S.params.push({ name: 'THAM_SO_MOI', value: 0, note: '' }); touch(); fillP(); } })
-    ]),
-    el('div', { class: 'body' }, [el('p', { class: 'hint', html: t('setup.params_help') })]),
-    el('div', { class: 'body tight' }, [el('div', { class: 'tw', style: 'max-height:none' }, [
+  wrap.appendChild(foldPanel('setup_params', t('hc.tham_so_dung_chung'), [],
+    [el('button', { class: 'btn sm', text: t('hc.them'), onclick: function () { S.params.push({ name: 'THAM_SO_MOI', value: 0, note: '' }); touch(); fillP(); } })],
+    el('div', { class: 'tw', style: 'max-height:none' }, [
       el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: t('export.audit.name') }), el('th', { text: t('export.audit.value') }), el('th', { text: t('export.audit.note') }), el('th', { text: '' })])]), pb])
-    ])])
-  ]));
+    ]),
+    t('setup.params_help')));
 
   return wrap;
 }

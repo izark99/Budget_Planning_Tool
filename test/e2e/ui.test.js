@@ -5,7 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { chromium } from 'playwright';
 import { LAUNCH } from '../helpers/env.mjs';
 import { startServer } from '../helpers/server.mjs';
-import { collectErrors, goToView, importHeadcount, inPage, loginToApp } from '../helpers/browser.mjs';
+import { clickButton, collectErrors, goToView, importHeadcount, inPage, loginToApp } from '../helpers/browser.mjs';
 
 let server, browser, ctx, page, errs;
 
@@ -70,7 +70,7 @@ describe('tiêu đề bảng', () => {
   it('mọi tiêu đề dùng chung một font, một cỡ, một kiểu', async () => {
     await goToView(page, 'Công thức chi phí');
     const specs = await page.evaluate(() =>
-      [...document.querySelectorAll('.panel > header h3, .chipbox > h4, h4.sec')].map((h) => {
+      [...document.querySelectorAll('.panel > header h3, h4.sec')].map((h) => {
         const c = getComputedStyle(h);
         return `${c.fontWeight} ${c.fontSize} ${c.fontFamily.split(',')[0]} ls=${c.letterSpacing} tt=${c.textTransform}`;
       }));
@@ -112,11 +112,12 @@ describe('hộp gợi ý chèn cột', () => {
       const c = document.querySelector('.chipbox');
       if (!c) return null;
       const cs = getComputedStyle(c);
-      const list = document.querySelector('.col-left .panel');
+      const bodyCs = getComputedStyle(c.querySelector('.chipbody'));
+      const list = document.querySelector('.col-left > .panel');
       return {
         inLeft: !!c.closest('.col-left'),
         belowList: list ? c.getBoundingClientRect().top >= list.getBoundingClientRect().bottom - 2 : false,
-        position: cs.position, maxHeight: cs.maxHeight, overflow: cs.overflow,
+        position: cs.position, maxHeight: bodyCs.maxHeight, overflow: bodyCs.overflow,
         height: c.getBoundingClientRect().height,
         dupChipRows: document.querySelectorAll('.rule .chips').length,
       };
@@ -127,7 +128,8 @@ describe('hộp gợi ý chèn cột', () => {
     expect(cb.position).toBe('sticky');
     expect(cb.maxHeight).toBe('260px');
     expect(cb.overflow).toBe('auto');
-    expect(cb.height).toBeLessThanOrEqual(260);
+    /* Thân cuộn trần 260px, cộng thanh tiêu đề của panel. */
+    expect(cb.height).toBeLessThanOrEqual(320);
     /* Trước đây mỗi nhóm quy tắc lặp lại một dải chip riêng — nay chỉ còn một hộp. */
     expect(cb.dupChipRows).toBe(0);
   });
@@ -137,13 +139,13 @@ describe('hộp gợi ý chèn cột', () => {
     const cb = await page.evaluate(() => {
       const c = document.querySelector('.chipbox');
       if (!c) return null;
-      const cs = getComputedStyle(c);
+      const cs = getComputedStyle(c.querySelector('.chipbody'));
       return { maxHeight: cs.maxHeight, overflow: cs.overflow, height: c.getBoundingClientRect().height };
     });
     expect(cb).not.toBeNull();
     expect(cb.maxHeight).toBe('260px');
     expect(cb.overflow).toBe('auto');
-    expect(cb.height).toBeLessThanOrEqual(260);
+    expect(cb.height).toBeLessThanOrEqual(320);
   });
 
   it('màn Tăng lương liệt kê công thức dùng chung để chọn', async () => {
@@ -154,38 +156,54 @@ describe('hộp gợi ý chèn cột', () => {
   });
 });
 
-describe('hộp gợi ý: tiêu đề dính khi cuộn', () => {
-  /* Tiêu đề nằm TRONG vùng cuộn của .chipbox, nên nếu không dính thì cuộn xuống
-     là mất tiêu đề, không còn biết đang xem hộp gì. */
-  it('tiêu đề vẫn nằm trong khung nhìn sau khi cuộn hộp xuống', async () => {
+describe('hộp gợi ý: vỏ panel giống danh sách Formula Code', () => {
+  /* Bản trước tiêu đề nằm TRONG vùng cuộn nên phải dính bằng position:sticky +
+     lề âm. Nay hộp là .panel thật: thanh tiêu đề nằm NGOÀI phần cuộn, đúng hình
+     của danh sách Formula Code — không cần mẹo nào, và không thể trôi. */
+  it('tiêu đề nằm ngoài phần cuộn, cuộn thân xuống nó không nhúc nhích', async () => {
     await goToView(page, 'Công thức chi phí');
     const r = await page.evaluate(async () => {
       const box = document.querySelector('.chipbox');
-      const h = box && box.querySelector('h4');
-      if (!h) return null;
-      const sticky = getComputedStyle(h).position;
+      const head = box && box.querySelector(':scope > header');
+      const body = box && box.querySelector('.chipbody');
+      if (!head || !body) return null;
       /* Bóp trần chiều cao để chắc chắn có gì đó để cuộn — số chip phụ thuộc file
          định biên nên không thể trông chờ nó tự tràn. */
-      const keep = box.style.maxHeight;
-      box.style.maxHeight = '70px';
-      box.scrollTop = box.scrollHeight;
+      const keep = body.style.maxHeight;
+      body.style.maxHeight = '70px';
+      const before = head.getBoundingClientRect().top;
+      body.scrollTop = body.scrollHeight;
       await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
-      const hb = h.getBoundingClientRect(), bb = box.getBoundingClientRect();
       const out = {
-        sticky, scrolled: box.scrollTop > 0,
-        /* Tiêu đề còn nằm trọn trong khung nhìn của hộp hay đã trôi lên trên? */
-        visible: hb.top >= bb.top - 1 && hb.bottom <= bb.bottom + 1,
-        topGap: Math.round(hb.top - bb.top),
+        isPanel: box.classList.contains('panel'),
+        headOutsideScroller: !body.contains(head),
+        scrolled: body.scrollTop > 0,
+        moved: Math.round(head.getBoundingClientRect().top - before),
       };
-      box.style.maxHeight = keep;
+      body.style.maxHeight = keep;
       return out;
     });
     expect(r).not.toBeNull();
-    expect(r.sticky).toBe('sticky');
+    expect(r.isPanel).toBe(true);
+    expect(r.headOutsideScroller).toBe(true);
     expect(r.scrolled).toBe(true);
-    /* Đã cuộn tới đáy mà tiêu đề vẫn hiện trọn trong hộp = nó dính thật.
-       Không dính thì nó trôi lên trên, topGap âm mạnh. */
-    expect(r.visible, `topGap=${r.topGap}`).toBe(true);
+    expect(r.moved).toBe(0);
+  });
+
+  it('tiêu đề dùng đúng thanh header của panel, như Formula Code', async () => {
+    await goToView(page, 'Công thức chi phí');
+    const same = await page.evaluate(() => {
+      const spec = (h) => {
+        const c = getComputedStyle(h);
+        return `${c.fontWeight} ${c.fontSize} ${c.letterSpacing} ${c.textTransform}`;
+      };
+      const chipHead = document.querySelector('.chipbox > header h3');
+      const fcHead = [...document.querySelectorAll('.col-left > .panel > header h3')]
+        .find((h) => h.textContent.includes('Formula Code'));
+      return chipHead && fcHead ? { a: spec(chipHead), b: spec(fcHead) } : null;
+    });
+    expect(same).not.toBeNull();
+    expect(same.a).toBe(same.b);
   });
 });
 
@@ -305,6 +323,27 @@ describe('danh sách Formula Code', () => {
       expect(await inPage(page, 'return st.RESULT;')).toBeNull();
     });
 
+    it('công thức thêm mới chèn ngay SAU cái đang chọn, không dồn xuống cuối', async () => {
+      await inPage(page, "st.S.ui.fSel = st.S.formulas[0].id; return true;");
+      await goToView(page, 'Kết quả');
+      await goToView(page, 'Công thức chi phí');
+      const before = await inPage(page, 'return st.S.formulas.map((f) => f.code);');
+
+      await clickButton(page, '.col-left > .panel > header button', 'Thêm');
+      await page.waitForTimeout(400);
+
+      const after = await inPage(page, 'return st.S.formulas.map((f) => f.code);');
+      expect(after).toHaveLength(before.length + 1);
+      /* Ở vị trí thứ 2, ngay sau cái đang chọn — không phải cuối danh sách. */
+      expect(after[0]).toBe(before[0]);
+      expect(after[2]).toBe(before[1]);
+      expect(after[after.length - 1]).toBe(before[before.length - 1]);
+      /* Và cái vừa thêm thành cái đang chọn. */
+      expect(await inPage(page, 'return st.S.formulas[1].id === st.S.ui.fSel;')).toBe(true);
+
+      await inPage(page, 'st.S.formulas.splice(1, 1); st.S.ui.fSel = st.S.formulas[0].id; return true;');
+    });
+
     it('dòng đầu không có ↑, dòng cuối không có ↓ để bấm', async () => {
       const ends = await page.evaluate(() => {
         const rs = [...document.querySelectorAll('.fclist .fcrow')];
@@ -381,20 +420,70 @@ describe('chip chèn ở công thức dùng chung', () => {
   });
 });
 
-describe('bảng "Cột của bảng định biên"', () => {
-  it('gấp lại được, và trạng thái gấp sống qua lần render lại', async () => {
-    await goToView(page, 'Thiết lập');
-    const findHead = () => page.evaluate(() => {
-      const h = [...document.querySelectorAll('.panel > header.fold')]
-        .find((x) => x.textContent.includes('Cột của bảng định biên'));
-      return h ? { hasCaret: !!h.querySelector('.caret'), open: h.nextElementSibling.style.display !== 'none' } : null;
+describe('dải thẻ "thử trên một dòng" chia hàng đều', () => {
+  /* Lưới auto-fit nhét được bao nhiêu thì nhét, nên 12 thẻ ra 7+5 lệch. Đo bằng
+     TOẠ ĐỘ thật (gom thẻ theo offsetTop) chứ không đọc CSS — cái phải đúng là
+     hình người dùng nhìn thấy. */
+  it('mọi hàng có cùng số thẻ, chênh nhau nhiều nhất một ô', async () => {
+    await goToView(page, 'Công thức chi phí');
+    const rows = await page.evaluate(() => {
+      const strip = document.querySelector('.content .stats');
+      if (!strip) return null;
+      const by = {};
+      [...strip.children].forEach((c) => {
+        const top = Math.round(c.getBoundingClientRect().top);
+        by[top] = (by[top] || 0) + 1;
+      });
+      return { counts: Object.values(by), total: strip.children.length };
     });
+    expect(rows).not.toBeNull();
+    expect(rows.total).toBeGreaterThan(6);
+    /* Chia đều: hàng dài nhất và hàng ngắn nhất chênh nhau tối đa một ô. */
+    expect(Math.max(...rows.counts) - Math.min(...rows.counts)).toBeLessThanOrEqual(1);
+    /* Và không hàng nào quá 6 ô. */
+    expect(Math.max(...rows.counts)).toBeLessThanOrEqual(6);
+  });
+
+  it('12 thẻ chia đúng 6 + 6', async () => {
+    await goToView(page, 'Công thức chi phí');
+    const r = await page.evaluate(() => {
+      const strip = document.querySelector('.content .stats');
+      if (!strip || strip.children.length !== 12) return { n: strip ? strip.children.length : 0 };
+      const by = {};
+      [...strip.children].forEach((c) => {
+        const top = Math.round(c.getBoundingClientRect().top);
+        by[top] = (by[top] || 0) + 1;
+      });
+      return { n: 12, counts: Object.values(by) };
+    });
+    /* File định biên mẫu cho đúng 12 thẻ (9 cột thuộc tính + 3 thẻ tổng kết). */
+    expect(r.n).toBe(12);
+    expect(r.counts).toEqual([6, 6]);
+  });
+});
+
+describe('các bảng ở màn Thiết lập gấp lại được', () => {
+  /* `title` là biến phía Node — phải TRUYỀN sang trang, thân hàm của evaluate()
+     chạy trong trình duyệt nên không thấy được biến ngoài. */
+  it.each([
+    'Cột của bảng định biên',
+    'Công thức dùng chung',
+    'Tham số dùng chung',
+  ])('%s: gấp lại được, và trạng thái gấp sống qua lần render lại', async (title) => {
+    await goToView(page, 'Thiết lập');
+    const findHead = () => page.evaluate((tt) => {
+      const h = [...document.querySelectorAll('.panel > header.fold')]
+        .find((x) => x.textContent.includes(tt));
+      return h ? { hasCaret: !!h.querySelector('.caret'), open: h.nextElementSibling.style.display !== 'none' } : null;
+    }, title);
+    const toggle = () => page.evaluate((tt) => {
+      [...document.querySelectorAll('.panel > header.fold')]
+        .find((x) => x.textContent.includes(tt)).click();
+    }, title);
+
     expect(await findHead()).toEqual({ hasCaret: true, open: true });
 
-    await page.evaluate(() => {
-      [...document.querySelectorAll('.panel > header.fold')]
-        .find((x) => x.textContent.includes('Cột của bảng định biên')).click();
-    });
+    await toggle();
     await page.waitForTimeout(200);
     expect((await findHead()).open).toBe(false);
 
@@ -403,10 +492,7 @@ describe('bảng "Cột của bảng định biên"', () => {
     expect((await findHead()).open).toBe(false);
 
     /* trả lại trạng thái mở cho các phép kiểm sau */
-    await page.evaluate(() => {
-      [...document.querySelectorAll('.panel > header.fold')]
-        .find((x) => x.textContent.includes('Cột của bảng định biên')).click();
-    });
+    await toggle();
   });
 });
 
