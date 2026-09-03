@@ -107,7 +107,7 @@ function openProject() {
     const fr = new FileReader();
     fr.onload = function (e) {
       try {
-        const o = JSON.parse(e.target.result);
+        const o = JSON.parse(/** @type {string} */ (e.target.result));
         if (!o || !o.hc) throw new Error(t('err.bad_project_file'));
         /* ESM không cho gán lại binding đã import: dựng object mới rồi setS().
            Các bước gán bên trong giữ nguyên thứ tự như bản gốc. */

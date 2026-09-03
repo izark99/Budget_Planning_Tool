@@ -8,6 +8,7 @@
 import { t } from './content.js';
 
 /* Báo cho tầng UI (app.js gắn toast vào đây) — tránh state.js phải import ui.js */
+/** @type {(msg: string, kind?: string) => void} */
 let notify = function () { };
 function setNotifier(fn) { notify = fn; }
 
@@ -101,14 +102,18 @@ function defaultState() {
   };
 }
 
+/** @type {ProjectState} */
 let S = defaultState();
+/** @type {BudgetResult|null} */
 let RESULT = null;
 let dirty = false;
 
 /* ESM: binding đã import là bất biến ở phía import, nên mọi chỗ gán lại
    S/RESULT ở module khác phải đi qua hai hàm này. Chỗ ĐỌC vẫn viết
    `S.hc.rows` / `RESULT` như cũ nhờ live binding. */
+/** @param {ProjectState} next */
 function setS(next) { S = next; }
+/** @param {BudgetResult|null} next */
 function setRESULT(next) { RESULT = next; }
 
 function save() { try { localStorage.setItem(LS_KEY, JSON.stringify(S)); dirty = false; return true; } catch { return false; } }

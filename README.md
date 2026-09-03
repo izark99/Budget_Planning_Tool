@@ -256,15 +256,21 @@ npm ci                 # cài công cụ (chỉ devDependencies — app không c
 
 npm test               # 87 phép kiểm đơn vị, thuần Node, ~1 giây
 npm run lint           # ESLint (bỏ qua public/vendor/**)
-npm run typecheck      # tsc --noEmit, hiện checkJs tắt
+npm run typecheck      # tsc --noEmit với checkJs BẬT — đọc JSDoc, không sinh tệp nào
 npm run checks         # ba cổng chất lượng trong tools/
 npm run test:e2e       # 35 phép kiểm Chromium thật, ~70 giây
 npm run verify         # tất cả những thứ trên, đúng thứ tự CI chạy
 ```
 
-`npm test` **không cần trình duyệt**: `state.js` và `formula.js` chỉ chạm
+`npm test` **không cần trình duyệt**: `core/state.js` và `core/engine.js` chỉ chạm
 `localStorage`/`window` bên trong thân hàm nên nạp thẳng vào Node được. Nhờ vậy
 mốc quan trọng nhất — golden master — chạy trong mili-giây.
+
+Kiểm kiểu **không thêm bước build**: `tsc --noEmit` chỉ đọc JSDoc cùng các hình dữ
+liệu khai trong `public/src/types.d.ts` (`ProjectState`, `BudgetResult`, `FxCtx`,
+`PreviewRow`…) rồi báo lỗi. Tệp `.d.ts` không được nạp, không được deploy. Nó đã tìm
+ra một lỗi thật: mảng token trong `tokenize()` trùng tên với hàm dịch `t()`, khiến
+mọi lỗi cú pháp công thức báo `"t is not a function"` thay vì câu tiếng Việt.
 
 **Ba mốc không được phép đổi:**
 

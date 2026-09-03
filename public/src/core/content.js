@@ -11,9 +11,11 @@
    =========================================================== */
 
 /* ---------- Text tách ngoài (content.md) ---------- */
+/** @type {Record<string, string>} */
 let STRINGS = {};
 
 function parseContent(txt) {
+  /** @type {Record<string, string>} */
   const out = {};
   String(txt).split(/\r?\n/).forEach((line) => {
     const s = line.trim();
@@ -27,6 +29,12 @@ function parseContent(txt) {
   return out;
 }
 
+/**
+ * Nạp public/content.md rồi giữ trong bộ nhớ. Gọi MỘT LẦN lúc khởi động, trước
+ * khi dựng giao diện.
+ * @param {string} [url]
+ * @returns {Promise<Record<string, string>>}
+ */
 async function loadContent(url) {
   const res = await fetch(url || '/content.md', { credentials: 'same-origin', cache: 'no-store' });
   if (!res.ok) throw new Error('content.md HTTP ' + res.status);
@@ -36,6 +44,11 @@ async function loadContent(url) {
 
 /* t('toast.import.rows', { n: 128 }) — thiếu khoá thì trả về chính khoá
    để lỗi lộ ra ngay trên giao diện thay vì im lặng hiện rỗng. */
+/**
+ * @param {string} key khoá trong content.md
+ * @param {Record<string, any>} [vars] giá trị thay cho {placeholder}
+ * @returns {string} chính `key` nếu thiếu — để lỗi lộ ra trên giao diện
+ */
 function t(key, vars) {
   let v = STRINGS[key];
   if (v == null) return key;

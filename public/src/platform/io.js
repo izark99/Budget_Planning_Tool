@@ -21,7 +21,7 @@ function pickFile(accept, cb) {
 function readWorkbook(file, cb) {
   const fr = new FileReader();
   fr.onload = function (e) {
-    try { cb(null, XLSX.read(new Uint8Array(e.target.result), { type: 'array' })); }
+    try { cb(null, XLSX.read(new Uint8Array(/** @type {ArrayBuffer} */ (e.target.result)), { type: 'array' })); }
     catch (err) { cb(err); }
   };
   fr.onerror = function () { cb(new Error(t('io.err.read'))); };
@@ -88,20 +88,21 @@ function exportBudget(opt) {
     if (opt.pivot) {
       const a2 = [['AccountCode', 'BudgetCode', 'CostCode', 'CostCenter', 'FormulaCode', 'TenCongThuc'].concat(MONTHS).concat(['CaNam'])];
       R.pivot.forEach((p) => {
-        a2.push([p.accountCode, p.budgetCode, p.costCode, p.costCenter, p.formulaCode, p.formulaName].concat(p.m).concat([p.total]));
+        a2.push(/** @type {any[]} */ ([p.accountCode, p.budgetCode, p.costCode, p.costCenter, p.formulaCode, p.formulaName]).concat(p.m).concat([p.total]));
       });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a2), 'TongHop_PhanLoai');
     }
 
     if (opt.fc) {
+      /** Bảng tổng hợp theo Formula Code: ô là chuỗi lẫn số. @type {any[][]} */
       const a3 = [['FormulaCode', 'Ten', 'CachTinh', 'ThangTrich'].concat(MONTHS).concat(['CaNam'])];
       fcs.forEach((fc, c) => {
         const mt = new Array(M).fill(0), arr = R.data[c];
         for (let i2 = 0; i2 < R.rows.length; i2++) for (let m2 = 0; m2 < M; m2++) mt[m2] += arr[i2 * M + m2];
-        a3.push([fc.code, fc.name || '', fc.mode === 'spread' ? t('export.mode.spread') : t('export.mode.monthly'),
-        (fc.months || []).map((x) => { return 'T' + String(x).padStart(2, '0'); }).join(' ')].concat(mt).concat([R.totalsByFc[c]]));
+        a3.push(/** @type {any[]} */ ([fc.code, fc.name || '', fc.mode === 'spread' ? t('export.mode.spread') : t('export.mode.monthly'),
+        (fc.months || []).map((x) => { return 'T' + String(x).padStart(2, '0'); }).join(' ')]).concat(mt).concat([R.totalsByFc[c]]));
       });
-      a3.push([t('export.total'), '', '', ''].concat(R.monthTotals).concat([R.grand]));
+      a3.push(/** @type {any[]} */ ([t('export.total'), '', '', '']).concat(R.monthTotals).concat([R.grand]));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a3), 'TongHop_FormulaCode');
     }
 
@@ -114,6 +115,7 @@ function exportBudget(opt) {
     }
 
     if (opt.audit) {
+      /** Bảng thuyết minh: ô là chuỗi lẫn số lẫn rỗng. @type {any[][]} */
       const a5 = [['MUC', 'KHOA', 'GIA TRI 1', 'GIA TRI 2', 'GIA TRI 3']];
       a5.push([t('export.audit.period'), S.meta.name, S.meta.year, t('export.audit.exportedAt'), new Date().toLocaleString('vi-VN')]);
       a5.push([t('export.audit.hcSource'), S.hc.file, S.hc.at, t('export.audit.rows', { n: S.hc.rows.length }), '']);

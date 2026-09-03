@@ -180,7 +180,7 @@ function accTemplate() {
   (S.accruals || []).forEach((a) => {
     if (!a.col) return;
     (a.rows || []).forEach((r) => {
-      rows.push([a.code, a.col, r.key].concat((r.m || blankMonths()).map((x) => { return x === '' ? '' : numOf(x); })));
+      rows.push(/** @type {any[]} */ ([a.code, a.col, r.key]).concat((r.m || blankMonths()).map((x) => { return x === '' ? '' : numOf(x); })));
     });
   });
   if (!rows.length && S.formulas.length) {

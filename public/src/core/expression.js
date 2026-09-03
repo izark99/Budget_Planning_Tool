@@ -34,7 +34,12 @@ const FX = (function () {
   function isIdentChar(ch) { return /[A-Za-z0-9_.\u00C0-\u024F\u1E00-\u1EFF]/.test(ch); }
 
   function tokenize(src) {
-    const t = []; let i = 0; const n = src.length;
+    /* LƯU Ý: mảng token PHẢI KHÔNG được đặt tên `t` — trùng với hàm dịch t()
+       import ở đầu tệp. Trước đây trùng thật, nên MỌI thông báo lỗi cú pháp
+       trong hàm này nổ thành "t is not a function" thay vì hiện câu tiếng Việt.
+       checkJs bắt được; đã có phép kiểm khoá lại. */
+    /** @type {Array<{ t: string, v: any }>} */
+    const toks = []; let i = 0; const n = src.length;
     while (i < n) {
       const ch = src[i];
       if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') { i++; continue; }
@@ -48,32 +53,32 @@ const FX = (function () {
           buf += src[j]; j++;
         }
         if (j >= n) throw new Error(t('fx.err.string.unclosed'));
-        t.push({ t: 'str', v: buf }); i = j + 1; continue;
+        toks.push({ t: 'str', v: buf }); i = j + 1; continue;
       }
       if (ch === '[') {
         const k = src.indexOf(']', i + 1);
         if (k < 0) throw new Error(t('fx.err.bracket.unclosed'));
         let nm = src.slice(i + 1, k).trim();
         if (nm[0] === '@') nm = nm.slice(1).trim();
-        t.push({ t: 'field', v: nm }); i = k + 1; continue;
+        toks.push({ t: 'field', v: nm }); i = k + 1; continue;
       }
       if (/[0-9]/.test(ch) || (ch === '.' && /[0-9]/.test(src[i + 1] || ''))) {
         const m = /^[0-9]*\.?[0-9]+([eE][+-]?[0-9]+)?/.exec(src.slice(i));
-        t.push({ t: 'num', v: parseFloat(m[0]) }); i += m[0].length; continue;
+        toks.push({ t: 'num', v: parseFloat(m[0]) }); i += m[0].length; continue;
       }
       if (isIdentStart(ch)) {
         let j2 = i;
         while (j2 < n && isIdentChar(src[j2])) j2++;
-        t.push({ t: 'id', v: src.slice(i, j2) }); i = j2; continue;
+        toks.push({ t: 'id', v: src.slice(i, j2) }); i = j2; continue;
       }
-      if (ch === '%') { t.push({ t: 'op', v: '%' }); i++; continue; }
+      if (ch === '%') { toks.push({ t: 'op', v: '%' }); i++; continue; }
       const two = src.substr(i, 2);
-      if (OPS2.indexOf(two) >= 0) { t.push({ t: 'op', v: two }); i += 2; continue; }
-      if (OPS1.indexOf(ch) >= 0) { t.push({ t: 'op', v: ch }); i++; continue; }
+      if (OPS2.indexOf(two) >= 0) { toks.push({ t: 'op', v: two }); i += 2; continue; }
+      if (OPS1.indexOf(ch) >= 0) { toks.push({ t: 'op', v: ch }); i++; continue; }
       throw new Error(t('fx.err.badchar', { ch }));
     }
-    t.push({ t: 'eof' });
-    return t;
+    toks.push({ t: 'eof', v: null });
+    return toks;
   }
 
   /* ---------- Parser (recursive descent, Excel precedence) ---------- */
@@ -447,6 +452,12 @@ const FX = (function () {
   }
 
   /* ---------- Public ---------- */
+  /**
+   * Biên dịch một biểu thức. Ném Error nếu sai cú pháp — dùng tryCompile() khi
+   * chuỗi đến từ người dùng.
+   * @param {string} src
+   * @returns {FxCompiled}
+   */
   function compile(src) {
     const ast = parse(src);
     const info = analyze(ast);
@@ -455,6 +466,11 @@ const FX = (function () {
       eval: function (ctx) { return evalNode(ast, ctx); }
     };
   }
+  /**
+   * Bản không ném của compile(): lỗi cú pháp trả về dạng dữ liệu.
+   * @param {string} src
+   * @returns {{ ok: boolean, fn?: FxCompiled, error?: string }}
+   */
   function tryCompile(src) {
     try { return { ok: true, fn: compile(src) }; }
     catch (e) { return { ok: false, error: e.message }; }

@@ -146,6 +146,20 @@ describe('tryCompile — lỗi cú pháp', () => {
     expect(typeof r.error).toBe('string');
   });
 
+  /* Mảng token trong tokenize() từng được đặt tên `t`, che mất hàm dịch t()
+     import ở đầu tệp — nên MỌI lỗi cú pháp báo ra "t is not a function" thay vì
+     câu tiếng Việt. checkJs tìm ra; phép kiểm này khoá lại. */
+  it.each([
+    ['"chuoi chua dong', 'Thiếu dấu " đóng chuỗi'],
+    ['[Cot chua dong', 'Thiếu dấu ] đóng tên cột'],
+    ['1 + \u00A7', 'Ký tự không hợp lệ: "\u00A7"'],
+  ])('%s báo đúng câu tiếng Việt, không phải lỗi nội bộ', (src, want) => {
+    const r = FX.tryCompile(src);
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe(want);
+    expect(r.error).not.toMatch(/is not a function/);
+  });
+
   it('biểu thức đúng trả về hàm dùng được', () => {
     const r = FX.tryCompile('1 + 1');
     expect(r.ok).toBe(true);

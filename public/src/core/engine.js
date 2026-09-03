@@ -59,7 +59,11 @@ const ENGINE = (function () {
      cho công thức dùng chung thì một đợt tăng sẽ bị tính hai lần. */
   function buildShared() {
     const defs = (S.shared || []).filter((x) => { return x && nkey(x.code); });
-    const reg = {}, byCode = {}, errors = [];
+    /** @type {Record<string, SharedRecord>} */
+    const reg = {};
+    /** @type {Record<string, SharedRecord>} */
+    const byCode = {};
+    const errors = [];
 
     defs.forEach((d) => {
       const code = nkey(d.code);
@@ -78,7 +82,7 @@ const ENGINE = (function () {
       let cf = null;
       if (r.cond && String(r.cond).trim()) { const cc = FX.tryCompile(r.cond); if (cc.ok) cf = cc.fn; }
       list.forEach((code) => {
-        if (byCode[code]) byCode[code].raises.push({ from: +r.fromMonth || 1, pct: parseFloat(r.pct) || 0, condFn: cf });
+        if (byCode[code]) byCode[code].raises.push({ from: +r.fromMonth || 1, pct: parseFloat(String(r.pct)) || 0, condFn: cf });
       });
     });
 
@@ -143,6 +147,7 @@ const ENGINE = (function () {
   }
 
   function buildParams() {
+    /** @type {Record<string, any>} */
     const p = {};
     (S.params || []).forEach((x) => {
       if (!x.name) return;
@@ -269,8 +274,11 @@ const ENGINE = (function () {
 
   /* ---- Bốn tầng phân loại chi phí ---- */
   function buildMaps() {
-    const mp = S.maps || {};
-    const cc = {}, cen = {}, bud = {}, acc = {};
+    const mp = S.maps || /** @type {ProjectState['maps']} */ ({});
+    /** @type {Record<string, any>} */ const cc = {};
+    /** @type {Record<string, any>} */ const cen = {};
+    /** @type {Record<string, any>} */ const bud = {};
+    /** @type {Record<string, any>} */ const acc = {};
     (mp.costCode || []).forEach((x) => { cc[nkey(x.formulaCode)] = x; });
     (mp.costCenter || []).forEach((x) => { cen[nkey(x.unit)] = x; });
     (mp.budgetCode || []).forEach((x) => { bud[nkey(x.costCenter) + '|' + nkey(x.costCode) + '|' + nkey(x.unit)] = x; });
@@ -279,6 +287,11 @@ const ENGINE = (function () {
   }
 
   /* ---------- CHẠY ---------- */
+  /**
+   * Tính toàn bộ ngân sách trên trạng thái S hiện tại.
+   * Nặng nhất trong app — gọi khi người dùng bấm "Chạy tính", không gọi lúc render.
+   * @returns {BudgetResult}
+   */
   function run() {
     const t0 = Date.now();
     let warnings = []; const formulaErrors = [];
@@ -290,6 +303,7 @@ const ENGINE = (function () {
     sh.errors.forEach((e) => {
       formulaErrors.push({ where: t('engine.where.shared', { code: e.where }), msg: e.msg });
     });
+    /** @type {Record<string, string>} */
     const fieldIndex = {};
     usableCols().forEach((c) => { fieldIndex[String(c).toLowerCase().trim()] = c; });
     const cal = buildCalendar();
@@ -309,7 +323,7 @@ const ENGINE = (function () {
         const c = FX.tryCompile(r.cond);
         if (c.ok) condFn = c.fn; else formulaErrors.push({ where: t('engine.where.raise', { name: r.name || '' }), msg: c.error });
       }
-      return { from: +r.fromMonth || 1, pct: parseFloat(r.pct) || 0, condFn, codes: (r.formulas || []).map(nkey) };
+      return { from: +r.fromMonth || 1, pct: parseFloat(String(r.pct)) || 0, condFn, codes: (r.formulas || []).map(nkey) };
     });
 
     /* tờ trình theo Formula Code */
@@ -470,9 +484,11 @@ const ENGINE = (function () {
     cacheKey = key; cacheRows = applyPolicies(applyClasses(buildRows(), null), null);
     return cacheRows;
   }
+  /** Bỏ kết quả đã nhớ. PHẢI gọi sau mọi thay đổi chạm tới số liệu. */
   function invalidate() { cacheRows = null; }
 
   function ctxFor(row, month, nSel) {
+    /** @type {Record<string, string>} */
     const fieldIndex = {};
     usableCols().forEach((c) => { fieldIndex[String(c).toLowerCase().trim()] = c; });
     const cal = buildCalendar();
@@ -498,6 +514,13 @@ const ENGINE = (function () {
   }
 
   /* Thử một dòng cho cả 12 tháng, có cả tăng lương và tờ trình */
+  /**
+   * Thử một Formula Code trên MỘT dòng định biên: ra 12 tháng, nhóm quy tắc nào
+   * khớp, và mọi thông tin mà công thức dùng tới (bảng đối chiếu).
+   * @param {FormulaCode} fc
+   * @param {number} rowIdx chỉ số dòng trong S.hc.rows
+   * @returns {PreviewRow}
+   */
   function previewRow(fc, rowIdx) {
     const rows = previewRows();
     const row = rows[rowIdx];
@@ -525,7 +548,7 @@ const ENGINE = (function () {
     }).map((r) => {
       let cf = null;
       if (r.cond && String(r.cond).trim()) { const c = FX.tryCompile(r.cond); if (c.ok) cf = c.fn; }
-      return { from: +r.fromMonth || 1, pct: parseFloat(r.pct) || 0, condFn: cf, name: r.name };
+      return { from: +r.fromMonth || 1, pct: parseFloat(String(r.pct)) || 0, condFn: cf, name: r.name };
     });
     const exs = (S.exceptions || []).filter((e) => {
       if (e.active === false || nkey(e.formulaCode) !== nkey(fc.code)) return false;

@@ -23,8 +23,11 @@ const STAT_DEFS = [
   { k: 'max', t: 'Max' }
 ];
 
+/** Bộ lọc của màn Bảng điều khiển, tạo sẵn giá trị mặc định nếu chưa có.
+ *  @returns {DashFilters} */
 function dashState() {
-  const f = S.ui.dash = S.ui.dash || {};
+  const f = /** @type {DashFilters} */ (S.ui.dash = S.ui.dash || {});
+  /* Từ đây trở xuống mọi trường đều được điền, nên f đúng là DashFilters đủ bộ. */
   if (!f.extra || f.extra.length !== 3) f.extra = [{ col: '', val: '' }, { col: '', val: '' }, { col: '', val: '' }];
   if (!f.stats) f.stats = ['min', 'median', 'mean', 'max'];
   if (f.costCode === undefined) f.costCode = '';
