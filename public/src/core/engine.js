@@ -308,7 +308,7 @@ const ENGINE = (function () {
    */
   /* Một lượt tính với đúng danh sách đợt tăng được đưa vào. run() gọi nó với cả
      danh sách; phần đo ảnh hưởng tăng lương gọi lại với danh sách cắt bớt. */
-  function runCore(raiseList) {
+  function runCore(raiseList, onStep) {
     const t0 = Date.now();
     let warnings = []; const formulaErrors = [];
     const rows = applyPolicies(applyClasses(buildRows(), warnings), warnings);
@@ -483,6 +483,7 @@ const ENGINE = (function () {
         }
       }
       data.push(arr); groupOf.push(gs);
+      if (onStep) onStep(c + 1, nF, fc.code);
 
       let noGroup = 0;
       for (let q = 0; q < nR; q++) if (gs[q] === null) noGroup++;
@@ -522,6 +523,90 @@ const ENGINE = (function () {
      đúng trường hợp của file mẫu. Chạy lại cả lượt thì không có đường nào lọt.
 
      Giá: thêm N+1 lượt khi có N đợt. Không khai đợt nào thì không chạy lượt nào. */
+  /* Bản bất đồng bộ của run(): nhường lại cho trình duyệt giữa các bước để thanh
+     tiến trình vẽ được. KHÔNG đụng vào một phép tính nào — run() đồng bộ ở dưới
+     vẫn là đường mà bộ kiểm và golden đi qua.
+
+     Hai mốc nhường có sẵn: hết mỗi Formula Code trong runCore, và hết mỗi lượt
+     trong run (N đợt tăng lương thì N+1 lượt). */
+  function yieldFrame() {
+    return new Promise((res) => { setTimeout(res, 0); });
+  }
+
+  async function runAsync(onProgress) {
+    const active = (S.raises || []).filter((r) => { return r.active !== false; });
+    /* Tổng số bước để quy ra phần trăm: mỗi lượt tính là một bước lớn. */
+    const passes = active.length ? active.length + 1 : 1;
+    let done = 0;
+    const tell = (label) => {
+      if (onProgress) onProgress(Math.min(99, Math.round(done / passes * 100)), label);
+    };
+
+    let stepInPass = 0;
+    const perFc = (c, n, code) => {
+      stepInPass = c / n;
+      if (onProgress) {
+        onProgress(Math.min(99, Math.round((done + stepInPass) / passes * 100)), code);
+      }
+    };
+
+    tell(t('engine.step.main'));
+    await yieldFrame();
+    const full = runCore(null, perFc);
+    done++;
+
+    if (!active.length) { if (onProgress) onProgress(100, ''); return full; }
+
+    tell(t('engine.step.noRaise'));
+    await yieldFrame();
+    const none = runCore([], perFc);
+    done++;
+    full.dataNoRaise = none.data;
+    full.raiseTotal = full.grand - none.grand;
+
+    let prev = none;
+    const impact = [];
+    for (let k = 0; k < active.length; k++) {
+      const r = active[k];
+      tell(t('engine.step.raise', { name: r.name || '' }));
+      await yieldFrame();
+      const cur = (k === active.length - 1) ? full : runCore(active.slice(0, k + 1), perFc);
+      done++;
+      impact.push(raiseSlice(r, cur, prev));
+      prev = cur;
+    }
+    full.raiseImpact = impact;
+    if (onProgress) onProgress(100, '');
+    return full;
+  }
+
+  /* Phần tiền mà riêng đợt `r` cộng thêm, so lượt `cur` với lượt `prev`. Dùng
+     chung cho cả run() lẫn runAsync() — một cách tính, không hai bản. */
+  function raiseSlice(r, cur, prev) {
+    /** @type {Record<string, number>} */
+    const byFc = {};
+    cur.formulas.forEach((fc, c) => {
+      const d = cur.totalsByFc[c] - prev.totalsByFc[c];
+      if (d) byFc[fc.code] = d;
+    });
+    const byMonth = cur.monthTotals.map((v, m) => { return v - prev.monthTotals[m]; });
+    /* Số lượt dòng × Formula Code mà đợt này thật sự làm đổi tiền. */
+    let nRows = 0;
+    cur.data.forEach((arr, c) => {
+      const before = prev.data[c];
+      for (let i = 0; i < cur.rows.length; i++) {
+        for (let m = 0; m < M; m++) {
+          if (arr[i * M + m] !== before[i * M + m]) { nRows++; break; }
+        }
+      }
+    });
+    return {
+      id: r.id, name: r.name || '', fromMonth: +r.fromMonth || 1,
+      pct: parseFloat(String(r.pct)) || 0,
+      total: cur.grand - prev.grand, byMonth, byFc, nRows
+    };
+  }
+
   function run() {
     const full = runCore(null);
     const active = (S.raises || []).filter((r) => { return r.active !== false; });
@@ -535,28 +620,7 @@ const ENGINE = (function () {
     let prev = none;
     full.raiseImpact = active.map((r, k) => {
       const cur = (k === active.length - 1) ? full : runCore(active.slice(0, k + 1));
-      /** @type {Record<string, number>} */
-      const byFc = {};
-      cur.formulas.forEach((fc, c) => {
-        const d = cur.totalsByFc[c] - prev.totalsByFc[c];
-        if (d) byFc[fc.code] = d;
-      });
-      const byMonth = cur.monthTotals.map((v, m) => { return v - prev.monthTotals[m]; });
-      /* Số lượt dòng × Formula Code mà đợt này thật sự làm đổi tiền. */
-      let nRows = 0;
-      cur.data.forEach((arr, c) => {
-        const before = prev.data[c];
-        for (let i = 0; i < cur.rows.length; i++) {
-          for (let m = 0; m < M; m++) {
-            if (arr[i * M + m] !== before[i * M + m]) { nRows++; break; }
-          }
-        }
-      });
-      const out = {
-        id: r.id, name: r.name || '', fromMonth: +r.fromMonth || 1,
-        pct: parseFloat(String(r.pct)) || 0,
-        total: cur.grand - prev.grand, byMonth, byFc, nRows
-      };
+      const out = raiseSlice(r, cur, prev);
       prev = cur;
       return out;
     });
@@ -758,6 +822,7 @@ const ENGINE = (function () {
 
   return {
     run, preview, policyCols, previewRow, countMatch, previewRows, invalidate,
+    runAsync,
     usableCols, attrCols, monthCols, roleCol, M
   };
 })();

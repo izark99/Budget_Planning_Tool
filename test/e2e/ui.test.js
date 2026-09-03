@@ -878,6 +878,99 @@ describe('soạn công thức: giữ chỗ và in lại cho dễ đọc', () => 
   });
 });
 
+describe('Tăng lương: giới hạn phạm vi theo cột', () => {
+  it('chọn hai giá trị của một cột → sinh đúng điều kiện, badge khớp countMatch', async () => {
+    await inPage(page, `
+      st.S.raises = [{ id: 'r1', name: 'Đợt thử', fromMonth: 1, pct: 10, cond: '', formulas: [], active: true }];
+      st.setRESULT(null); return true;
+    `);
+    await goToView(page, 'Tăng lương');
+
+    await clickButton(page, '.rule button', 'Chọn theo cột');
+    await page.waitForTimeout(400);
+
+    /* Chọn cột Dept rồi tích hai giá trị đầu. */
+    await page.selectOption('.modal select', 'Dept');
+    await page.waitForTimeout(300);
+    const vals = await page.evaluate(() =>
+      [...document.querySelectorAll('.modal .chips .chip')].slice(0, 2).map((c) => c.textContent));
+    for (const v of vals) {
+      await page.locator('.modal .chips .chip', { hasText: new RegExp('^' + v + '$') }).first().click();
+    }
+    await page.locator('.modal footer button.pri').click();
+    await page.waitForTimeout(500);
+
+    const cond = await inPage(page, 'return st.S.raises[0].cond;');
+    expect(cond).toBe('OR(' + vals.map((v) => '[Dept]="' + v + '"').join(', ') + ')');
+
+    /* Badge "n dòng áp dụng" phải khớp đúng countMatch trên chính điều kiện đó. */
+    const n = await inPage(page, 'return fm.ENGINE.countMatch(st.S.raises[0].cond).n;');
+    const badge = await page.evaluate(() =>
+      [...document.querySelectorAll('.rule .h .tag')].map((x) => x.textContent).join(' '));
+    expect(badge).toContain(String(n));
+    expect(n).toBeGreaterThan(0);
+  });
+
+  it('điều kiện sinh ra biên dịch được và lọc đúng dòng', async () => {
+    const ok = await inPage(page, `
+      const c = fm.FX ? null : null;
+      const r = st.S.raises[0];
+      const cm = fm.ENGINE.countMatch(r.cond);
+      return { err: !!cm.error, n: cm.n, all: !!cm.all };
+    `);
+    expect(ok.err).toBe(false);
+    expect(ok.all).toBe(false);
+  });
+
+  it('nút "Bỏ giới hạn" xoá điều kiện, quay lại áp cho tất cả', async () => {
+    await clickButton(page, '.rule button', 'Bỏ giới hạn');
+    await page.waitForTimeout(400);
+    expect(await inPage(page, 'return st.S.raises[0].cond;')).toBe('');
+    expect(await inPage(page, 'return fm.ENGINE.countMatch(st.S.raises[0].cond).all;')).toBe(true);
+    await inPage(page, 'st.S.raises = []; st.setRESULT(null); return true;');
+  });
+});
+
+describe('thanh tiến trình khi chạy tính', () => {
+  it('hiện lớp phủ có phần trăm, rồi BIẾN MẤT trước khi màn Kết quả dựng', async () => {
+    await goToView(page, 'Định biên');
+    await inPage(page, 'st.setRESULT(null); return true;');
+
+    /* Bắt lớp phủ ngay khi nó xuất hiện — nó sống rất ngắn trên bộ dữ liệu mẫu. */
+    const seen = page.evaluate(() => new Promise((res) => {
+      const seenAt = [];
+      const ob = new MutationObserver(() => {
+        const b = document.querySelector('.progmask');
+        if (b) seenAt.push(b.querySelector('.pct').textContent);
+      });
+      ob.observe(document.body, { childList: true, subtree: true, characterData: true });
+      setTimeout(() => { ob.disconnect(); res(seenAt); }, 4000);
+    }));
+
+    await clickButton(page, '.topbar button', 'Chạy tính');
+    const pcts = await seen;
+
+    /* Có thấy lớp phủ, và nó có báo phần trăm. */
+    expect(pcts.length).toBeGreaterThan(0);
+    expect(pcts.some((x) => /\d+%/.test(x))).toBe(true);
+
+    /* Tính xong thì lớp phủ phải sạch bóng — không còn treo trên màn hình. */
+    expect(await page.locator('.progmask').count()).toBe(0);
+    /* Và đã sang màn Kết quả với số liệu thật. */
+    expect(await inPage(page, 'return st.RESULT && st.RESULT.grand > 0;')).toBe(true);
+  });
+
+  it('chưa nạp định biên thì không dựng lớp phủ, chỉ báo lỗi', async () => {
+    const saved = await inPage(page, 'return JSON.stringify(st.S.hc);');
+    await inPage(page, 'st.S.hc = { headers: [], rows: [], file: "", at: "" }; st.setRESULT(null); return true;');
+    await goToView(page, 'Định biên');
+    await clickButton(page, '.topbar button', 'Chạy tính');
+    await page.waitForTimeout(600);
+    expect(await page.locator('.progmask').count()).toBe(0);
+    await inPage(page, 'st.S.hc = JSON.parse(a); fm.ENGINE.invalidate(); return true;', saved);
+  });
+});
+
 describe('mọi màn hình', () => {
   it('mở được hết, không màn nào ném lỗi', async () => {
     const labels = await page.evaluate(() =>

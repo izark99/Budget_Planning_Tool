@@ -6,19 +6,28 @@ import { M, MONTHS, RESULT, S, fmt, fmtNum, fmtShort, setRESULT } from '../core/
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { exportBudget } from '../platform/io.js';
-import { el, modal, render, ribbon, toast } from '../ui/dom.js';
+import { el, modal, progressBox, render, ribbon, toast } from '../ui/dom.js';
 import { pager } from '../ui/widgets.js';
 
 /* ==== 08-view-result-boot.js ==== */
 /* ===========================================================
    MÀN 9 — KẾT QUẢ NGÂN SÁCH
    =========================================================== */
-function runBudget(silent) {
+/* Bất đồng bộ để thanh tiến trình vẽ được: máy tính nhường lại cho trình duyệt
+   giữa các bước. `silent` bỏ cả lớp phủ lẫn lời báo — dùng cho đường chạy ngầm.
+   LỚP PHỦ PHẢI ĐÓNG TRƯỚC khi nơi gọi render(): render() xoá sạch document.body
+   mà lớp phủ là con trực tiếp của body. */
+async function runBudget(silent) {
   if (!S.hc.rows.length) { if (!silent) toast(t('msg.no_hc'), 'bad'); return null; }
+  const box = silent ? null : progressBox(t('res.running'));
   try {
-    setRESULT(ENGINE.run());
+    setRESULT(await ENGINE.runAsync(box ? (p, label) => { box.set(p, label); } : null));
+    if (box) box.close();
     if (!silent) toast(t('res.done', { ms: RESULT.ms }), 'good');
-  } catch (e) { setRESULT(null); toast(t('res.error', { e: e.message }), 'bad'); }
+  } catch (e) {
+    if (box) box.close();
+    setRESULT(null); toast(t('res.error', { e: e.message }), 'bad');
+  }
   return RESULT;
 }
 
@@ -31,7 +40,7 @@ function viewResult() {
       el('span', { text: S.hc.rows.length ? t('res.not_run_hint') : t('dash.no_hc_hint') }),
       S.hc.rows.length ? el('div', { style: 'margin-top:14px' }, [el('button', {
         class: 'btn go', style: 'padding:8px 18px', text: t('dash.chay_tinh_ngay'),
-        onclick: function () { runBudget(); render(); }
+        onclick: function () { runBudget().then(render); }
       })]) : null
     ])]));
     return wrap;
@@ -81,7 +90,7 @@ function viewResult() {
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [
       el('h3', { text: 'Theo Formula Code' }), el('div', { class: 'sp' }),
-      el('button', { class: 'btn sm go', text: t('dash.chay_lai'), onclick: function () { runBudget(); render(); } }),
+      el('button', { class: 'btn sm go', text: t('dash.chay_lai'), onclick: function () { runBudget().then(render); } }),
       el('button', { class: 'btn sm pri', text: t('res.xuat_excel'), onclick: exportDialog })
     ]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
@@ -229,8 +238,10 @@ function viewResult() {
 /* ===========================================================
    XUẤT EXCEL
    =========================================================== */
-function exportDialog() {
-  if (!RESULT) { runBudget(); if (!RESULT) return; }
+/* Bất đồng bộ vì runBudget() nay là bất đồng bộ: chưa có kết quả thì phải CHỜ
+   tính xong mới dựng hộp thoại, chứ không dựng trên RESULT rỗng. */
+async function exportDialog() {
+  if (!RESULT) { await runBudget(); if (!RESULT) return; }
   const R = RESULT;
   const opt = { person: true, pivot: true, fc: true, conflict: true, audit: true, long: false };
   function cb(k, label, note) {

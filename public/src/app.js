@@ -101,7 +101,14 @@ function shellRender() {
     el('div', { class: 'topbar' }, [
       el('div', { class: 'ttl' }, [el('h2', { text: t(cur.title) }), el('div', { class: 'sub', text: t(cur.sub) })]),
       el('span', { class: 'tag', text: (S.meta.name || '') + ' · ' + S.meta.year }),
-      el('button', { class: 'btn go', text: t('app.run'), onclick: function () { runBudget(); S.ui.view = 'result'; touch(); shellRender(); window.scrollTo(0, 0); } })
+      el('button', {
+        class: 'btn go', text: t('app.run'),
+        /* Chờ tính xong rồi mới dựng lại: lớp phủ tiến trình là con trực tiếp của
+           body, mà shellRender() xoá sạch body. */
+        onclick: function () {
+          runBudget().then(() => { S.ui.view = 'result'; touch(); shellRender(); window.scrollTo(0, 0); });
+        }
+      })
     ]),
     el('div', { class: 'content' }, [cur.fn()])
   ]);

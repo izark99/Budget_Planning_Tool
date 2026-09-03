@@ -185,7 +185,7 @@ function viewDashboard() {
       el('span', { text: S.hc.rows.length ? t('dash.not_run_hint') : t('dash.no_hc_hint') }),
       S.hc.rows.length ? el('div', { style: 'margin-top:14px' }, [el('button', {
         class: 'btn go', style: 'padding:8px 18px', text: t('dash.chay_tinh_ngay'),
-        onclick: function () { runBudget(); render(); }
+        onclick: function () { runBudget().then(render); }
       })]) : null
     ])]));
     return wrap;
@@ -252,7 +252,7 @@ function viewDashboard() {
           touch(); render();
         }
       }),
-      el('button', { class: 'btn sm go', text: t('dash.chay_lai'), onclick: function () { runBudget(); render(); } })
+      el('button', { class: 'btn sm go', text: t('dash.chay_lai'), onclick: function () { runBudget().then(render); } })
     ]),
     el('div', { class: 'body' }, [
       el('div', { class: 'row', style: 'margin-bottom:12px' }, [

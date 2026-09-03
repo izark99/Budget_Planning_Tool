@@ -100,6 +100,52 @@ describe('đợt tăng khai đích danh một CÔNG THỨC DÙNG CHUNG', () => {
   });
 });
 
+describe('bản bất đồng bộ cho ra ĐÚNG kết quả của bản đồng bộ', () => {
+  /* runAsync chỉ nhường lại cho trình duyệt giữa các bước để thanh tiến trình vẽ
+     được — không đụng vào một phép tính nào. Đây là chỗ chứng minh điều đó. */
+  const canon = (R) => JSON.stringify({
+    grand: R.grand,
+    monthTotals: Array.from(R.monthTotals),
+    totalsByFc: Array.from(R.totalsByFc),
+    data: R.data.map((a) => Array.from(a)),
+    dataNoRaise: R.dataNoRaise ? R.dataNoRaise.map((a) => Array.from(a)) : null,
+    raiseTotal: R.raiseTotal,
+    raiseImpact: R.raiseImpact,
+    pivot: R.pivot,
+    warnings: R.warnings.map((w) => w.type + '|' + w.msg).sort(),
+  });
+
+  it('trùng từng con số, kể cả phần đo tăng lương', async () => {
+    const sync = runOn(state, formula, snapshot);
+    const a = canon(sync);
+    state.setS(JSON.parse(JSON.stringify(snapshot)));
+    formula.ENGINE.invalidate(); state.setRESULT(null);
+    const async1 = await formula.ENGINE.runAsync(null);
+    expect(canon(async1)).toBe(a);
+  });
+
+  it('với hai đợt tăng cũng trùng', async () => {
+    const sync = withRaises(TWO);
+    const a = canon(sync);
+    const s2 = JSON.parse(JSON.stringify(snapshot)); s2.raises = TWO;
+    state.setS(s2); formula.ENGINE.invalidate(); state.setRESULT(null);
+    expect(canon(await formula.ENGINE.runAsync(null))).toBe(a);
+  });
+
+  it('báo tiến trình tăng dần và kết thúc ở 100', async () => {
+    const s2 = JSON.parse(JSON.stringify(snapshot)); s2.raises = TWO;
+    state.setS(s2); formula.ENGINE.invalidate(); state.setRESULT(null);
+    const seen = [];
+    await formula.ENGINE.runAsync((p) => { seen.push(p); });
+    expect(seen.length).toBeGreaterThan(2);
+    expect(seen[seen.length - 1]).toBe(100);
+    /* Không bao giờ lùi. */
+    for (let i = 1; i < seen.length; i++) expect(seen[i]).toBeGreaterThanOrEqual(seen[i - 1]);
+    expect(Math.min(...seen)).toBeGreaterThanOrEqual(0);
+    expect(Math.max(...seen)).toBeLessThanOrEqual(100);
+  });
+});
+
 describe('không có đợt tăng nào', () => {
   it('raiseTotal = 0 và KHÔNG cấp phát mảng song song', () => {
     const R = withRaises([]);

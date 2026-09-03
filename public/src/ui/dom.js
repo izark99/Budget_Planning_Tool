@@ -49,6 +49,32 @@ function modal(title, bodyNode, buttons) {
   mask.appendChild(el('div', { class: 'modal' }, [el('header', {}, [el('h3', { text: title })]), el('div', { class: 'body' }, [bodyNode]), foot]));
   document.body.appendChild(mask); return close;
 }
+/* Lớp phủ báo tiến trình. Không dùng được toast (chỉ một chỗ, tự xoá sau 3 giây)
+   cũng không dùng được modal (bấm ra ngoài hay Escape là đóng, mà đang tính thì
+   không cho đóng). Trả về { set, close } — nơi gọi PHẢI đóng trước khi render()
+   dựng lại trang, vì lớp phủ là con trực tiếp của body. */
+function progressBox(title) {
+  const bar = el('i');
+  const pct = el('span', { class: 'pct', text: '0%' });
+  const step = el('div', { class: 'step' });
+  const mask = el('div', { class: 'mask progmask' }, [
+    el('div', { class: 'progbox' }, [
+      el('h3', { text: title }),
+      el('div', { class: 'progbar' }, [bar]),
+      el('div', { class: 'progfoot' }, [step, el('div', { class: 'sp' }), pct])
+    ])
+  ]);
+  document.body.appendChild(mask);
+  return {
+    set(p, label) {
+      bar.style.width = Math.max(0, Math.min(100, p)) + '%';
+      pct.textContent = Math.round(p) + '%';
+      if (label != null) step.textContent = label;
+    },
+    close() { mask.remove(); }
+  };
+}
+
 function confirmBox(msg, onYes) {
   modal(t('modal.confirm.title'), el('p', { text: msg, style: 'margin:0' }), [{ label: t('btn.cancel') }, { label: t('btn.agree'), cls: 'pri', onclick: onYes }]);
 }
@@ -76,4 +102,4 @@ function ribbon(active, opts) {
   return r;
 }
 
-export { el, esc, toast, modal, confirmBox, ribbon, render, setRenderer };
+export { el, esc, toast, modal, progressBox, confirmBox, ribbon, render, setRenderer };

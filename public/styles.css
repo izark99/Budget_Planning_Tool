@@ -302,6 +302,20 @@ tr:hover > td.grip { color: var(--soft); }
 .fxlayout > *, .split > *, .rule > .b > * { min-width: 0; }
 @media (max-width: 1240px) { .fxlayout { grid-template-columns: 1fr; } .chipbox { position: static; } .chipbody { max-height: 210px; } }
 
+/* ============ Lớp phủ báo tiến trình khi chạy tính ============ */
+.progmask { cursor: progress; }
+.progbox {
+  background: var(--panel); border-radius: var(--r); box-shadow: var(--shadow);
+  padding: 20px 22px; width: min(420px, 90vw);
+}
+.progbox h3 { margin: 0 0 14px; font: 600 13px var(--disp); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); }
+.progbar { height: 6px; background: var(--bone-2); border-radius: 3px; overflow: hidden; }
+.progbar i { display: block; height: 100%; width: 0; background: var(--mineral); transition: width .18s ease; }
+.progfoot { display: flex; align-items: baseline; gap: 10px; margin-top: 9px; }
+.progfoot > .sp { flex: 1; }
+.progfoot .step { font: 11.5px var(--mono); color: var(--soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.progfoot .pct { font: 600 13px var(--disp); font-variant-numeric: tabular-nums; color: var(--mineral); }
+
 /* ============ Import wizard ============ */
 .drop {
   border: 1.5px dashed var(--rule); border-radius: var(--r); padding: 26px; text-align: center; background: var(--bone-2);

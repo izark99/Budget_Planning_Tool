@@ -306,6 +306,9 @@ engine.group.unnamed: (không tên)
 engine.map.none: (chưa map)
 engine.map.undeclared: (chưa khai báo)
 engine.rule.unnamed: nhóm
+engine.step.main: Đang tính ngân sách…
+engine.step.noRaise: Đang tính bản không tăng lương…
+engine.step.raise: Đang đo đợt tăng {name}…
 engine.value.empty: (rỗng)
 engine.warn.ac.missing: Chưa có Account Code cho {k}
 engine.warn.bc.missing: Chưa có Budget Code cho {k}
@@ -591,6 +594,14 @@ maps.word_unit: đơn vị
 # Màn 9 · Tăng lương
 raise.cond_placeholder: Bỏ trống = áp cho tất cả
 raise.n_rows: {n} dòng áp dụng
+raise.scope_apply: Áp cho các giá trị đã chọn
+raise.scope_by_col: Chọn theo cột…
+raise.scope_clear: Bỏ giới hạn
+raise.scope_done: Đã giới hạn phạm vi theo {n} giá trị của {col}
+raise.scope_help: Bấm chọn những giá trị muốn áp đợt tăng này. App sẽ tự viết điều kiện giúp bạn — vẫn sửa tay được ở ô bên dưới.
+raise.scope_info: Cột {col} có {n} giá trị khác nhau
+raise.scope_none: Chưa chọn giá trị nào
+raise.scope_title: Giới hạn phạm vi theo cột
 fm.raise.cost_group: Áp cho công thức chi phí
 fm.raise.shared_group: Áp cho công thức dùng chung
 fm.raise.shared_note: Chọn ở đây thì mọi công thức chi phí gọi tới nó đều ăn theo. Đừng chọn kèm cả công thức chi phí đang dùng nó, kẻo một đợt tăng bị tính hai lần.
@@ -646,6 +657,7 @@ res.raise_th_round: Đợt tăng
 res.raise_th_rows: Lượt dòng chạm
 res.raise_th_share: % tổng ngân sách
 res.raise_title: Ảnh hưởng của tăng lương
+res.running: Đang chạy tính
 res.sheet_audit: Bản khai báo
 res.sheet_audit_note: Công thức, tham số, phân loại, lịch ngày công
 res.sheet_conflict: Đối chiếu tờ trình

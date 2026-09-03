@@ -5,7 +5,8 @@
 import { MONTHS, S, fmt, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
-import { el } from '../ui/dom.js';
+import { el, esc, modal, render, toast } from '../ui/dom.js';
+import { distinctVals } from '../platform/io.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 
 function viewRaise() {
@@ -58,7 +59,15 @@ function viewRaise() {
           el('div', {}, [el('label', { class: 'f', text: t('fm.ap_cho_cong_thuc_nao') }), picker])
         ]),
         el('div', { style: 'padding:0 10px 10px' }, [
-          el('label', { class: 'f', text: t('fm.gioi_han_pham_vi_tuy_chon') }),
+          el('div', { class: 'row', style: 'margin-bottom:6px;align-items:center' }, [
+            el('label', { class: 'f', style: 'margin:0', text: t('fm.gioi_han_pham_vi_tuy_chon') }),
+            el('div', { class: 'sp', style: 'flex:1' }),
+            el('button', { class: 'btn sm', text: t('raise.scope_by_col'), onclick: function () { scopeByCol(r, draw); } }),
+            r.cond ? el('button', {
+              class: 'btn sm dim', text: t('raise.scope_clear'),
+              onclick: function () { r.cond = ''; setRESULT(null); touch(); draw(); }
+            }) : null
+          ]),
           el('div', { class: 'fxlayout' }, [condBox, chipsPanel(condBox)])
         ])
       ]));
@@ -79,6 +88,57 @@ function viewRaise() {
     ])
   ]));
   return wrap;
+}
+
+/* Chọn phạm vi theo CỘT thay vì gõ công thức — giống hệt "Tạo nhóm theo cột" ở
+   màn Công thức chi phí, và cũng chỉ sinh ra một CHUỖI FX như bên đó. Nhờ vậy
+   máy tính không phải sửa một dòng nào: cả bốn chỗ biên dịch r.cond vẫn nhận
+   một chuỗi như cũ, và file dự án cũ vẫn chạy đúng. */
+function scopeByCol(r, redraw) {
+  const avail = ENGINE.usableCols();
+  const sel = el('select', {}, avail.map((c) => { return el('option', { value: c, text: c }); }));
+  const list = el('div', { class: 'chips', style: 'max-height:220px;overflow:auto' });
+  const info = el('p', { class: 'hint' });
+  let picked = {};
+
+  function upd() {
+    picked = {};
+    list.innerHTML = '';
+    const vals = distinctVals(ENGINE.previewRows(), sel.value);
+    info.textContent = t('raise.scope_info', { col: sel.value, n: vals.length });
+    if (vals.length > 300) { info.textContent = t('fm.too_many_values', { n: vals.length }); return; }
+    vals.forEach((v) => {
+      const chip = el('span', { class: 'chip', text: v, onclick: function () {
+        picked[v] = !picked[v];
+        chip.style.cssText = picked[v] ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '';
+      } });
+      list.appendChild(chip);
+    });
+  }
+  sel.addEventListener('change', upd); upd();
+
+  modal(t('raise.scope_title'), el('div', {}, [
+    el('p', { class: 'hint', html: t('raise.scope_help') }),
+    el('label', { class: 'f', text: t('fm.chon_cot') }), sel, info, list
+  ]), [
+    { label: t('btn.cancel') },
+    {
+      label: t('raise.scope_apply'), cls: 'pri', onclick: function () {
+        const col = sel.value;
+        const vals = Object.keys(picked).filter((k) => { return picked[k]; });
+        if (!vals.length) { toast(t('raise.scope_none'), 'bad'); return false; }
+        /* Nhân đôi dấu " để thoát, đúng cách autoGroup() bên màn công thức làm.
+           OR ở máy này là HÀM chứ không phải toán tử trung tố (giống Excel), nên
+           nhiều giá trị phải gói vào OR(...); một giá trị thì để trần cho gọn. */
+        const parts = vals.map((v) => {
+          return '[' + col + ']="' + String(v).replace(/"/g, '""') + '"';
+        });
+        r.cond = parts.length === 1 ? parts[0] : 'OR(' + parts.join(', ') + ')';
+        setRESULT(null); touch(); redraw ? redraw() : render();
+        toast(t('raise.scope_done', { n: vals.length, col: esc(col) }), 'good');
+      }
+    }
+  ]);
 }
 
 export { viewRaise };
