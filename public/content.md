@@ -77,6 +77,8 @@ toast.table.added: Đã thêm {n} dòng
 toast.table.cleared: Đã xoá sạch bảng
 toast.table.empty: Bảng đang trống
 toast.table.noNewCombo: Không có tổ hợp mới
+toast.export.empty: Chưa có dòng nào để xuất
+toast.export.ok: Đã xuất {n} dòng
 toast.template.fail: Không tạo được file mẫu: {e}
 toast.template.ok: Đã tải file mẫu
 
@@ -96,6 +98,7 @@ role.skip: Bỏ qua
 table.addRow: + Thêm dòng
 table.clear: Xoá sạch
 table.downloadTemplate: ⤓ Tải mẫu Excel
+table.exportData: ⤒ Xuất dữ liệu
 table.empty: Chưa có dòng nào
 table.filter.placeholder: Lọc…
 table.importExcel: Nhập từ Excel
@@ -150,6 +153,7 @@ import.sheet: Sheet
 io.err.read: Không đọc được file
 io.header.fallback: Cột{i}
 template.guide.append: Gõ thêm dòng ngay dưới bảng, Excel tự mở rộng vùng.
+template.guide.exported: Đây là {n} dòng bạn đang khai trong app. Sửa xong, nạp lại bằng nút "Nhập từ Excel" — dữ liệu cũ sẽ được thay thế.
 template.guide.tableName: Bảng tên "{name}" — tham chiếu được bằng ={name}[Tên cột]
 template.guide.title: HƯỚNG DẪN — {title}
 
@@ -313,6 +317,7 @@ hc.guide_1: Mỗi dòng là MỘT nhân sự.
 hc.guide_2: Chín cột đầu là thuộc tính, dùng được trong công thức bằng cú pháp [Tên cột].
 hc.guide_3: Mười hai cột 1..12 là hệ số định biên từng tháng: 1 = có mặt cả tháng, 0 = không, 0.5 = nửa tháng.
 hc.guide_4: Ví dụ dòng đầu: chỉ làm việc từ T04 đến T09.
+hc.export_guide: Giữ nguyên tên các cột. Nạp lại file này thì thiết lập vai trò cột ở màn Thiết lập vẫn được giữ.
 hc.hien_them_500: Hiện thêm 500
 hc.hoac_keo_tha_vao_day_moi_dong_mot: Hoặc kéo thả vào đây. Mỗi dòng một nhân sự, mười hai cột tháng là hệ số định biên.
 hc.import_title: Nhập bảng định biên — {file}
@@ -373,6 +378,7 @@ cal.gap_short: thiếu {n} ngày
 cal.guide_1: Cột Nhom: giá trị của cột đã chọn để phân lịch. Ghi * cho lịch dùng chung.
 cal.guide_2: Cột Thang: số từ 1 đến 12.
 cal.guide_3: Ngày công chuẩn nên bằng tổng của bốn cột còn lại.
+cal.export_guide: Giữ nguyên hai cột Nhom và Thang. Nạp lại file này sẽ thay thế toàn bộ lịch ngày công đang có.
 cal.import_title: Nhập lịch ngày công
 cal.imported: Đã nhập {n} lịch
 cal.khong_doc_duoc_dong_hop_le_nao: Không đọc được dòng hợp lệ nào
@@ -519,6 +525,7 @@ exc.guide_1: Có ID thì ghép theo ID; bỏ trống ID và điền Chuc Danh th
 exc.guide_2: Quy Tac nhận: MAX (lấy cao nhất) · OVERRIDE (ghi đè) · ADD (cộng thêm).
 exc.guide_3: Bỏ trống Tu Thang / Den Thang nghĩa là áp cho mọi tháng trích của Formula Code.
 exc.guide_4: Formula Code phải trùng mã đã khai ở màn hình Công thức chi phí.
+exc.export_guide: Một tờ trình chọn nhiều tháng không liền nhau sẽ tách thành nhiều dòng — nạp lại vẫn ra đúng các tháng đó. Nạp lại file này sẽ thay thế toàn bộ tờ trình đang có.
 exc.help: Ghép theo <strong>ID</strong> nếu có, không thì theo <strong>Chức danh</strong>. Quy tắc <strong>Lấy cao nhất</strong> so công thức với tờ trình rồi lấy số lớn hơn; mọi trường hợp lệch đều vào bảng đối chiếu ở màn hình Kết quả. Bỏ trống tháng nghĩa là áp cho mọi tháng trích của Formula Code đó.
 exc.import_title: Nhập tờ trình ngoại lệ
 exc.imported: Đã nhập {n} tờ trình
@@ -577,6 +584,7 @@ acc.guide_1: Cột Formula Code phải trùng mã đã khai ở màn Công thứ
 acc.guide_2: Cột Cot Phan Loai là tên cột dùng để phân loại, ví dụ Salary Group hoặc Dept.
 acc.guide_3: Cột Gia Tri là một giá trị cụ thể của cột phân loại đó.
 acc.guide_4: T01 đến T12 nhập số phần trăm: 100 nghĩa là trích đủ, 50 là trích một nửa, bỏ trống cũng là 100.
+acc.export_guide: Giữ nguyên ba cột đầu. Nạp lại file này sẽ thay thế toàn bộ phần trăm trích đang khai.
 
 # Màn 10 · Kết quả
 res.chua_co_so_lieu: Chưa có số liệu

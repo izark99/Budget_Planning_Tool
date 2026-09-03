@@ -167,7 +167,6 @@ th {
   vertical-align: middle; text-align: center;
 }
 th.nowrap { white-space: nowrap; }
-th.num { text-align: center; }
 td { padding: 4px 9px; border-bottom: 1px solid var(--rule-2); vertical-align: middle; }
 /* Ô chứa văn bản dài (công thức, ghi chú) thì xuống dòng thay vì kéo bảng dài vô tận. */
 td { max-width: 460px; overflow-wrap: anywhere; }
@@ -176,7 +175,12 @@ td > input[type=text], td > input[type=number] { min-width: 90px; }
 td > input[type=text], td > input[type=number], td > select { height: calc(var(--ctl) - 4px); }
 td > .btn.sm { height: calc(var(--ctl) - 4px); }
 tbody tr:hover { background: #FAFBF8; }
-td.num, th.num { text-align: right; font: 12.5px var(--mono); font-variant-numeric: tabular-nums; }
+td.num { text-align: right; font: 12.5px var(--mono); font-variant-numeric: tabular-nums; }
+/* Tiêu đề cột số chỉ đổi CĂN LỀ, tuyệt đối KHÔNG đổi font. Gộp chung với td.num
+   thì th mang class 'num' ăn luôn mono 12,5px và rơi khỏi font hiển thị của mọi
+   th khác — đúng lỗi cũ: "SỐ GIÁ TRỊ" ở màn Thiết lập và cả hàng tiêu đề Ngày
+   công hiện khác hẳn chữ "Status" ngay bên cạnh. */
+th.num { text-align: right; }
 td.mono { font: 12px var(--mono); }
 td.zero { color: #B7C0BB; }
 tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid var(--ink-3); }

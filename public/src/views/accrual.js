@@ -11,7 +11,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { distinctVals, pickFile } from '../platform/io.js';
 import { confirmBox, el, render, toast } from '../ui/dom.js';
-import { downloadTemplate, foldPanel, importMapped, panel } from '../ui/widgets.js';
+import { downloadData, downloadTemplate, foldPanel, importMapped, panel } from '../ui/widgets.js';
 
 /* CHUỖI GIAO THỨC — tên cột của file mẫu .xlsx, đồng thời là khoá khớp khi
    nhập lại. Đổi là hỏng chức năng nhập file. Để ASCII không dấu cho chắc. */
@@ -68,6 +68,7 @@ function viewAccrual() {
 
   wrap.appendChild(panel(t('acc.title'), [
     el('button', { class: 'btn sm', text: t('table.downloadTemplate'), onclick: accTemplate }),
+    el('button', { class: 'btn sm', text: t('table.exportData'), onclick: accExport }),
     el('button', { class: 'btn sm pri', text: t('table.importExcel'), onclick: function () { pickFile('.xlsx,.xls,.csv', accImport); } })
   ], el('p', { class: 'hint', style: 'margin:0', html: t('acc.help') })));
 
@@ -175,7 +176,27 @@ function viewAccrual() {
   return wrap;
 }
 
+/* Tiêu đề cột dùng chung cho mẫu trống, bản xuất và trình nhập. */
+function accHeaders() {
+  return [IMP_CODE, IMP_COL, IMP_KEY].concat(MONTHS.map((_, i) => { return impMonth(i + 1); }));
+}
+
+/** Mẫu TRỐNG: một dòng ví dụ để thấy cấu trúc. */
 function accTemplate() {
+  const rows = [];
+  if (S.formulas.length) {
+    rows.push([S.formulas[0].code, ENGINE.usableCols()[0] || '', ''].concat(blankMonths()));
+  }
+  downloadTemplate({
+    tableName: 'tblPhanTramTrich', title: t('acc.title'), sheetName: 'PhanTramTrich',
+    headers: accHeaders(), rows,
+    guide: [t('acc.guide_1'), t('acc.guide_2'), t('acc.guide_3'), t('acc.guide_4')],
+    file: 'mau-phan-tram-trich.xlsx'
+  });
+}
+
+/** Xuất DỮ LIỆU đang khai, để sửa ngoài Excel rồi nạp đè lại. */
+function accExport() {
   const rows = [];
   (S.accruals || []).forEach((a) => {
     if (!a.col) return;
@@ -183,15 +204,11 @@ function accTemplate() {
       rows.push(/** @type {any[]} */ ([a.code, a.col, r.key]).concat((r.m || blankMonths()).map((x) => { return x === '' ? '' : numOf(x); })));
     });
   });
-  if (!rows.length && S.formulas.length) {
-    rows.push([S.formulas[0].code, ENGINE.usableCols()[0] || '', ''].concat(blankMonths()));
-  }
-  downloadTemplate({
+  downloadData({
     tableName: 'tblPhanTramTrich', title: t('acc.title'), sheetName: 'PhanTramTrich',
-    headers: [IMP_CODE, IMP_COL, IMP_KEY].concat(MONTHS.map((_, i) => { return impMonth(i + 1); })),
-    rows,
-    guide: [t('acc.guide_1'), t('acc.guide_2'), t('acc.guide_3'), t('acc.guide_4')],
-    file: 'mau-phan-tram-trich.xlsx'
+    headers: accHeaders(), rows,
+    guide: [t('acc.export_guide')],
+    file: 'xuat-phan-tram-trich.xlsx'
   });
 }
 
@@ -230,4 +247,4 @@ function accImport(file) {
   });
 }
 
-export { viewAccrual, accTemplate, accImport };
+export { viewAccrual, accTemplate, accExport, accImport };

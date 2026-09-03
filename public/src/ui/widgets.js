@@ -12,19 +12,42 @@ import { confirmBox, el, modal, toast } from './dom.js';
 /* SheetJS/XLTABLE nạp bằng thẻ <script> nên nằm trên window, không import được. */
 const XLTABLE = window.XLTABLE;
 
-/* ---------- Tải file mẫu (Excel Table đặt tên) ---------- */
-function downloadTemplate(spec) {
+/* ---------- Tải .xlsx (Excel Table đặt tên) ----------
+   Hai lối ra dùng chung một ruột, chỉ khác ý nghĩa với người dùng:
+
+     downloadTemplate  MẪU TRỐNG — cấu trúc cột + vài dòng ví dụ, để bắt đầu từ số 0
+     downloadData      DỮ LIỆU THẬT — đang có gì xuất nấy, để sửa ngoài Excel rồi nạp lại
+
+   Điều làm vòng "xuất → sửa → nhập" khép kín là CẢ HAI dùng chung đúng một bộ
+   tiêu đề cột với trình nhập. Đổi tiêu đề ở một bên là hỏng chức năng nhập. */
+function writeSheet(spec, tail, okMsg) {
   try {
     XLTABLE.download({
       tableName: spec.tableName, sheetName: spec.sheetName || 'DuLieu',
       headers: spec.headers, rows: spec.rows || [],
       guide: [[t('template.guide.title', { title: spec.title || spec.tableName })]].concat(
         (spec.guide || []).map((g) => { return [g]; })
-      ).concat([[''], [t('template.guide.tableName', { name: XLTABLE.safeName(spec.tableName) })],
-      [t('template.guide.append')]])
+      ).concat(tail.map((x) => { return [x]; }))
     }, spec.file || (spec.tableName + '.xlsx'));
-    toast(t('toast.template.ok'), 'good');
+    toast(okMsg, 'good');
   } catch (e) { toast(t('toast.template.fail', { e: e.message }), 'bad'); }
+}
+
+function downloadTemplate(spec) {
+  writeSheet(spec, [
+    '', t('template.guide.tableName', { name: XLTABLE.safeName(spec.tableName) }),
+    t('template.guide.append'),
+  ], t('toast.template.ok'));
+}
+
+/** Xuất dữ liệu đang có. Không dòng nào thì báo chứ đừng tải về một file rỗng. */
+function downloadData(spec) {
+  const rows = spec.rows || [];
+  if (!rows.length) { toast(t('toast.export.empty'), 'warn'); return; }
+  writeSheet(spec, [
+    '', t('template.guide.exported', { n: rows.length }),
+    t('template.guide.append'),
+  ], t('toast.export.ok', { n: rows.length }));
 }
 
 /* ---------- Import chung: ghép cột theo tên header ----------
@@ -236,6 +259,19 @@ function dataTable(cfg) {
     });
   }
 
+  /* Xuất TOÀN BỘ dòng, không lọc theo ô tìm kiếm: người dùng xuất ra là để sửa
+     trọn bảng ngoài Excel rồi nạp đè lại. Cột lấy đúng cfg.columns mà doImport()
+     dùng để khớp — nhờ vậy nạp lại không lệch cột nào. */
+  function exportRows() {
+    downloadData({
+      tableName: cfg.tableName, title: cfg.title,
+      sheetName: (cfg.sheetName || 'DuLieu'),
+      headers: cfg.columns.map((c) => { return c.label; }),
+      rows: cfg.rows().map((r) => { return cfg.columns.map((c) => { return r[c.k] == null ? '' : r[c.k]; }); }),
+      file: 'xuat-' + cfg.tableName + '.xlsx'
+    });
+  }
+
   function doImport(file) {
     importMapped(file, cfg.title || t('btn.import'),
       cfg.columns.map((c) => { return { k: c.k, label: c.label, required: !!c.required }; }),
@@ -282,6 +318,7 @@ function dataTable(cfg) {
     } }) : null,
     el('button', { class: 'btn sm del', text: t('table.clear'), onclick: clearAll }),
     el('button', { class: 'btn sm', text: t('table.downloadTemplate'), onclick: template }),
+    el('button', { class: 'btn sm', text: t('table.exportData'), onclick: exportRows }),
     el('button', { class: 'btn sm pri', text: t('table.importExcel'), onclick: function () { pickFile('.xlsx,.xls,.csv', doImport); } })
   ]));
   wrap.appendChild(el('div', { class: 'tw' }, [
@@ -334,4 +371,4 @@ function foldPanel(key, title, badges, actions, bodyNode, note) {
   return el('div', { class: 'panel' }, [head, body]);
 }
 
-export { downloadTemplate, importMapped, dataTable, readTable, panel, foldPanel };
+export { downloadTemplate, downloadData, importMapped, dataTable, readTable, panel, foldPanel };

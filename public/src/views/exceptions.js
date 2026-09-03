@@ -6,7 +6,7 @@ import { S, allMonths, numOf, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { pickFile } from '../platform/io.js';
 import { el, render, ribbon, toast } from '../ui/dom.js';
-import { downloadTemplate, importMapped } from '../ui/widgets.js';
+import { downloadData, downloadTemplate, importMapped } from '../ui/widgets.js';
 
 function viewExc() {
   const wrap = el('div');
@@ -52,6 +52,7 @@ function viewExc() {
       el('h3', { text: t('fm.to_trinh_ngoai_le') }), el('span', { class: 'tag', text: t('table.info.rows', { n: S.exceptions.length }) }), el('div', { class: 'sp' }),
       el('button', { class: 'btn sm', text: t('table.addRow'), onclick: function () { S.exceptions.push({ id2: uid(), no: '', id: '', position: '', formulaCode: codes[0] || '', amount: 0, months: [], rule: 'MAX', note: '', active: true }); setRESULT(null); touch(); draw(); } }),
       el('button', { class: 'btn sm', text: t('table.downloadTemplate'), onclick: excTemplate }),
+      el('button', { class: 'btn sm', text: t('table.exportData'), onclick: excExport }),
       el('button', { class: 'btn sm pri', text: t('table.importExcel'), onclick: function () { pickFile('.xlsx,.xls,.csv', excImport); } })
     ]),
     el('div', { class: 'body' }, [el('p', {
@@ -83,12 +84,51 @@ function excTemplate() {
   });
 }
 
+/* Giao thức nhập chỉ có "Tu Thang"/"Den Thang" — một khoảng liền mạch. Nhưng
+   người dùng chọn tháng bằng dải 12 ô nên có thể chọn ngắt quãng (T1, T3, T5).
+   Ghi min..max sẽ hoá thành T1..T5, tức là xuất ra rồi nạp lại là SAI. Vì vậy
+   tách mỗi khoảng liền mạch thành một dòng — kết quả tính y hệt, và nạp lại
+   đúng từng tháng đã chọn. */
+function monthRuns(months) {
+  const ms = (months || []).map(Number).filter((m) => { return m >= 1 && m <= 12; }).sort((a, b) => { return a - b; });
+  if (!ms.length) return [['', '']];
+  const runs = [];
+  let from = ms[0], prev = ms[0];
+  for (let i = 1; i < ms.length; i++) {
+    if (ms[i] === prev + 1) { prev = ms[i]; continue; }
+    runs.push([from, prev]); from = ms[i]; prev = ms[i];
+  }
+  runs.push([from, prev]);
+  return runs;
+}
+
+function excExport() {
+  const rows = [];
+  (S.exceptions || []).forEach((e) => {
+    monthRuns(e.months).forEach((r) => {
+      rows.push([e.no || '', e.id == null ? '' : e.id, e.position || '', e.formulaCode || '',
+        numOf(e.amount), r[0], r[1], e.rule || 'MAX', e.note || '']);
+    });
+  });
+  downloadData({
+    tableName: 'tblToTrinh', title: t('fm.to_trinh_ngoai_le'), sheetName: 'ToTrinh',
+    headers: ['So To Trinh', 'ID', 'Chuc Danh', 'Formula Code', 'So Tien', 'Tu Thang', 'Den Thang', 'Quy Tac', 'Ghi Chu'],
+    rows,
+    guide: [t('exc.export_guide')],
+    file: 'xuat-to-trinh-ngoai-le.xlsx'
+  });
+}
+
 function excImport(file) {
   importMapped(file, t('exc.import_title'), [
     { k: 'no', label: 'So To Trinh' }, { k: 'id', label: 'ID' }, { k: 'position', label: 'Chuc Danh' },
     { k: 'formulaCode', label: 'Formula Code', required: true }, { k: 'amount', label: 'So Tien', required: true },
     { k: 'from', label: 'Tu Thang' }, { k: 'to', label: 'Den Thang' }, { k: 'rule', label: 'Quy Tac' }, { k: 'note', label: 'Ghi Chu' }
   ], (out) => {
+    /* THAY THẾ chứ không nối thêm — giống mọi màn nhập khác trong app
+       (dataTable, Ngày công, % trích, Định biên đều thay thế). Nếu nối thêm thì
+       vòng "xuất ra, sửa, nạp lại" sẽ nhân đôi toàn bộ tờ trình. */
+    S.exceptions.length = 0;
     out.forEach((o) => {
       const a = parseInt(o.from, 10), b = parseInt(o.to, 10), months = [];
       if (!isNaN(a)) { const s = Math.max(1, a), e2 = isNaN(b) ? s : Math.min(12, b); for (let m = s; m <= e2; m++) months.push(m); }

@@ -5,7 +5,7 @@
    FX_DOCS/FX_OPS dựng lúc NẠP MODULE — trước khi content.md kịp về — nên chúng
    chỉ giữ KHOÁ nội dung; t() gọi lúc render.
    =========================================================== */
-import { CAL_FIELDS, S, fmt } from '../core/state.js';
+import { CAL_FIELDS, S, fmtNum } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { el, modal, toast } from './dom.js';
@@ -133,7 +133,7 @@ function fxLibrary(target) {
         .forEach((c) => { body.appendChild(item('[' + c + ']', t('fx.col.desc'), '', '[' + c + ']')); });
       body.appendChild(el('div', { class: 'fx-cat', text: t('fx.cat.params') }));
       (S.params || []).filter((p) => { return p.name && (!kw || p.name.toLowerCase().indexOf(kw) >= 0); })
-        .forEach((p) => { body.appendChild(item(p.name, p.note || '', t('fx.param.current', { v: fmt(p.value) }), p.name)); });
+        .forEach((p) => { body.appendChild(item(p.name, p.note || '', t('fx.param.current', { v: fmtNum(p.value) }), p.name)); });
       body.appendChild(el('div', { class: 'fx-cat', text: t('fx.sysvar') }));
       [['THANG', t('fx.var.THANG')], ['DINH_BIEN', t('fx.var.DINH_BIEN')], ['SO_THANG', t('fx.var.SO_THANG')]]
         .concat(CAL_FIELDS.map((f) => { return [f.varName, t('fx.var.calField', { label: f.label })]; }))
@@ -237,7 +237,7 @@ function fxAssist(ta, onChange, check) {
         if (f.n.toLowerCase().indexOf(kw) === 0) out.push({ label: f.n + '(' + fxArgs(f).join('; ') + ')', hint: t(f.d), ins: f.n + '(' });
       });
       (S.params || []).forEach((p) => {
-        if (p.name && p.name.toLowerCase().indexOf(kw) === 0) out.push({ label: p.name, hint: t('fx.hint.param', { v: fmt(p.value) }), ins: p.name });
+        if (p.name && p.name.toLowerCase().indexOf(kw) === 0) out.push({ label: p.name, hint: t('fx.hint.param', { v: fmtNum(p.value) }), ins: p.name });
       });
       ['THANG', 'DINH_BIEN', 'SO_THANG'].concat(CAL_FIELDS.map((f) => { return f.varName; })).forEach((v) => {
         if (v.toLowerCase().indexOf(kw) === 0) out.push({ label: v, hint: t('fx.sysvar'), ins: v });

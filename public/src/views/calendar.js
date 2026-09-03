@@ -7,7 +7,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { pickFile } from '../platform/io.js';
 import { el, esc, render, toast } from '../ui/dom.js';
-import { downloadTemplate, importMapped, panel } from '../ui/widgets.js';
+import { downloadData, downloadTemplate, importMapped, panel } from '../ui/widgets.js';
 
 function viewCalendar() {
   const wrap = el('div');
@@ -92,6 +92,7 @@ function viewCalendar() {
         }
       }) : null,
       el('button', { class: 'btn', text: t('table.downloadTemplate'), onclick: calTemplate }),
+      el('button', { class: 'btn', text: t('table.exportData'), onclick: calExport }),
       el('button', { class: 'btn pri', text: t('table.importExcel'), onclick: function () { pickFile('.xlsx,.xls,.csv', calImport); } })
     ])])
   ]));
@@ -99,23 +100,40 @@ function viewCalendar() {
   return wrap;
 }
 
+/* Tiêu đề cột dùng chung cho cả mẫu trống lẫn bản xuất — cũng chính là bộ mà
+   calImport() khớp cột. Một nguồn duy nhất, đổi là đổi cả ba. */
+const CAL_HEADERS = ['Nhom', 'Thang'].concat(CAL_FIELDS.map((f) => { return f.label; }));
+
+/** Mẫu TRỐNG: 12 dòng cho nhóm mặc định, để người dùng điền từ đầu. */
 function calTemplate() {
-  const rows = [];
-  (S.calendar.tables || []).forEach((tbl) => {
-    MONTHS.forEach((mn, k) => {
-      rows.push([tbl.scope || '*', k + 1].concat(CAL_FIELDS.map((f) => { return numOf(tbl.m[k][f.k]); })));
-    });
+  const rows = MONTHS.map((mn, k) => {
+    return ['*', k + 1].concat(CAL_FIELDS.map(() => { return ''; }));
   });
   downloadTemplate({
     tableName: 'tblNgayCong', title: t('cal.ngay_cong_chuan_tung_thang'), sheetName: 'NgayCong',
-    headers: ['Nhom', 'Thang'].concat(CAL_FIELDS.map((f) => { return f.label; })),
-    rows,
+    headers: CAL_HEADERS, rows,
     guide: [
       t('cal.guide_1'),
       t('cal.guide_2'),
       t('cal.guide_3')
     ],
     file: 'mau-ngay-cong.xlsx'
+  });
+}
+
+/** Xuất DỮ LIỆU đang khai, để sửa ngoài Excel rồi nạp đè lại. */
+function calExport() {
+  const rows = [];
+  (S.calendar.tables || []).forEach((tbl) => {
+    MONTHS.forEach((mn, k) => {
+      rows.push([tbl.scope || '*', k + 1].concat(CAL_FIELDS.map((f) => { return numOf(tbl.m[k][f.k]); })));
+    });
+  });
+  downloadData({
+    tableName: 'tblNgayCong', title: t('cal.ngay_cong_chuan_tung_thang'), sheetName: 'NgayCong',
+    headers: CAL_HEADERS, rows,
+    guide: [t('cal.export_guide')],
+    file: 'xuat-ngay-cong.xlsx'
   });
 }
 
@@ -139,4 +157,4 @@ function calImport(file) {
   });
 }
 
-export { viewCalendar, calTemplate, calImport };
+export { viewCalendar, calTemplate, calExport, calImport };

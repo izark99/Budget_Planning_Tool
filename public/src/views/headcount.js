@@ -7,7 +7,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { dedupeHeaders, pickFile, readWorkbook, sheetAoa } from '../platform/io.js';
 import { el, modal, render, ribbon, toast } from '../ui/dom.js';
-import { downloadTemplate, panel, readTable } from '../ui/widgets.js';
+import { downloadData, downloadTemplate, panel, readTable } from '../ui/widgets.js';
 
 /* `values` không dùng tới ở đây — vai trò đoán từ TÊN cột; kiểu dữ liệu thì
    guessType() lo. Vẫn nhận tham số để hai hàm đoán có cùng chữ ký. */
@@ -112,6 +112,20 @@ function hcTemplate() {
   });
 }
 
+/* Xuất ĐỦ cột gốc của file đã nạp, không lược bớt cột nào: importHeadcount giữ
+   lại cấu hình vai trò/bí danh cũ theo TÊN CỘT GỐC (prev[c.src]), nên nạp lại
+   file này không mất thiết lập nào ở màn Thiết lập. */
+function hcExport() {
+  const headers = S.hc.headers || [];
+  downloadData({
+    tableName: 'tblDinhBien', title: t('hc.bang_dinh_bien'), sheetName: 'DinhBien',
+    headers,
+    rows: S.hc.rows.map((r) => { return headers.map((h) => { return r[h] == null ? '' : r[h]; }); }),
+    guide: [t('hc.export_guide')],
+    file: 'xuat-dinh-bien.xlsx'
+  });
+}
+
 function viewHC() {
   const wrap = el('div');
   if (!S.hc.rows.length) {
@@ -166,6 +180,7 @@ function viewHC() {
       el('input', { type: 'text', placeholder: t('hc.tim_trong_bang'), style: 'width:190px', oninput: function (e) { q.t = e.target.value; fill(); } }),
       el('button', { class: 'btn sm', text: t('hc.hien_them_500'), onclick: function () { q.lim += 500; fill(); } }),
       el('button', { class: 'btn sm', text: t('hc.mau'), onclick: hcTemplate }),
+      el('button', { class: 'btn sm', text: t('table.exportData'), onclick: hcExport }),
       el('button', { class: 'btn sm', text: t('hc.nhap_lai'), onclick: function () { pickFile('.xlsx,.xls,.csv', importHeadcount); } })
     ]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [

@@ -10,6 +10,7 @@ import path from 'node:path';
 import { LAUNCH } from '../helpers/env.mjs';
 import { startServer } from '../helpers/server.mjs';
 import { clickButton, collectErrors, getState, goToView, importHeadcount, inPage, loginToApp } from '../helpers/browser.mjs';
+import { readCells } from '../helpers/xlsx-cells.mjs';
 
 let server, browser, ctx, page, errs;
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bpt-acc-'));
@@ -45,7 +46,7 @@ describe('tab % trích', () => {
     expect(after).toEqual(before);
   });
 
-  it('tải mẫu Excel rồi nhập lại ra đúng dữ liệu đã khai', async () => {
+  it('xuất dữ liệu rồi nhập lại ra đúng dữ liệu đã khai', async () => {
     const declared = await inPage(page, `
       st.S.accruals = [{ id: 'a1', code: st.S.formulas[0].code, col: 'Dept', rows: [
         { key: 'AC', m: [100,100,100,100,100,100,50,50,50,50,50,50] },
@@ -58,7 +59,7 @@ describe('tab % trích', () => {
     await goToView(page, '% trích');
     const [dl] = await Promise.all([
       page.waitForEvent('download', { timeout: 30000 }),
-      clickButton(page, '.content button', 'Tải mẫu Excel'),
+      clickButton(page, '.content button', 'Xuất dữ liệu'),
     ]);
     const file = path.join(tmp, dl.suggestedFilename());
     await dl.saveAs(file);
@@ -82,6 +83,27 @@ describe('tab % trích', () => {
 
     const reimported = (await getState(page)).accruals;
     expect(norm(reimported)).toEqual(norm(declared));
+  });
+
+  /* Trước đây "Tải mẫu Excel" âm thầm tải về dữ liệu thật — hai nút làm cùng một
+     việc. Nay tách bạch: mẫu là mẫu, xuất là xuất. */
+  it('nút "Tải mẫu" cho ra mẫu TRỐNG, không kèm dữ liệu đang khai', async () => {
+    await inPage(page, `
+      st.S.accruals = [{ id: 'a9', code: st.S.formulas[0].code, col: 'Dept',
+        rows: [{ key: 'KHONG_DUOC_CO_TRONG_MAU', m: [7,7,7,7,7,7,7,7,7,7,7,7] }] }];
+      return true;
+    `);
+    await goToView(page, 'Kết quả');
+    await goToView(page, '% trích');
+    const [dl] = await Promise.all([
+      page.waitForEvent('download', { timeout: 30000 }),
+      clickButton(page, '.content button', 'Tải mẫu Excel'),
+    ]);
+    const file = path.join(tmp, 'mau-' + dl.suggestedFilename());
+    await dl.saveAs(file);
+    const cells = readCells(fs.readFileSync(file));
+    const values = Object.values(cells).flatMap((sheet) => { return Object.values(sheet); });
+    expect(values).not.toContain('KHONG_DUOC_CO_TRONG_MAU');
   });
 
   it('không một lỗi JavaScript nào', () => {

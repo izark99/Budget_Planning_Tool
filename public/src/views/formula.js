@@ -3,7 +3,7 @@
    Soạn quy tắc theo nhóm, thử trên một dòng, và bảng đối chiếu mọi thông
    tin mà công thức dùng tới.
    =========================================================== */
-import { MONTHS, S, allMonths, fmt, nkey, setRESULT, touch, uid } from '../core/state.js';
+import { MONTHS, S, allMonths, fmt, fmtNum, nkey, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { distinctVals } from '../platform/io.js';
@@ -214,7 +214,10 @@ const REF_KIND = {
 function refVal(v) {
   if (v && typeof v === 'object' && v.err) return v.err;
   if (v === '' || v === null || v === undefined) return '—';
-  if (typeof v === 'number') return fmt(v);
+  /* fmtNum chứ KHÔNG phải fmt: bảng này liệt kê ĐẦU VÀO của công thức — hệ số
+     1,276 · ngày công 21,5 · tỷ lệ 0,215 — chứ không phải tiền đồng. fmt() làm
+     tròn nên 1,5 từng hiện thành 2, ngay ở bảng người dùng mở ra để đối chiếu. */
+  if (typeof v === 'number') return fmtNum(v);
   if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
   return String(v);
 }

@@ -79,6 +79,32 @@ describe('tiêu đề bảng', () => {
   });
 });
 
+describe('tiêu đề cột của bảng', () => {
+  /* Lỗi cũ: styles.css gộp `td.num, th.num` nên MỌI tiêu đề cột số ăn luôn font
+     mono 12,5px, lệch hẳn khỏi font hiển thị 11px của các tiêu đề còn lại — thấy
+     rõ nhất ở "SỐ GIÁ TRỊ" (Thiết lập) và cả hàng tiêu đề màn Ngày công. */
+  it.each(['Thiết lập', 'Ngày công', 'Định biên', 'Phân loại chi phí'])(
+    'màn %s: mọi th dùng chung một font, một cỡ', async (view) => {
+      await goToView(page, view);
+      const specs = await page.evaluate(() =>
+        [...document.querySelectorAll('th')].map((h) => {
+          const c = getComputedStyle(h);
+          return `${c.fontWeight} ${c.fontSize} ${c.fontFamily.split(',')[0]}`;
+        }));
+      expect(specs.length).toBeGreaterThan(2);
+      expect([...new Set(specs)]).toHaveLength(1);
+    });
+
+  it('tiêu đề cột số vẫn căn phải để thẳng cột với con số bên dưới', async () => {
+    await goToView(page, 'Ngày công');
+    const align = await page.evaluate(() => {
+      const h = document.querySelector('th.num');
+      return h && getComputedStyle(h).textAlign;
+    });
+    expect(align).toBe('right');
+  });
+});
+
 describe('hộp gợi ý chèn cột', () => {
   it('ở màn Công thức chi phí: cột trái, dưới danh sách FC, dính và cuộn nội bộ', async () => {
     await goToView(page, 'Công thức chi phí');
@@ -139,6 +165,36 @@ describe('thử trên một dòng', () => {
     });
     expect(rows).not.toBeNull();
     expect(rows).toBeGreaterThan(0);
+  });
+
+  /* LỖI ĐÃ BÁO: refVal() dùng fmt() — bộ định dạng cho TIỀN ĐỒNG, có Math.round —
+     nên hệ số 1,5 hiện thành 2 và 0,215 hiện thành 0, ngay tại bảng người dùng mở
+     ra để đối chiếu. Phải là fmtNum (tối đa 6 chữ số thập phân). */
+  it('bảng đối chiếu giữ nguyên phần thập phân, KHÔNG làm tròn', async () => {
+    await inPage(page, `
+      st.S.hc.rows[0].Coefficient = 1.5;
+      st.S.formulas[0].rules[0].cond = '';
+      st.S.formulas[0].rules[0].formula = '[Coefficient] * NGAY_CONG_CHUAN';
+      fm.ENGINE.invalidate(); st.setRESULT(null);
+      return true;
+    `);
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Công thức chi phí');
+
+    const cells = await page.evaluate(() => {
+      const h = [...document.querySelectorAll('.content h4')]
+        .find((x) => x.textContent.includes('Thông tin dùng trong công thức'));
+      if (!h) return null;
+      return [...h.parentElement.querySelectorAll('tbody tr')].map((tr) =>
+        [...tr.children].map((td) => td.textContent.trim()));
+    });
+    expect(cells).not.toBeNull();
+
+    const coefRow = cells.find((r) => r[0] === '[Coefficient]');
+    expect(coefRow, JSON.stringify(cells)).toBeTruthy();
+    /* Trước khi sửa, ô này là "2". */
+    expect(coefRow).toContain('1,5');
+    expect(coefRow).not.toContain('2');
   });
 
   it('bảng đối chiếu hiện hàng "% trích" khi Formula Code có khai % trích', async () => {
