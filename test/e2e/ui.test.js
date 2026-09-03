@@ -154,6 +154,55 @@ describe('hộp gợi ý chèn cột', () => {
   });
 });
 
+describe('hộp gợi ý: tiêu đề dính khi cuộn', () => {
+  /* Tiêu đề nằm TRONG vùng cuộn của .chipbox, nên nếu không dính thì cuộn xuống
+     là mất tiêu đề, không còn biết đang xem hộp gì. */
+  it('tiêu đề vẫn nằm trong khung nhìn sau khi cuộn hộp xuống', async () => {
+    await goToView(page, 'Công thức chi phí');
+    const r = await page.evaluate(async () => {
+      const box = document.querySelector('.chipbox');
+      const h = box && box.querySelector('h4');
+      if (!h) return null;
+      const sticky = getComputedStyle(h).position;
+      /* Bóp trần chiều cao để chắc chắn có gì đó để cuộn — số chip phụ thuộc file
+         định biên nên không thể trông chờ nó tự tràn. */
+      const keep = box.style.maxHeight;
+      box.style.maxHeight = '70px';
+      box.scrollTop = box.scrollHeight;
+      await new Promise((res) => requestAnimationFrame(() => requestAnimationFrame(res)));
+      const hb = h.getBoundingClientRect(), bb = box.getBoundingClientRect();
+      const out = {
+        sticky, scrolled: box.scrollTop > 0,
+        /* Tiêu đề còn nằm trọn trong khung nhìn của hộp hay đã trôi lên trên? */
+        visible: hb.top >= bb.top - 1 && hb.bottom <= bb.bottom + 1,
+        topGap: Math.round(hb.top - bb.top),
+      };
+      box.style.maxHeight = keep;
+      return out;
+    });
+    expect(r).not.toBeNull();
+    expect(r.sticky).toBe('sticky');
+    expect(r.scrolled).toBe(true);
+    /* Đã cuộn tới đáy mà tiêu đề vẫn hiện trọn trong hộp = nó dính thật.
+       Không dính thì nó trôi lên trên, topGap âm mạnh. */
+    expect(r.visible, `topGap=${r.topGap}`).toBe(true);
+  });
+});
+
+describe('khoảng cách giữa khối soạn và "thử trên một dòng"', () => {
+  it('không dính sát nhau', async () => {
+    await goToView(page, 'Công thức chi phí');
+    const gap = await page.evaluate(() => {
+      const split = document.querySelector('.split');
+      const next = split && split.nextElementSibling;
+      if (!split || !next) return null;
+      return Math.round(next.getBoundingClientRect().top - split.getBoundingClientRect().bottom);
+    });
+    expect(gap).not.toBeNull();
+    expect(gap).toBeGreaterThan(0);
+  });
+});
+
 describe('danh sách Formula Code', () => {
   /* Trước đây không có trần chiều cao: nhiều công thức là cột trái dài ra vô tận,
      đẩy hộp gợi ý bên dưới ra khỏi tầm nhìn. */
@@ -263,6 +312,42 @@ describe('thử trên một dòng', () => {
     /* Trước khi sửa, ô này là "2". */
     expect(coefRow).toContain('1,5');
     expect(coefRow).not.toContain('2');
+  });
+
+  /* Người dùng cần biết dòng đang thử là AI — Grade nào, Gender gì, làm ở đâu —
+     mà không phải mở lại màn Định biên. Lấy theo CỘT THẬT của file, không viết
+     cứng tên cột, nên file nào cũng đủ thông tin. */
+  it('dải thẻ liệt kê đủ mọi cột thuộc tính của dòng, ID đứng trước', async () => {
+    await goToView(page, 'Công thức chi phí');
+    const r = await page.evaluate(() => {
+      const stats = document.querySelector('.content .stats');
+      if (!stats) return null;
+      return [...stats.querySelectorAll('.stat')].map((s) => ({
+        k: s.querySelector('.k').textContent.trim(),
+        v: s.querySelector('.v').textContent.trim(),
+        sm: s.classList.contains('sm'),
+      }));
+    });
+    expect(r).not.toBeNull();
+
+    const attrCols = await inPage(page, 'return fm.ENGINE.attrCols().map((c) => c.alias);');
+    const idCol = await inPage(page, "return fm.ENGINE.roleCol('key');");
+    const keys = r.map((x) => x.k);
+
+    /* đủ mọi cột thuộc tính */
+    for (const c of attrCols) expect(keys, c).toContain(c);
+
+    /* ID đứng trước các thẻ vừa thêm */
+    expect(keys[0]).toBe(idCol);
+    expect(r[1].sm).toBe(true);
+
+    /* và giá trị đúng của chính dòng đang thử */
+    const row = await inPage(page, `
+      const res = fm.ENGINE.previewRow(st.S.formulas.find((f) => f.id === st.S.ui.fSel) || st.S.formulas[0], 0);
+      return JSON.stringify(res.row);
+    `).then(JSON.parse);
+    const grade = r.find((x) => x.k === 'Grade');
+    if (grade) expect(grade.v).toBe(String(row.Grade));
   });
 
   it('bảng đối chiếu hiện hàng "% trích" khi Formula Code có khai % trích', async () => {

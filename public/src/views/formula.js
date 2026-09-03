@@ -304,13 +304,27 @@ function previewPanel(fc) {
       out.appendChild(el('div', { class: 'errbox', html: t('fm.preview_error', { e: esc(res.error) }) + (res.group ? ' ' + t('fm.preview_error_group', { g: esc(res.group) }) : '') }));
       return;
     }
+    /* Sau thẻ ID là mọi cột thuộc tính của chính dòng đang thử — Grade, Gender,
+       nơi làm việc... — để đối chiếu ngay tại chỗ, khỏi mở lại màn Định biên.
+       Đọc từ cột THẬT của file chứ không viết cứng tên cột: mỗi nơi một file. */
+    const rowInfo = ENGINE.attrCols()
+      .filter((c) => { return c.alias !== idCol; })
+      .map((c) => {
+        const v = res.row ? res.row[c.alias] : '';
+        return el('div', { class: 'stat sm' }, [
+          el('div', { class: 'k', text: c.alias }),
+          el('div', { class: 'v', text: v == null || v === '' ? '—' : String(v) })
+        ]);
+      });
+
     out.appendChild(el('div', { class: 'stats', style: 'margin:0 0 12px' }, [
       idCol ? el('div', { class: 'stat' }, [el('div', { class: 'k', text: idCol }), el('div', { class: 'v', style: 'font-size:17px', text: String(res.id == null ? '' : res.id) })]) : null,
+    ].concat(rowInfo).concat([
       el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('fm.nhom_khop') }), el('div', { class: 'v', style: 'font-size:15px', text: res.group || t('fm.no_match') })]),
       el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('fm.ca_nam_dong_nay') }), el('div', { class: 'v money', text: fmt(res.total) })]),
       el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('export.audit.monthsPicked') }), el('div', { class: 'v', style: 'font-size:15px', text: res.nSel + '/12' }),
         el('div', { class: 'u', text: fc.mode === 'spread' ? t('fm.mode_spread_short') : t('fm.mode_monthly_long') })])
-    ]));
+    ])));
     if (res.error) out.appendChild(el('div', { class: 'errbox', text: res.error }));
 
     const lines = [

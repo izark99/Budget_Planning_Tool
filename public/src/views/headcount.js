@@ -187,7 +187,10 @@ function viewHC() {
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
       el('table', {}, [el('thead', {}, [el('tr', {}, cols.map((c) => { return el('th', { text: c.alias }); })
         .concat([el('th', { text: t('hc.dinh_bien_t01_t12') })]))]), tb])
-    ]), pg.node])
+    ])]),
+    /* Thanh phân trang nằm trong .body (đệm 14px) chứ không trong .body.tight
+       (đệm 0) — nếu không nó dính sát góc panel. Giống bảng Phân loại nhóm. */
+    el('div', { class: 'body' }, [pg.node])
   ]));
   return wrap;
 }

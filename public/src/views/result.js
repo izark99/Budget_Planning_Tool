@@ -115,7 +115,8 @@ function viewResult() {
         .concat(MONTHS.map((m) => { return el('th', { class: 'num', text: m }); }))
         .concat([el('th', { class: 'num', text: t('fm.full_year') })]))]),
       pivotTb])
-    ]), pgPivot.node])
+    ])]),
+    el('div', { class: 'body' }, [pgPivot.node])
   ]));
 
   /* đối chiếu — trước đây cắt cụt ở 500 dòng mà không báo gì. */
@@ -139,14 +140,14 @@ function viewResult() {
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('res.doi_chieu_to_trinh_cong_thuc') }), el('span', { class: 'tag' + (diffs.length ? ' o' : ''), text: t('res.n_diffs', { n: diffs.length }) })]),
     el('div', { class: 'body tight' }, [
-      diffs.length ? el('div', {}, [
-        el('div', { class: 'tw' }, [
-          el('table', {}, [
-            el('thead', {}, [el('tr', {}, [t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('export.audit.month'), t('export.audit.formula'), t('dash.kind_exc'), t('exc.th_rule'), t('res.th_applied'), t('res.th_winner')]
-              .map((h, i) => { return el('th', { class: (i >= 5 && i <= 8) ? 'num' : '', text: h }); }))]),
-            diffTb])
-        ]), pgDiff.node]) : el('div', { class: 'empty', text: t('res.khong_co_chenh_lech_nao') })
-    ])
+      diffs.length ? el('div', { class: 'tw' }, [
+        el('table', {}, [
+          el('thead', {}, [el('tr', {}, [t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('export.audit.month'), t('export.audit.formula'), t('dash.kind_exc'), t('exc.th_rule'), t('res.th_applied'), t('res.th_winner')]
+            .map((h, i) => { return el('th', { class: (i >= 5 && i <= 8) ? 'num' : '', text: h }); }))]),
+          diffTb])
+      ]) : el('div', { class: 'empty', text: t('res.khong_co_chenh_lech_nao') })
+    ]),
+    diffs.length ? el('div', { class: 'body' }, [pgDiff.node]) : null
   ]));
 
   return wrap;

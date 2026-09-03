@@ -64,7 +64,8 @@ function viewExc() {
     })]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
       el('table', {}, [el('thead', {}, [el('tr', {}, ['', t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('exc.th_amount'), t('exc.th_months'), t('exc.th_rule'), t('export.audit.note'), ''].map((h) => { return el('th', { text: h }); }))]), tb])
-    ]), pg.node])
+    ])]),
+    el('div', { class: 'body' }, [pg.node])
   ]));
   return wrap;
 }

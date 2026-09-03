@@ -208,6 +208,10 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .stat .v.money { color: var(--mineral); }
 .stat .v.warn { color: var(--ochre); }
 .stat .u { font-size: 11px; color: var(--soft); margin-top: 2px; }
+/* Thẻ phụ: các cột thuộc tính của dòng đang thử. Nhỏ hơn bốn thẻ chính để dải
+   thẻ vẫn đọc được khi file định biên nhiều cột. */
+.stat.sm { padding: 9px 12px; }
+.stat.sm .v { font: 600 13.5px/1.25 var(--disp); word-break: break-word; }
 
 /* ============ Rule / group editor ============ */
 .rule { border: 1px solid var(--rule); border-radius: var(--r); margin-bottom: 8px; background: #fff; }
@@ -240,7 +244,14 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .pager select { width: auto; }
 /* Ô nhập trần sinh combo, nằm cạnh nút "Sinh sẵn từ định biên". */
 .lim { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--soft); }
-.chipbox > h4 { margin: 0 0 7px; }
+/* Tiêu đề dính đỉnh vùng cuộn của hộp — cuộn xuống vẫn biết đang xem hộp gì,
+   giống cách th của bảng đã làm. Lề âm cho nền phủ hết bề ngang, không để nội
+   dung cuộn lòi ra hai bên phần đệm của hộp. */
+.chipbox > h4 {
+  position: sticky; top: 0; z-index: 1;
+  background: var(--bone-2);
+  margin: -9px -10px 7px; padding: 9px 10px 7px;
+}
 .chipbox .chips { margin-top: 0; }
 .chipbox .target { font: 11px var(--mono); color: var(--mineral); margin-bottom: 7px; display: block; }
 /* Khu soạn công thức: danh sách nhóm bên trái, hộp gợi ý dính bên phải */
@@ -264,7 +275,9 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .drop strong { display: block; font: 600 15px var(--disp); letter-spacing: .03em; }
 .drop span { color: var(--soft); font-size: 12.5px; }
 
-.split { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 18px; align-items: start; }
+/* margin-bottom: hộp gợi ý là thứ cuối cột trái nhưng KHÔNG phải .panel nên
+   không có lề dưới — thiếu dòng này thì panel "thử trên một dòng" dính sát đáy nó. */
+.split { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 18px; align-items: start; margin-bottom: 18px; }
 @media (max-width: 1100px) { .split { grid-template-columns: 1fr; } .rule > .b { grid-template-columns: 1fr; } }
 @media (max-width: 860px) {
   .shell { flex-direction: column; }

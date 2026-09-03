@@ -499,7 +499,8 @@ function viewDashboard() {
       })]),
       el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
         el('table', {}, [el('thead', {}, [el('tr', {}, head)]), groupTb])
-      ]), pgDash.node])
+      ])]),
+      el('div', { class: 'body' }, [pgDash.node])
     ]));
   }
 

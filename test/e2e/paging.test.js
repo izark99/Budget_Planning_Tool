@@ -131,6 +131,58 @@ describe('Phân trang dùng chung', () => {
   });
 });
 
+describe('đệm của thanh phân trang', () => {
+  /* LỖI ĐÃ BÁO: pg.node bị nhét thẳng vào `.body.tight` (padding 0) nên thanh
+     phân trang dính sát góc và cạnh panel. Bảng Phân loại nhóm đặt đúng ngay từ
+     đầu — nó là mốc, mọi bảng khác phải khớp với nó. */
+
+  /* Thanh phân trang tự ẩn khi danh sách ngắn (≤ 25 dòng), nên phải bơm dữ liệu
+     cho từng bảng thì mới có cái để đo. */
+  const SEED = BIG_HEADCOUNT + `
+    const many = (n, f) => { const a = []; for (let i = 0; i < n; i++) a.push(f(i)); return a; };
+    st.S.classes[0].rows = many(40, (i) => { return ['D' + i, 'U' + i, 'G' + i]; });
+    st.S.exceptions = many(40, (i) => {
+      return { id2: 'x' + i, no: 'TT-' + i, id: i, position: '', formulaCode: '',
+        amount: 1000, months: [], rule: 'MAX', note: '', active: true };
+    });
+    st.S.maps.costCode = many(40, (i) => {
+      return { formulaCode: 'FC_' + i, costCode: 'CC_' + i, name: 'CC ' + i };
+    });
+    st.S.ui.pageSize = 25;
+  `;
+
+  /** Đệm trái và đệm dưới của thanh phân trang ĐANG HIỆN so với mép panel. */
+  const padOf = () => page.evaluate(() => {
+    /* Panel gập lại có display:none nên rect toàn số 0 — phải lấy thanh phân
+       trang đang hiện, không lấy cái đầu tiên gặp trong DOM. */
+    const p = [...document.querySelectorAll('.pager')]
+      .find((x) => x.getBoundingClientRect().width > 0);
+    if (!p) return null;
+    const pb = p.getBoundingClientRect(), nb = p.closest('.panel').getBoundingClientRect();
+    return { left: Math.round(pb.left - nb.left), bottom: Math.round(nb.bottom - pb.bottom) };
+  });
+
+  const measure = async (view) => {
+    await inPage(page, SEED + 'return true;');
+    await goToView(page, view);
+    return padOf();
+  };
+
+  it('mọi màn lùi vào bằng đúng bảng Phân loại nhóm', async () => {
+    const ref = await measure('Phân loại nhóm');
+    expect(ref).not.toBeNull();
+    /* Đệm trái phải bằng đệm dưới — dính một cạnh cũng là dính. */
+    expect(ref.left).toBe(ref.bottom);
+    expect(ref.left).toBeGreaterThan(8);
+
+    for (const view of ['Định biên', 'Tờ trình ngoại lệ', 'Phân loại chi phí']) {
+      const pad = await measure(view);
+      expect(pad, view).not.toBeNull();
+      expect(pad, view).toEqual(ref);
+    }
+  });
+});
+
 describe('toàn bộ luồng', () => {
   it('không một lỗi JavaScript nào', () => {
     expect(errs).toEqual([]);
