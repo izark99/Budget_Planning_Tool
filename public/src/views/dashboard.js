@@ -2,7 +2,7 @@
    MÀN 11 — DASHBOARD SOÁT SỐ
    Tách nguyên văn từ khối 07b-view-dashboard.js.
    =========================================================== */
-import { M, MONTHS, RESULT, S, fmt, fmtShort, nkey, touch } from '../core/state.js';
+import { M, MONTHS, RESULT, S, fmt, fmtNum, fmtShort, nkey, touch } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { el, render } from '../ui/dom.js';
@@ -101,6 +101,10 @@ function dashAggregate(R, f) {
   const months = new Array(M).fill(0); let total = 0;
   const byFc = {}, byCc = {}, byGroup = {}, matrix = {}, ccSet = {};
   let personMonths = 0, zeroRows = 0, nRow = 0;
+  /* Ảnh hưởng tăng lương gộp trong CHÍNH vòng lặp này, nên nó tôn trọng đủ mọi
+     bộ lọc đang bật — không phải con số toàn cục dán vào. */
+  const noR = R.dataNoRaise;
+  let totalNoRaise = 0;
   const rowTotals = [];
 
   for (let r = 0; r < nR; r++) {
@@ -112,13 +116,14 @@ function dashAggregate(R, f) {
     personMonths += hcSum;
 
     const gv = f.groupCol ? String(row[f.groupCol] == null ? '' : row[f.groupCol]).trim() : t('dash.all_groups');
-    if (!byGroup[gv]) byGroup[gv] = { total: 0, pm: 0, n: 0 };
+    if (!byGroup[gv]) byGroup[gv] = { total: 0, pm: 0, n: 0, noRaise: 0 };
     byGroup[gv].pm += hcSum; byGroup[gv].n++;
 
-    let rowTotal = 0;
+    let rowTotal = 0, rowNoRaise = 0;
     for (let k = 0; k < fcIdx.length; k++) {
       const it = fcIdx[k], arr = R.data[it.i], base = r * M; let sub = 0;
       for (let m2 = 0; m2 < M; m2++) { const v2 = arr[base + m2]; if (v2) { months[m2] += v2; sub += v2; } }
+      if (noR) { const a0 = noR[it.i]; for (let m3 = 0; m3 < M; m3++) rowNoRaise += a0[base + m3]; }
       if (!sub) continue;
       rowTotal += sub;
       byFc[it.fc.code] = (byFc[it.fc.code] || 0) + sub;
@@ -128,13 +133,16 @@ function dashAggregate(R, f) {
       matrix[key] = (matrix[key] || 0) + sub;
     }
     byGroup[gv].total += rowTotal;
-    total += rowTotal;
+    byGroup[gv].noRaise += rowNoRaise;
+    total += rowTotal; totalNoRaise += rowNoRaise;
     if (hcSum > 0) rowTotals.push(rowTotal / hcSum);
     if (!rowTotal && hcSum > 0) zeroRows++;
   }
 
   return {
     months, total, nRow, personMonths,
+    /* raise = phần do tăng lương, trong đúng bộ lọc đang bật. */
+    raise: noR ? total - totalNoRaise : null,
     byFc, byCc, byGroup, matrix, rowTotals,
     costCodes: Object.keys(ccSet).sort(), fcIdx, zeroRows, ccOf, filters
   };
@@ -272,8 +280,17 @@ function viewDashboard() {
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.binh_quan_thang') }), el('div', { class: 'v', text: fmtShort(A.total / 12) })]),
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.binh_quan_dau_nguoi_thang') }), el('div', { class: 'v', text: fmtShort(perHead) }), el('div', { class: 'u', text: t('dash.person_months', { n: fmt(A.personMonths) }) })]),
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('hc.dong_dinh_bien') }), el('div', { class: 'v', text: fmt(A.nRow) })]),
-    el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.dinh_bien_binh_quan') }), el('div', { class: 'v', text: fmt(A.personMonths / 12) })])
-  ]));
+    el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.dinh_bien_binh_quan') }), el('div', { class: 'v', text: fmt(A.personMonths / 12) })]),
+    /* Chỉ hiện khi có khai đợt tăng lương — không thì thêm một ô rỗng vô nghĩa. */
+    A.raise === null ? null : el('div', { class: 'stat' }, [
+      el('div', { class: 'k', text: t('dash.do_tang_luong') }),
+      el('div', { class: 'v money', text: fmtShort(A.raise) }),
+      /* Con số CHÍNH XÁC ở dòng phụ, như mọi thẻ tiền khác — .v chỉ là bản rút gọn. */
+      el('div', { class: 'u', text: t('dash.raise_share', {
+        n: fmt(A.raise), p: fmtNum(A.total ? Math.round(A.raise / A.total * 1000) / 10 : 0)
+      }) })
+    ])
+  ].filter(Boolean)));
 
   /* ---------- điểm cần soát ---------- */
   const flags = [];
@@ -440,9 +457,12 @@ function viewDashboard() {
       return f.sort === 'per' ? q.per - p.per : q.total - p.total;
     });
     const ccs = A.costCodes;
+    const showRaise = A.raise !== null;
     const head = [el('th', { text: f.groupCol }), el('th', { class: 'num', text: t('dash.nguoi_thang') })]
       .concat(ccs.map((c) => { return el('th', { class: 'num', text: c }); }))
-      .concat([el('th', { class: 'num', text: t('fm.full_year') }), el('th', { class: 'num', text: t('dash.bq_dau_nguoi_thang') })]);
+      .concat([el('th', { class: 'num', text: t('fm.full_year') })])
+      .concat(showRaise ? [el('th', { class: 'num', text: t('dash.do_tang_luong') })] : [])
+      .concat([el('th', { class: 'num', text: t('dash.bq_dau_nguoi_thang') })]);
 
     /* Chỉ PHÂN TRANG các dòng nhóm; hàng thống kê và hàng tổng luôn nằm cuối
        bảng, không bao giờ bị đẩy sang trang khác. */
@@ -460,7 +480,11 @@ function viewDashboard() {
         const v = A.matrix[x.g + '\u0001' + c] || 0;
         return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' });
       })).concat([
-        el('td', { class: 'num', text: fmt(x.total) }),
+        el('td', { class: 'num', text: fmt(x.total) })
+      ]).concat(showRaise ? [(function () {
+        const up = x.total - x.noRaise;
+        return el('td', { class: 'num' + (up ? '' : ' zero'), text: up ? fmt(up) : '–' });
+      })()] : []).concat([
         el('td', { class: 'num' }, [cls ? el('span', { class: 'tag ' + cls, text: fmtShort(x.per) }) : el('span', { text: fmtShort(x.per) })])
       ]));
     };
@@ -474,12 +498,16 @@ function viewDashboard() {
         groupTb.appendChild(el('tr', { class: 'statrow' },
           [el('td', {}, [el('span', { class: 'tag', text: sd.t })]), el('td', {})]
             .concat(ccs.map(() => { return el('td', {}); }))
-            .concat([el('td', {}), el('td', { class: 'num', text: fmt(perStats[sd.k]) })])));
+            .concat([el('td', {})])
+            .concat(showRaise ? [el('td', {})] : [])
+            .concat([el('td', { class: 'num', text: fmt(perStats[sd.k]) })])));
       });
       groupTb.appendChild(el('tr', { class: 'tot' },
         [el('td', { text: t('export.total') }), el('td', { class: 'num', text: fmt(A.personMonths) })]
           .concat(ccs.map((c) => { return el('td', { class: 'num', text: fmt(A.byCc[c] || 0) }); }))
-          .concat([el('td', { class: 'num', text: fmt(A.total) }), el('td', { class: 'num', text: fmtShort(perHead) })])));
+          .concat([el('td', { class: 'num', text: fmt(A.total) })])
+          .concat(showRaise ? [el('td', { class: 'num', text: fmt(A.raise) })] : [])
+          .concat([el('td', { class: 'num', text: fmtShort(perHead) })])));
     }
     drawGroups();
 

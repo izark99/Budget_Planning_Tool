@@ -145,6 +145,7 @@ export.audit.otherDays: Thực tế / Lễ / Phép / Khác
 export.audit.params: THAM SỐ
 export.audit.pct: Mức %
 export.audit.period: Kỳ ngân sách
+export.audit.raiseAmount: Tien Tang Them
 export.audit.raiseName: Tên đợt
 export.audit.raises: TĂNG LƯƠNG
 export.audit.rowCount: Số dòng
@@ -616,6 +617,17 @@ res.more_warnings: … và {n} cảnh báo khác
 res.n_diffs: {n} lượt lệch
 res.not_run_hint: Số liệu chỉ được tính khi bạn bấm nút bên dưới, để tránh chạy lại mỗi lần mở màn hình.
 res.pivot_title: Theo Account / Budget / Cost Code / Cost Center
+res.raise_before: Ngân sách nếu không tăng lương
+res.raise_by_fc: Tách theo Formula Code
+res.raise_hint: So với chính bộ khai báo này nhưng <strong>bỏ hết mọi đợt tăng</strong>. Các đợt nhân chồng lên nhau nên phần của từng đợt tính theo thứ tự khai báo — nhờ vậy cộng lại đúng bằng tổng.
+res.raise_none: Chưa khai đợt tăng lương nào
+res.raise_th_amount: Tiền tăng thêm
+res.raise_th_from: Từ tháng
+res.raise_th_pct: Mức tăng
+res.raise_th_round: Đợt tăng
+res.raise_th_rows: Lượt dòng chạm
+res.raise_th_share: % tổng ngân sách
+res.raise_title: Ảnh hưởng của tăng lương
 res.sheet_audit: Bản khai báo
 res.sheet_audit_note: Công thức, tham số, phân loại, lịch ngày công
 res.sheet_conflict: Đối chiếu tờ trình
@@ -655,6 +667,7 @@ dash.dien_bien_12_thang: Diễn biến 12 tháng
 dash.dinh_bien_binh_quan: Định biên bình quân
 dash.dir_down: giảm
 dash.dir_up: tăng
+dash.do_tang_luong: Do tăng lương
 dash.filter_col: Lọc {i} — cột
 dash.flag_exc: {n} lượt tờ trình lệch công thức, làm ngân sách {dir} {amt}
 dash.flag_fc_zero: Formula Code "{code}" không sinh ra đồng nào
@@ -686,6 +699,7 @@ dash.not_run: Chưa chạy tính
 dash.not_run_hint: Dashboard đọc từ kết quả đã tính. Bấm nút bên dưới để chạy.
 dash.person_months: {n} người-tháng
 dash.phan_loai_theo: Phân loại theo
+dash.raise_share: {n} đ · {p}% ngân sách trong bộ lọc
 dash.series_fc: Tổng cả năm theo Formula Code
 dash.series_group: Chi phí mỗi người-tháng theo nhóm {col}
 dash.series_months: Ngân sách theo tháng

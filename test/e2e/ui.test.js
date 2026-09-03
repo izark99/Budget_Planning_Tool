@@ -592,6 +592,82 @@ describe('thử trên một dòng', () => {
   });
 });
 
+describe('ảnh hưởng của tăng lương', () => {
+  /* File mẫu có một đợt tăng khai đích danh công thức DÙNG CHUNG — đường mà bản
+     đo đầu tiên bỏ sót và báo 0 đồng. Giữ nguyên đợt của file mẫu ở đây. */
+  beforeAll(async () => {
+    await goToView(page, 'Kết quả');
+    await clickButton(page, '.content button', 'Chạy');
+    await page.waitForTimeout(1200);
+  });
+
+  it('màn Kết quả có panel, và hàng TỔNG khớp đúng raiseTotal', async () => {
+    const r = await page.evaluate(() => {
+      const p = [...document.querySelectorAll('.panel')]
+        .find((x) => x.textContent.includes('Ảnh hưởng của tăng lương'));
+      if (!p) return null;
+      /* Panel có HAI bảng: bảng từng đợt, rồi bảng tách theo Formula Code.
+         Chỉ đo bảng đầu. */
+      const tb = p.querySelector('tbody');
+      const tot = tb.querySelector('tr.tot');
+      const cells = [...tot.querySelectorAll('td')].map((c) => c.textContent.trim());
+      const body = [...tb.querySelectorAll('tr:not(.tot)')].map((tr) =>
+        [...tr.querySelectorAll('td')].map((c) => c.textContent.trim()));
+      return { totalText: cells[1], nRounds: body.length, firstRow: body[0] };
+    });
+    expect(r).not.toBeNull();
+
+    const state = await inPage(page, 'return { total: st.RESULT.raiseTotal, n: st.RESULT.raiseImpact.length };');
+    expect(r.nRounds).toBe(state.n);
+    expect(r.totalText.replace(/\D/g, '')).toBe(String(state.total));
+    /* Tiền phải khác 0 — báo 0 chính là lỗi của bản đo đầu tiên. */
+    expect(state.total).toBeGreaterThan(0);
+    /* Dòng đầu: tên đợt, từ tháng, mức %, lượt chạm, tiền, % tổng. */
+    expect(r.firstRow).toHaveLength(6);
+    expect(r.firstRow[0]).toBe('Tăng lương định kỳ');
+  });
+
+  it('các phần của từng đợt cộng lại đúng bằng tổng', async () => {
+    const ok = await inPage(page, `
+      const R = st.RESULT;
+      const parts = R.raiseImpact.reduce((a, x) => a + x.total, 0);
+      return parts === R.raiseTotal;
+    `);
+    expect(ok).toBe(true);
+  });
+
+  it('Dashboard có thẻ "Do tăng lương", khớp đúng con số của màn Kết quả', async () => {
+    await goToView(page, 'Dashboard');
+    const tile = await page.evaluate(() => {
+      const s = [...document.querySelectorAll('.stat')]
+        .find((x) => x.querySelector('.k') && x.querySelector('.k').textContent.includes('Do tăng lương'));
+      return s ? s.querySelector('.u').textContent : null;
+    });
+    expect(tile).not.toBeNull();
+    /* Dashboard chưa lọc gì thì bằng đúng tổng toàn cục. Dòng phụ có cả tiền
+       chính xác lẫn %, nên so bằng chuỗi tiền đã định dạng. */
+    const total = await inPage(page, 'return st.RESULT.raiseTotal;');
+    expect(tile).toContain(new Intl.NumberFormat('vi-VN').format(total));
+  });
+
+  it('không khai đợt tăng nào thì KHÔNG dựng panel, không thêm thẻ', async () => {
+    const saved = await inPage(page, 'return JSON.stringify(st.S.raises);');
+    await inPage(page, 'st.S.raises = []; fm.ENGINE.invalidate(); st.setRESULT(null); return true;');
+    await goToView(page, 'Kết quả');
+    await clickButton(page, '.content button', 'Chạy');
+    await page.waitForTimeout(1200);
+
+    expect(await page.evaluate(() =>
+      [...document.querySelectorAll('.panel')].some((x) => x.textContent.includes('Ảnh hưởng của tăng lương')))).toBe(false);
+
+    await goToView(page, 'Dashboard');
+    expect(await page.evaluate(() =>
+      [...document.querySelectorAll('.stat .k')].some((x) => x.textContent.includes('Do tăng lương')))).toBe(false);
+
+    await inPage(page, 'st.S.raises = JSON.parse(a); fm.ENGINE.invalidate(); st.setRESULT(null); return true;', saved);
+  });
+});
+
 describe('mọi màn hình', () => {
   it('mở được hết, không màn nào ném lỗi', async () => {
     const labels = await page.evaluate(() =>

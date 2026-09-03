@@ -71,7 +71,7 @@ const ENGINE = (function () {
      Tăng lương chỉ áp cho công thức dùng chung khi được LIỆT KÊ ĐÍCH DANH.
      Danh sách rỗng vẫn giữ nghĩa cũ là "mọi công thức chi phí", nếu cho nó áp luôn
      cho công thức dùng chung thì một đợt tăng sẽ bị tính hai lần. */
-  function buildShared() {
+  function buildShared(raiseList) {
     const defs = (S.shared || []).filter((x) => { return x && nkey(x.code); });
     /** @type {Record<string, SharedRecord>} */
     const reg = {};
@@ -89,7 +89,7 @@ const ENGINE = (function () {
       if (nkey(d.name)) reg[nkey(d.name)] = rec;
     });
 
-    (S.raises || []).forEach((r) => {
+    (raiseList || S.raises || []).forEach((r) => {
       if (r.active === false) return;
       const list = (r.formulas || []).map(nkey);
       if (!list.length) return;                       /* rỗng = chỉ áp cho công thức chi phí */
@@ -306,13 +306,15 @@ const ENGINE = (function () {
    * Nặng nhất trong app — gọi khi người dùng bấm "Chạy tính", không gọi lúc render.
    * @returns {BudgetResult}
    */
-  function run() {
+  /* Một lượt tính với đúng danh sách đợt tăng được đưa vào. run() gọi nó với cả
+     danh sách; phần đo ảnh hưởng tăng lương gọi lại với danh sách cắt bớt. */
+  function runCore(raiseList) {
     const t0 = Date.now();
     let warnings = []; const formulaErrors = [];
     const rows = applyPolicies(applyClasses(buildRows(), warnings), warnings);
     const nR = rows.length;
     const params = buildParams();
-    const sh = buildShared();
+    const sh = buildShared(raiseList);
     const acc = buildAccruals();
     sh.errors.forEach((e) => {
       formulaErrors.push({ where: t('engine.where.shared', { code: e.where }), msg: e.msg });
@@ -331,7 +333,7 @@ const ENGINE = (function () {
     if (!idCol) warnings.push({ type: 'role', msg: t('engine.warn.keycol') });
 
     /* tăng lương */
-    const raises = (S.raises || []).filter((r) => { return r.active !== false; }).map((r) => {
+    const raises = (raiseList || S.raises || []).filter((r) => { return r.active !== false; }).map((r) => {
       let condFn = null;
       if (r.cond && String(r.cond).trim()) {
         const c = FX.tryCompile(r.cond);
@@ -486,8 +488,65 @@ const ENGINE = (function () {
         return (a.accountCode + a.budgetCode + a.costCode) < (b.accountCode + b.budgetCode + b.costCode) ? -1 : 1;
       }),
       conflicts, warnings, formulaErrors,
+      dataNoRaise: null, raiseImpact: null, raiseTotal: 0,
       idCol, posCol, unitCol, ms: Date.now() - t0
     };
+  }
+
+  /* ẢNH HƯỞNG CỦA TĂNG LƯƠNG, tách theo từng đợt.
+
+     Đo bằng cách CHẠY LẠI cả lượt tính với danh sách đợt tăng cắt dần:
+       A₀ = không đợt nào     Aₖ = đợt 1..k     đóng góp đợt k = Aₖ − Aₖ₋₁
+     Cộng dồn theo thứ tự nên các phần cộng lại ĐÚNG BẰNG tổng; bỏ-một-đợt-ra thì
+     không, vì các đợt nhân chồng lên nhau.
+
+     Vì sao chạy lại cả lượt chứ không nhân chia tại chỗ cho rẻ: đợt tăng có HAI
+     đường vào số liệu — liệt kê đích danh một công thức DÙNG CHUNG thì nó được
+     áp bên trong chính công thức đó (buildShared), còn lại thì áp ở vòng tính của
+     công thức chi phí. Đo tại chỗ ở vòng ngoài sẽ bỏ sót hẳn đường thứ nhất —
+     đúng trường hợp của file mẫu. Chạy lại cả lượt thì không có đường nào lọt.
+
+     Giá: thêm N+1 lượt khi có N đợt. Không khai đợt nào thì không chạy lượt nào. */
+  function run() {
+    const full = runCore(null);
+    const active = (S.raises || []).filter((r) => { return r.active !== false; });
+    if (!active.length) return full;
+
+    const t1 = Date.now();
+    const none = runCore([]);
+    full.dataNoRaise = none.data;
+    full.raiseTotal = full.grand - none.grand;
+
+    let prev = none;
+    full.raiseImpact = active.map((r, k) => {
+      const cur = (k === active.length - 1) ? full : runCore(active.slice(0, k + 1));
+      /** @type {Record<string, number>} */
+      const byFc = {};
+      cur.formulas.forEach((fc, c) => {
+        const d = cur.totalsByFc[c] - prev.totalsByFc[c];
+        if (d) byFc[fc.code] = d;
+      });
+      const byMonth = cur.monthTotals.map((v, m) => { return v - prev.monthTotals[m]; });
+      /* Số lượt dòng × Formula Code mà đợt này thật sự làm đổi tiền. */
+      let nRows = 0;
+      cur.data.forEach((arr, c) => {
+        const before = prev.data[c];
+        for (let i = 0; i < cur.rows.length; i++) {
+          for (let m = 0; m < M; m++) {
+            if (arr[i * M + m] !== before[i * M + m]) { nRows++; break; }
+          }
+        }
+      });
+      const out = {
+        id: r.id, name: r.name || '', fromMonth: +r.fromMonth || 1,
+        pct: parseFloat(String(r.pct)) || 0,
+        total: cur.grand - prev.grand, byMonth, byFc, nRows
+      };
+      prev = cur;
+      return out;
+    });
+    full.ms += Date.now() - t1;
+    return full;
   }
 
   /* ---------- Tiện ích cho UI ---------- */

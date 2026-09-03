@@ -172,11 +172,35 @@ interface BudgetResult {
   conflicts: any[];
   warnings: Array<{ type: string; msg: string }>;
   formulaErrors: Array<{ where: string; msg: string }>;
+  /** Cùng hình dạng với `data`, nhưng là số tiền khi BỎ HẾT mọi đợt tăng lương.
+   *  null khi không có đợt tăng nào đang bật — khi đó không cấp phát gì cả. */
+  dataNoRaise: Float64Array[] | null;
+  /** Phần tiền mỗi đợt tăng lương cộng thêm, tính cộng dồn theo thứ tự khai báo
+   *  nên tổng các phần đúng bằng `raiseTotal`. null khi không có đợt nào. */
+  raiseImpact: RaiseImpact[] | null;
+  /** Tổng ảnh hưởng của tăng lương = tổng `data` trừ tổng `dataNoRaise`. */
+  raiseTotal: number;
   idCol: string;
   posCol: string;
   unitCol: string;
   /** Thời gian tính, mili-giây. */
   ms: number;
+}
+
+/** Một đợt tăng lương và phần tiền nó cộng thêm vào ngân sách. */
+interface RaiseImpact {
+  id: string;
+  name: string;
+  fromMonth: number;
+  pct: number;
+  /** Tiền cộng thêm do riêng đợt này. */
+  total: number;
+  /** Tiền cộng thêm theo từng tháng; cộng lại đúng bằng `total`. */
+  byMonth: number[];
+  /** Tiền cộng thêm theo từng Formula Code; cộng lại đúng bằng `total`. */
+  byFc: Record<string, number>;
+  /** Số lượt dòng × Formula Code mà đợt này thật sự chạm tới. */
+  nRows: number;
 }
 
 /** Giá trị lỗi kiểu Excel mà FX trả về, ví dụ { __err: '#DIV/0!' }. */

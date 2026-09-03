@@ -2,7 +2,7 @@
    MÀN 10 — KẾT QUẢ NGÂN SÁCH
    Tách nguyên văn từ khối 08-view-result-boot.js (phần kết quả).
    =========================================================== */
-import { M, MONTHS, RESULT, S, fmt, fmtShort, setRESULT } from '../core/state.js';
+import { M, MONTHS, RESULT, S, fmt, fmtNum, fmtShort, setRESULT } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { exportBudget } from '../platform/io.js';
@@ -90,6 +90,79 @@ function viewResult() {
         .concat([el('th', { class: 'num', text: t('fm.full_year') })]))]), el('tbody', {}, rowsEl)])
     ])])
   ]));
+
+  /* ---------- ảnh hưởng của tăng lương ----------
+     So với chính bộ khai báo này nhưng bỏ hết mọi đợt tăng. Không khai đợt nào
+     thì không dựng panel — người không dùng tăng lương không phải nhìn thấy gì. */
+  if (R.raiseImpact && R.raiseImpact.length) {
+    const share = (v) => { return R.grand ? (v / R.grand * 100) : 0; };
+    const before = R.grand - R.raiseTotal;
+
+    const rows = R.raiseImpact.map((x) => {
+      return el('tr', {}, [
+        el('td', { text: x.name || t('cal.unnamed') }),
+        el('td', { class: 'num', text: MONTHS[x.fromMonth - 1] }),
+        el('td', { class: 'num', text: fmtNum(x.pct) + '%' }),
+        el('td', { class: 'num', text: fmt(x.nRows) }),
+        el('td', { class: 'num money', text: fmt(x.total) }),
+        el('td', { class: 'num', text: fmtNum(Math.round(share(x.total) * 100) / 100) + '%' })
+      ]);
+    });
+    /* Hàng tổng phải khớp đúng thẻ "do tăng lương" — cộng dồn theo thứ tự khai
+       báo nên các phần cộng lại bằng tổng, không xê một đồng. */
+    rows.push(el('tr', { class: 'tot' }, [
+      el('td', { colspan: 4, text: t('res.tong_cong') }),
+      el('td', { class: 'num', text: fmt(R.raiseTotal) }),
+      el('td', { class: 'num', text: fmtNum(Math.round(share(R.raiseTotal) * 100) / 100) + '%' })
+    ]));
+
+    /* Tách theo Formula Code: gộp mọi đợt lại cho từng mã. */
+    const byFc = {};
+    R.raiseImpact.forEach((x) => {
+      Object.keys(x.byFc).forEach((k) => { byFc[k] = (byFc[k] || 0) + x.byFc[k]; });
+    });
+    const fcRows = Object.keys(byFc).sort((a, b) => { return byFc[b] - byFc[a]; }).map((k) => {
+      return el('tr', {}, [
+        el('td', { class: 'mono', text: k }),
+        el('td', { class: 'num money', text: fmt(byFc[k]) }),
+        el('td', { class: 'num', text: fmtNum(Math.round(share(byFc[k]) * 100) / 100) + '%' })
+      ]);
+    });
+
+    wrap.appendChild(el('div', { class: 'panel' }, [
+      el('header', {}, [
+        el('h3', { text: t('res.raise_title') }),
+        el('span', { class: 'tag o', text: fmtShort(R.raiseTotal) })
+      ]),
+      el('div', { class: 'body' }, [el('p', { class: 'hint', html: t('res.raise_hint') })]),
+      el('div', { class: 'stats', style: 'margin:0 14px 14px' }, [
+        el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('res.raise_before') }), el('div', { class: 'v', text: fmtShort(before) })]),
+        el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('res.raise_title') }), el('div', { class: 'v money', text: fmtShort(R.raiseTotal) }), el('div', { class: 'u', text: t('dash.currency', { n: fmt(R.raiseTotal) }) })]),
+        el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('res.total_budget', { y: S.meta.year }) }), el('div', { class: 'v', text: fmtShort(R.grand) })])
+      ]),
+      el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
+        el('table', {}, [
+          el('thead', {}, [el('tr', {}, [
+            el('th', { text: t('res.raise_th_round') }), el('th', { class: 'num', text: t('res.raise_th_from') }),
+            el('th', { class: 'num', text: t('res.raise_th_pct') }), el('th', { class: 'num', text: t('res.raise_th_rows') }),
+            el('th', { class: 'num', text: t('res.raise_th_amount') }), el('th', { class: 'num', text: t('res.raise_th_share') })
+          ])]),
+          el('tbody', {}, rows)
+        ])
+      ])]),
+      fcRows.length ? el('div', { class: 'body' }, [el('h4', { class: 'sec', text: t('res.raise_by_fc') })]) : null,
+      fcRows.length ? el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
+        el('table', {}, [
+          el('thead', {}, [el('tr', {}, [
+            el('th', { text: 'Formula Code' }),
+            el('th', { class: 'num', text: t('res.raise_th_amount') }),
+            el('th', { class: 'num', text: t('res.raise_th_share') })
+          ])]),
+          el('tbody', {}, fcRows)
+        ])
+      ])]) : null
+    ]));
+  }
 
   /* pivot 4 tầng — bảng này dài theo số tổ hợp mã, trước đây dựng hết một lúc. */
   const pivotTb = el('tbody');

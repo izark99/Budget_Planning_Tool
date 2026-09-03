@@ -138,8 +138,16 @@ function exportBudget(opt) {
         a5.push(['', f.code, f.mode === 'spread' ? t('export.mode.spread') : t('export.mode.monthly'),
         (f.months || []).map((x) => { return 'T' + String(x).padStart(2, '0'); }).join(' '), '']);
       });
-      a5.push([]); a5.push([t('export.audit.raises'), t('export.audit.raiseName'), t('export.audit.fromMonth'), t('export.audit.pct'), t('export.audit.appliesTo')]);
-      S.raises.forEach((r) => { a5.push(['', r.name, 'T' + String(r.fromMonth).padStart(2, '0'), r.pct, (r.formulas || []).join(' ') || t('export.audit.all')]); });
+      a5.push([]); a5.push([t('export.audit.raises'), t('export.audit.raiseName'), t('export.audit.fromMonth'), t('export.audit.pct'), t('export.audit.appliesTo'), t('export.audit.raiseAmount')]);
+      /* Kèm luôn tiền mà mỗi đợt cộng thêm, để file khớp đúng màn Kết quả. Khớp
+         theo id vì tên đợt có thể trùng nhau. */
+      const impact = {};
+      ((RESULT && RESULT.raiseImpact) || []).forEach((x) => { impact[x.id] = x.total; });
+      S.raises.forEach((r) => {
+        a5.push(['', r.name, 'T' + String(r.fromMonth).padStart(2, '0'), r.pct,
+          (r.formulas || []).join(' ') || t('export.audit.all'),
+          impact[r.id] == null ? '' : Math.round(impact[r.id])]);
+      });
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a5), 'BanKhaiBao');
     }
 
