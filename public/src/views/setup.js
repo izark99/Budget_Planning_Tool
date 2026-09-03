@@ -8,7 +8,7 @@ import { ENGINE } from '../core/engine.js';
 import { FX } from '../core/expression.js';
 import { distinctVals } from '../platform/io.js';
 import { el, render } from '../ui/dom.js';
-import { panel } from '../ui/widgets.js';
+import { foldPanel, panel } from '../ui/widgets.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 import { guessRole } from './headcount.js';
 
@@ -66,28 +66,23 @@ function viewSetup() {
     draw();
 
     const nMonth = S.cols.filter((c) => { return c.role === 'month' && c.month; }).length;
-    wrap.appendChild(el('div', { class: 'panel' }, [
-      el('header', {}, [
-        el('h3', { text: t('hc.cot_cua_bang_dinh_bien') }),
-        el('span', { class: 'tag' + (nMonth === 12 ? ' g' : ' o'), text: t('hc.month_cols_badge', { n: nMonth }) }),
-        el('div', { class: 'sp' }),
-        el('button', { class: 'btn sm', text: t('hc.doan_lai_vai_tro'), onclick: function () {
-          S.cols.forEach((c) => {
-            const g = guessRole(c.src, rows.slice(0, 60).map((r) => { return r[c.src]; }));
-            c.role = g.role; c.month = g.month || null;
-          });
-          ENGINE.invalidate(); setRESULT(null); touch(); render();
-        } })
-      ]),
-      el('div', { class: 'body' }, [el('p', {
-        class: 'hint',
-        html: t('setup.cols_help')
-      })]),
-      el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
+    /* foldPanel như mọi bảng khác: file định biên nhiều cột thì gấp lại được,
+       trạng thái gấp/mở tự lưu ở S.ui.collapsed. */
+    wrap.appendChild(foldPanel('setup_cols',
+      t('hc.cot_cua_bang_dinh_bien'),
+      [el('span', { class: 'tag' + (nMonth === 12 ? ' g' : ' o'), text: t('hc.month_cols_badge', { n: nMonth }) })],
+      [el('button', { class: 'btn sm', text: t('hc.doan_lai_vai_tro'), onclick: function () {
+        S.cols.forEach((c) => {
+          const g = guessRole(c.src, rows.slice(0, 60).map((r) => { return r[c.src]; }));
+          c.role = g.role; c.month = g.month || null;
+        });
+        ENGINE.invalidate(); setRESULT(null); touch(); render();
+      } })],
+      el('div', { class: 'tw' }, [
         el('table', {}, [el('thead', {}, [el('tr', {}, [t('setup.th_file_col'), t('setup.th_formula_name'), t('setup.th_role'), t('export.audit.month'), t('setup.th_type'), t('setup.th_distinct'), t('setup.th_sample')]
           .map((h, i) => { return el('th', { class: i === 5 ? 'num' : '', text: h }); }))]), tb])
-      ])])
-    ]));
+      ]),
+      t('setup.cols_help')));
   }
 
   /* --- tham số --- */

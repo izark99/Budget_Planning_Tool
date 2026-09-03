@@ -154,6 +154,74 @@ describe('hộp gợi ý chèn cột', () => {
   });
 });
 
+describe('danh sách Formula Code', () => {
+  /* Trước đây không có trần chiều cao: nhiều công thức là cột trái dài ra vô tận,
+     đẩy hộp gợi ý bên dưới ra khỏi tầm nhìn. */
+  it('tự cuộn trong khung thay vì kéo dài mãi', async () => {
+    /* Các phép kiểm trong tệp này dùng chung một trang: phải trả lại S.formulas
+       nguyên trạng, nếu không phép kiểm sau sẽ thấy công thức giả của phép kiểm này. */
+    const saved = await inPage(page, 'return JSON.stringify({ f: st.S.formulas, sel: st.S.ui.fSel });');
+    await inPage(page, `
+      st.S.formulas = [];
+      for (let i = 0; i < 40; i++) {
+        st.S.formulas.push({ id: 'f' + i, code: 'FC_' + i, name: 'Công thức ' + i,
+          mode: 'monthly', months: [1,2,3,4,5,6,7,8,9,10,11,12],
+          rules: [{ id: 'r' + i, name: 'Tất cả', cond: '', formula: '1' }] });
+      }
+      st.S.ui.fSel = 'f0'; fm.ENGINE.invalidate(); st.setRESULT(null);
+      return true;
+    `);
+    await goToView(page, 'Công thức chi phí');
+    const box = await page.evaluate(() => {
+      const n = document.querySelector('.fclist');
+      if (!n) return null;
+      const cs = getComputedStyle(n);
+      return { overflow: cs.overflowY, h: n.getBoundingClientRect().height,
+        scrolls: n.scrollHeight > n.clientHeight, vh: window.innerHeight };
+    });
+    expect(box).not.toBeNull();
+    expect(box.overflow).toBe('auto');
+    expect(box.scrolls).toBe(true);
+    expect(box.h).toBeLessThanOrEqual(box.vh * 0.5);
+
+    await inPage(page, `
+      const old = JSON.parse(a);
+      st.S.formulas = old.f; st.S.ui.fSel = old.sel;
+      fm.ENGINE.invalidate(); st.setRESULT(null);
+      return true;
+    `, saved);
+  });
+});
+
+describe('bảng "Cột của bảng định biên"', () => {
+  it('gấp lại được, và trạng thái gấp sống qua lần render lại', async () => {
+    await goToView(page, 'Thiết lập');
+    const findHead = () => page.evaluate(() => {
+      const h = [...document.querySelectorAll('.panel > header.fold')]
+        .find((x) => x.textContent.includes('Cột của bảng định biên'));
+      return h ? { hasCaret: !!h.querySelector('.caret'), open: h.nextElementSibling.style.display !== 'none' } : null;
+    });
+    expect(await findHead()).toEqual({ hasCaret: true, open: true });
+
+    await page.evaluate(() => {
+      [...document.querySelectorAll('.panel > header.fold')]
+        .find((x) => x.textContent.includes('Cột của bảng định biên')).click();
+    });
+    await page.waitForTimeout(200);
+    expect((await findHead()).open).toBe(false);
+
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Thiết lập');
+    expect((await findHead()).open).toBe(false);
+
+    /* trả lại trạng thái mở cho các phép kiểm sau */
+    await page.evaluate(() => {
+      [...document.querySelectorAll('.panel > header.fold')]
+        .find((x) => x.textContent.includes('Cột của bảng định biên')).click();
+    });
+  });
+});
+
 describe('thử trên một dòng', () => {
   it('có bảng đối chiếu liệt kê mọi thông tin công thức dùng tới', async () => {
     await goToView(page, 'Công thức chi phí');

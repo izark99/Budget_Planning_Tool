@@ -74,6 +74,7 @@ toast.open_project: Đã mở file dự án
 toast.reset_done: Đã làm mới
 toast.save_project: Đã lưu file dự án
 toast.table.added: Đã thêm {n} dòng
+toast.table.comboTruncated: Đã chạm trần {n} dòng — còn tổ hợp chưa sinh. Nâng "Trần sinh" hoặc để trống để sinh hết.
 toast.table.cleared: Đã xoá sạch bảng
 toast.table.empty: Bảng đang trống
 toast.table.noNewCombo: Không có tổ hợp mới
@@ -97,6 +98,9 @@ role.skip: Bỏ qua
 # Bảng dữ liệu
 table.addRow: + Thêm dòng
 table.clear: Xoá sạch
+table.comboLimit: Trần sinh
+table.comboLimit.hint: Số dòng tối đa mỗi lần bấm "Sinh sẵn từ định biên". Để trống nghĩa là không giới hạn — sinh đủ mọi tổ hợp có trong định biên.
+table.comboLimit.none: không giới hạn
 table.downloadTemplate: ⤓ Tải mẫu Excel
 table.exportData: ⤒ Xuất dữ liệu
 table.empty: Chưa có dòng nào
@@ -107,6 +111,11 @@ table.info.rows: {n} dòng
 table.info.showing: · hiện {n}
 table.noData: Chưa có dữ liệu
 table.noMatch: Không có dòng nào khớp “{kw}”
+table.page.all: Tất cả
+table.page.info: {from}–{to} / {n}
+table.page.next: Sau ›
+table.page.prev: ‹ Trước
+table.page.size: Mỗi trang
 table.prefill: Sinh sẵn từ định biên
 table.showMore: Hiện thêm
 

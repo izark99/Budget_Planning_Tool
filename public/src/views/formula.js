@@ -40,7 +40,7 @@ function viewFormula() {
       }
     })
   ]));
-  const ul = el('div', { class: 'body tight' });
+  const ul = el('div', { class: 'body tight fclist' });
   const ccOf = {};
   (S.maps.costCode || []).forEach((x) => { ccOf[nkey(x.formulaCode)] = x.costCode; });
   S.formulas.forEach((f) => {

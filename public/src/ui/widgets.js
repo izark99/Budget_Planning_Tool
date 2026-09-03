@@ -12,6 +12,98 @@ import { confirmBox, el, modal, toast } from './dom.js';
 /* SheetJS/XLTABLE nạp bằng thẻ <script> nên nằm trên window, không import được. */
 const XLTABLE = window.XLTABLE;
 
+/* ---------- Thanh phân trang dùng chung ----------
+   Mọi bảng dài trong app đi qua đây, nên cỡ trang chọn một lần là áp cho tất cả
+   và sống qua lần mở sau (lưu ở S.ui.pageSize).
+
+   apply(list) trả về lát cắt của trang hiện tại và tự cập nhật nhãn + nút. Nó
+   cũng KẸP số trang khi danh sách co lại (xoá dòng, lọc bớt) để không bao giờ
+   đứng ở một trang trống. */
+const PAGE_SIZES = [25, 50, 100, 200, 500];
+
+function pageSize() {
+  const v = parseInt(String(S.ui.pageSize), 10);
+  if (v === 0) return 0;                     /* 0 = xem tất cả */
+  return isNaN(v) || v < 0 ? 100 : v;
+}
+
+function pager(onChange) {
+  let page = 0;
+  const info = el('span', { class: 'muted' });
+  const prev = el('button', { class: 'btn sm', text: t('table.page.prev') });
+  const next = el('button', { class: 'btn sm', text: t('table.page.next') });
+  const sel = el('select', {
+    style: 'width:auto',
+    onchange: function (e) {
+      S.ui.pageSize = parseInt(e.target.value, 10);
+      page = 0; touch(); onChange && onChange();
+    }
+  }, PAGE_SIZES.map((n) => {
+    return el('option', { value: String(n), selected: pageSize() === n, text: String(n) });
+  }).concat([el('option', { value: '0', selected: pageSize() === 0, text: t('table.page.all') })]));
+
+  prev.addEventListener('click', () => { if (page > 0) { page--; onChange && onChange(); } });
+  next.addEventListener('click', () => { page++; onChange && onChange(); });
+
+  const node = el('div', { class: 'pager' }, [
+    el('span', { class: 'muted', text: t('table.page.size') }), sel, prev, next, info,
+  ]);
+
+  return {
+    node,
+    apply(list) {
+      const size = pageSize();
+      if (!size) {
+        page = 0;
+        node.style.display = list.length > PAGE_SIZES[0] ? '' : 'none';
+        info.textContent = t('table.page.info', { from: list.length ? 1 : 0, to: list.length, n: list.length });
+        prev.disabled = next.disabled = true;
+        return list;
+      }
+      const pages = Math.max(1, Math.ceil(list.length / size));
+      if (page > pages - 1) page = pages - 1;    /* danh sách co lại: kẹp về trang cuối */
+      if (page < 0) page = 0;
+      const from = page * size;
+      const slice = list.slice(from, from + size);
+      node.style.display = list.length > PAGE_SIZES[0] ? '' : 'none';
+      info.textContent = t('table.page.info', { from: list.length ? from + 1 : 0, to: from + slice.length, n: list.length });
+      prev.disabled = page === 0;
+      next.disabled = page >= pages - 1;
+      return slice;
+    },
+    reset() { page = 0; },
+  };
+}
+
+/* ---------- Trần sinh combo ----------
+   "Sinh sẵn từ định biên" dựng một dòng cho MỖI tổ hợp giá trị phân biệt của các
+   cột khoá. Một cột khoá thì ít; từ hai cột trở lên tích chéo bung rất nhanh.
+   Trước đây mã cắt cứng ở 800 dòng và KHÔNG BÁO GÌ — người dùng thấy "xxx dòng
+   định biên chưa khớp" mà không hiểu vì sao. Nay trần do người dùng đặt, để
+   trống hoặc 0 nghĩa là KHÔNG GIỚI HẠN, và chạm trần thì có cảnh báo. */
+function comboLimit() {
+  const v = parseInt(String(S.ui.comboLimit), 10);
+  return isNaN(v) || v <= 0 ? 0 : v;
+}
+
+function comboLimitBox(onChange) {
+  return el('label', { class: 'lim', title: t('table.comboLimit.hint') }, [
+    el('span', { text: t('table.comboLimit') }),
+    el('input', {
+      type: 'number', min: 0, step: 100, style: 'width:86px',
+      placeholder: t('table.comboLimit.none'),
+      value: comboLimit() || '',
+      onchange: function (e) {
+        const v = parseInt(e.target.value, 10);
+        S.ui.comboLimit = isNaN(v) || v <= 0 ? 0 : v;
+        e.target.value = S.ui.comboLimit || '';
+        touch();
+        onChange && onChange();
+      }
+    })
+  ]);
+}
+
 /* ---------- Tải .xlsx (Excel Table đặt tên) ----------
    Hai lối ra dùng chung một ruột, chỉ khác ý nghĩa với người dùng:
 
@@ -195,8 +287,8 @@ function dataTable(cfg) {
     });
   }
 
-  let shown = cfg.maxShow || 150;
   let filter = '';
+  const pg = pager(() => { draw(); });
   function draw() {
     optCache = {}; buildDatalists();
     tb.innerHTML = '';
@@ -204,19 +296,17 @@ function dataTable(cfg) {
     const kw = filter.trim().toLowerCase();
     const keys = cfg.columns.map((c) => { return c.k; });
     const frag = document.createDocumentFragment();
-    let n = 0, matched = 0;
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i];
-      if (kw) {
-        let hit = false;
-        for (let q = 0; q < keys.length; q++) {
-          if (String(row[keys[q]] == null ? '' : row[keys[q]]).toLowerCase().indexOf(kw) >= 0) { hit = true; break; }
-        }
-        if (!hit) continue;
+    /* Lọc TRƯỚC, phân trang SAU — số trang phải tính trên kết quả lọc. */
+    const matchedRows = !kw ? rows : rows.filter((row) => {
+      for (let q = 0; q < keys.length; q++) {
+        if (String(row[keys[q]] == null ? '' : row[keys[q]]).toLowerCase().indexOf(kw) >= 0) return true;
       }
-      matched++;
-      if (n >= shown) continue;
-      n++;
+      return false;
+    });
+    const matched = matchedRows.length;
+    const shownRows = pg.apply(matchedRows);
+    for (let i = 0; i < shownRows.length; i++) {
+      const row = shownRows[i];
       (function (row) {
         const tds = cfg.columns.map((col) => {
           return el('td', { style: col.w ? 'width:' + col.w + 'px' : '' }, [cell(row, col)]);
@@ -235,16 +325,11 @@ function dataTable(cfg) {
     tb.appendChild(frag);
     if (!rows.length) tb.appendChild(el('tr', {}, [el('td', { colspan: cfg.columns.length + 1, class: 'empty', text: cfg.emptyText || t('table.empty') })]));
     else if (!matched) tb.appendChild(el('tr', {}, [el('td', { colspan: cfg.columns.length + 1, class: 'empty', text: t('table.noMatch', { kw: filter }) })]));
-    info.textContent = t('table.info.rows', { n: rows.length }) + (kw ? ' ' + t('table.info.matched', { n: matched }) : '') + (matched > n ? ' ' + t('table.info.showing', { n }) : '');
-    more.style.display = matched > n ? '' : 'none';
+    info.textContent = t('table.info.rows', { n: rows.length }) + (kw ? ' ' + t('table.info.matched', { n: matched }) : '');
   }
-  const more = el('button', {
-    class: 'btn sm', text: t('table.showMore'), style: 'display:none',
-    onclick: function () { shown += 300; draw(); }
-  });
   const search = el('input', {
     type: 'text', placeholder: t('table.filter.placeholder'), style: 'width:130px',
-    oninput: function (e) { filter = e.target.value; shown = cfg.maxShow || 150; draw(); }
+    oninput: function (e) { filter = e.target.value; pg.reset(); draw(); }
   });
 
   function template() {
@@ -303,19 +388,23 @@ function dataTable(cfg) {
   draw();
   wrap.appendChild(dlBox);
   wrap.appendChild(el('div', { class: 'row', style: 'margin-bottom:8px' }, [
-    info, more, el('div', { class: 'sp', style: 'flex:1' }), search,
+    info, el('div', { class: 'sp', style: 'flex:1' }), search,
     el('button', { class: 'btn sm', text: t('table.addRow'), onclick: function () { cfg.rows().push(cfg.blank ? cfg.blank() : {}); cfg.onChange && cfg.onChange(); draw(); } }),
     cfg.prefill ? el('button', { class: 'btn sm', text: t('table.prefill'), onclick: function () {
       const rows = cfg.rows(), have = {};
       rows.forEach((r) => { have[cfg.columns.filter((c) => { return c.key; }).map((c) => { return nkey(r[c.k]); }).join('|')] = 1; });
       let add = 0;
-      cfg.prefill().forEach((p) => {
+      const gen = cfg.prefill();
+      gen.forEach((p) => {
         const k = cfg.columns.filter((c) => { return c.key; }).map((c) => { return nkey(p[c.k]); }).join('|');
         if (have[k]) return; have[k] = 1; rows.push(p); add++;
       });
       cfg.onChange && cfg.onChange(); draw();
-      toast(add ? t('toast.table.added', { n: add }) : t('toast.table.noNewCombo'));
+      /* Chạm trần thì nói thẳng — cắt trong im lặng chính là lỗi cũ. */
+      if (gen.truncated) toast(t('toast.table.comboTruncated', { n: gen.truncated }), 'bad');
+      else toast(add ? t('toast.table.added', { n: add }) : t('toast.table.noNewCombo'));
     } }) : null,
+    cfg.prefill ? comboLimitBox() : null,
     el('button', { class: 'btn sm del', text: t('table.clear'), onclick: clearAll }),
     el('button', { class: 'btn sm', text: t('table.downloadTemplate'), onclick: template }),
     el('button', { class: 'btn sm', text: t('table.exportData'), onclick: exportRows }),
@@ -327,6 +416,7 @@ function dataTable(cfg) {
       tb
     ])
   ]));
+  wrap.appendChild(pg.node);
   wrap._redraw = draw;
   return wrap;
 }
@@ -371,4 +461,4 @@ function foldPanel(key, title, badges, actions, bodyNode, note) {
   return el('div', { class: 'panel' }, [head, body]);
 }
 
-export { downloadTemplate, downloadData, importMapped, dataTable, readTable, panel, foldPanel };
+export { comboLimit, pager, downloadTemplate, downloadData, importMapped, dataTable, readTable, panel, foldPanel };

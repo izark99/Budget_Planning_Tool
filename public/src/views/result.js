@@ -7,6 +7,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { exportBudget } from '../platform/io.js';
 import { el, modal, render, ribbon, toast } from '../ui/dom.js';
+import { pager } from '../ui/widgets.js';
 
 /* ==== 08-view-result-boot.js ==== */
 /* ===========================================================
@@ -90,15 +91,22 @@ function viewResult() {
     ])])
   ]));
 
-  /* pivot 4 tầng */
-  const pr = R.pivot.map((p) => {
-    return el('tr', {}, [
-      el('td', { class: 'mono', text: p.accountCode }), el('td', { class: 'mono', text: p.budgetCode }),
-      el('td', { class: 'mono', text: p.costCode }), el('td', { class: 'mono', text: p.costCenter }),
-      el('td', { class: 'mono', text: p.formulaCode })
-    ].concat(p.m.map((v) => { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
-      .concat([el('td', { class: 'num', text: fmt(p.total) })]));
-  });
+  /* pivot 4 tầng — bảng này dài theo số tổ hợp mã, trước đây dựng hết một lúc. */
+  const pivotTb = el('tbody');
+  const pgPivot = pager(() => { drawPivot(); });
+  function drawPivot() {
+    pivotTb.innerHTML = '';
+    pgPivot.apply(R.pivot).forEach((p) => {
+      pivotTb.appendChild(el('tr', {}, [
+        el('td', { class: 'mono', text: p.accountCode }), el('td', { class: 'mono', text: p.budgetCode }),
+        el('td', { class: 'mono', text: p.costCode }), el('td', { class: 'mono', text: p.costCenter }),
+        el('td', { class: 'mono', text: p.formulaCode })
+      ].concat(p.m.map((v) => { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
+        .concat([el('td', { class: 'num', text: fmt(p.total) })])));
+    });
+    if (!R.pivot.length) pivotTb.appendChild(el('tr', {}, [el('td', { colspan: 18, class: 'empty', text: t('res.chua_co_so_lieu') })]));
+  }
+  drawPivot();
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('res.pivot_title') }), el('span', { class: 'tag', text: t('table.info.rows', { n: R.pivot.length }) })]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
@@ -106,30 +114,38 @@ function viewResult() {
         .map((h) => { return el('th', { text: h }); })
         .concat(MONTHS.map((m) => { return el('th', { class: 'num', text: m }); }))
         .concat([el('th', { class: 'num', text: t('fm.full_year') })]))]),
-      el('tbody', {}, pr.length ? pr : [el('tr', {}, [el('td', { colspan: 18, class: 'empty', text: t('res.chua_co_so_lieu') })])])])
-    ])])
+      pivotTb])
+    ]), pgPivot.node])
   ]));
 
-  /* đối chiếu */
+  /* đối chiếu — trước đây cắt cụt ở 500 dòng mà không báo gì. */
+  const diffTb = el('tbody');
+  const pgDiff = pager(() => { drawDiffs(); });
+  function drawDiffs() {
+    diffTb.innerHTML = '';
+    pgDiff.apply(diffs).forEach((c) => {
+      diffTb.appendChild(el('tr', {}, [
+        el('td', { class: 'mono', text: c.no }), el('td', { class: 'mono', text: String(c.id == null ? '' : c.id) }),
+        el('td', { text: String(c.position == null ? '' : c.position) }), el('td', { class: 'mono', text: c.formulaCode }),
+        el('td', { class: 'num', text: MONTHS[c.month - 1] }), el('td', { class: 'num', text: fmt(c.formula) }),
+        el('td', { class: 'num', text: fmt(c.exception) }), el('td', {}, [el('span', { class: 'tag', text: c.rule })]),
+        el('td', { class: 'num', text: fmt(c.final) }),
+        el('td', {}, [el('span', { class: 'tag ' + (c.won ? 'o' : 'g'), text: c.won ? t('dash.kind_exc') : t('export.audit.formula') })])
+      ]));
+    });
+  }
+  drawDiffs();
+
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('res.doi_chieu_to_trinh_cong_thuc') }), el('span', { class: 'tag' + (diffs.length ? ' o' : ''), text: t('res.n_diffs', { n: diffs.length }) })]),
     el('div', { class: 'body tight' }, [
-      diffs.length ? el('div', { class: 'tw' }, [
-        el('table', {}, [
-          el('thead', {}, [el('tr', {}, [t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('export.audit.month'), t('export.audit.formula'), t('dash.kind_exc'), t('exc.th_rule'), t('res.th_applied'), t('res.th_winner')]
-            .map((h, i) => { return el('th', { class: (i >= 5 && i <= 8) ? 'num' : '', text: h }); }))]),
-          el('tbody', {}, diffs.slice(0, 500).map((c) => {
-            return el('tr', {}, [
-              el('td', { class: 'mono', text: c.no }), el('td', { class: 'mono', text: String(c.id == null ? '' : c.id) }),
-              el('td', { text: String(c.position == null ? '' : c.position) }), el('td', { class: 'mono', text: c.formulaCode }),
-              el('td', { class: 'num', text: MONTHS[c.month - 1] }), el('td', { class: 'num', text: fmt(c.formula) }),
-              el('td', { class: 'num', text: fmt(c.exception) }), el('td', {}, [el('span', { class: 'tag', text: c.rule })]),
-              el('td', { class: 'num', text: fmt(c.final) }),
-              el('td', {}, [el('span', { class: 'tag ' + (c.won ? 'o' : 'g'), text: c.won ? t('dash.kind_exc') : t('export.audit.formula') })])
-            ]);
-          }))
-        ])
-      ]) : el('div', { class: 'empty', text: t('res.khong_co_chenh_lech_nao') })
+      diffs.length ? el('div', {}, [
+        el('div', { class: 'tw' }, [
+          el('table', {}, [
+            el('thead', {}, [el('tr', {}, [t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('export.audit.month'), t('export.audit.formula'), t('dash.kind_exc'), t('exc.th_rule'), t('res.th_applied'), t('res.th_winner')]
+              .map((h, i) => { return el('th', { class: (i >= 5 && i <= 8) ? 'num' : '', text: h }); }))]),
+            diffTb])
+        ]), pgDiff.node]) : el('div', { class: 'empty', text: t('res.khong_co_chenh_lech_nao') })
     ])
   ]));
 

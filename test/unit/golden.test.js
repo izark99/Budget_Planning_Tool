@@ -137,6 +137,38 @@ describe('cơ chế nghiệp vụ mà golden đang canh', () => {
     expect(R.formulaErrors.some((e) => /#CIRC!/.test(e.msg))).toBe(true);
   });
 
+  /* previewRows() nhớ kết quả để khỏi dựng lại bảng dẫn xuất mỗi lần. Khoá nhớ
+     từng lấy ĐỘ DÀI chuỗi JSON của [S.cols, S.classes] — nên hai cấu hình khác
+     nhau mà cùng độ dài dùng chung một khoá, và hàm trả về cột dẫn xuất SAI.
+     Hai bảng phân loại dưới đây khác nội dung nhưng JSON dài BẰNG NHAU. */
+  it('previewRows() phân biệt hai cấu hình cùng độ dài chuỗi JSON', () => {
+    const base = JSON.parse(JSON.stringify(snapshot));
+    const mkClass = (def) => [{
+      id: 'c1', name: 'NHOM', type: 'text', keys: ['Dept'],
+      /* Phủ đủ mọi Dept có trong fixture, để không dòng nào rơi về giá trị mặc định. */
+      rows: [['AC', def], ['SL', def], ['PR', def], ['HR', def]], def: '',
+    }];
+
+    const a = { ...base, classes: mkClass('XX') };
+    const b = { ...base, classes: mkClass('YY') };
+    /* Điều kiện của phép kiểm: cùng độ dài, khác nội dung. */
+    const la = JSON.stringify([a.cols, a.classes]).length;
+    const lb = JSON.stringify([b.cols, b.classes]).length;
+    expect(la).toBe(lb);
+    expect(JSON.stringify(a.classes)).not.toBe(JSON.stringify(b.classes));
+
+    state.setS(a);
+    formula.ENGINE.invalidate();
+    const rowsA = formula.ENGINE.previewRows().map((r) => r.NHOM);
+
+    /* KHÔNG gọi invalidate() — đây đúng là chỗ khoá nhớ phải tự phân biệt. */
+    state.setS(b);
+    const rowsB = formula.ENGINE.previewRows().map((r) => r.NHOM);
+
+    expect(rowsA.every((v) => v === 'XX')).toBe(true);
+    expect(rowsB.every((v) => v === 'YY')).toBe(true);
+  });
+
   it('bảng đối chiếu previewRow liệt kê đủ 4 loại tham chiếu', () => {
     const s = JSON.parse(JSON.stringify(snapshot));
     s.formulas[0].rules[0].cond = '[Coefficient] > 0';

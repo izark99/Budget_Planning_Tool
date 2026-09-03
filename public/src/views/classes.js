@@ -7,7 +7,7 @@ import { S, fmt, fmtNum, nkey, numOf, setRESULT, touch, uid } from '../core/stat
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { confirmBox, el, render, toast } from '../ui/dom.js';
-import { dataTable, foldPanel, panel } from '../ui/widgets.js';
+import { comboLimit, dataTable, foldPanel, panel } from '../ui/widgets.js';
 
 /* SheetJS/XLTABLE nạp bằng thẻ <script> nên nằm trên window, không import được. */
 const XLTABLE = window.XLTABLE;
@@ -20,15 +20,21 @@ function availableKeys(beforeIdx) {
 
 function classCombos(cl) {
   const rows = ENGINE.previewRows();
-  const seen = {}, out = [];
+  const cap = comboLimit();
+  /** @type {ComboRows} */
+  const out = [];
+  const seen = {};
+  let hit = false;
   rows.forEach((r) => {
     const vals = (cl.keys || []).map((k) => { return r[k] == null ? '' : String(r[k]).trim(); });
     const k = vals.map(nkey).join('|');
     if (seen[k]) return; seen[k] = 1;
+    if (cap && out.length >= cap) { hit = true; return; }
     const o = {}; (cl.keys || []).forEach((kc, j) => { o['k' + j] = vals[j]; });
     o.res = ''; out.push(o);
   });
-  return out.slice(0, 800);
+  if (hit) out.truncated = cap;
+  return out;
 }
 
 function classMissCount(cl) {

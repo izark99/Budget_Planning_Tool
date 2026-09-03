@@ -6,16 +6,19 @@ import { S, allMonths, numOf, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { pickFile } from '../platform/io.js';
 import { el, render, ribbon, toast } from '../ui/dom.js';
-import { downloadData, downloadTemplate, importMapped } from '../ui/widgets.js';
+import { downloadData, downloadTemplate, importMapped, pager } from '../ui/widgets.js';
 
 function viewExc() {
   const wrap = el('div');
   const codes = S.formulas.map((f) => { return f.code; });
 
   const tb = el('tbody');
+  const pg = pager(() => { draw(); });
   function draw() {
     tb.innerHTML = '';
-    S.exceptions.forEach((e, i) => {
+    /* Nút xoá phải tìm lại vị trí thật trong S.exceptions bằng indexOf — chỉ số
+       của trang hiện tại KHÔNG phải chỉ số trong mảng gốc. */
+    pg.apply(S.exceptions).forEach((e) => {
       const mCell = el('td');
       mCell.appendChild(ribbon(e.months && e.months.length ? e.months : allMonths(), {
         pick: function (m, on) {
@@ -40,7 +43,7 @@ function viewExc() {
           el('option', { value: 'ADD', selected: e.rule === 'ADD', text: t('fm.cong_them') })
         ])]),
         el('td', {}, [el('input', { type: 'text', value: e.note || '', oninput: function (ev) { e.note = ev.target.value; touch(); } })]),
-        el('td', { style: 'width:32px' }, [el('button', { class: 'btn sm del', text: '✕', onclick: function () { S.exceptions.splice(i, 1); setRESULT(null); touch(); draw(); } })])
+        el('td', { style: 'width:32px' }, [el('button', { class: 'btn sm del', text: '✕', onclick: function () { const j = S.exceptions.indexOf(e); if (j >= 0) S.exceptions.splice(j, 1); setRESULT(null); touch(); draw(); } })])
       ]));
     });
     if (!S.exceptions.length) tb.appendChild(el('tr', {}, [el('td', { colspan: 10, class: 'empty', text: t('fm.chua_co_to_trinh_nao') })]));
@@ -61,7 +64,7 @@ function viewExc() {
     })]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
       el('table', {}, [el('thead', {}, [el('tr', {}, ['', t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('exc.th_amount'), t('exc.th_months'), t('exc.th_rule'), t('export.audit.note'), ''].map((h) => { return el('th', { text: h }); }))]), tb])
-    ])])
+    ]), pg.node])
   ]));
   return wrap;
 }

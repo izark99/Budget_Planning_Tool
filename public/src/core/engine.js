@@ -479,7 +479,11 @@ const ENGINE = (function () {
   /* ---------- Tiện ích cho UI ---------- */
   let cacheRows = null, cacheKey = '';
   function previewRows() {
-    const key = JSON.stringify([S.cols, S.classes]).length + '|' + (S.hc.rows || []).length + '|' + (S.classes || []).length;
+    /* Khoá nhớ phải theo NỘI DUNG. Trước đây lấy JSON.stringify(...).length — tức
+       ĐỘ DÀI chuỗi — nên hai cấu hình khác nhau mà cùng độ dài (đổi cột khoá
+       Dept -> Unit, đổi giá trị AC -> SL...) cho cùng một khoá và trả về bảng cũ
+       với cột dẫn xuất SAI. classCombos và classMissCount đều đọc qua đây. */
+    const key = JSON.stringify([S.cols, S.classes]) + '|' + (S.hc.rows || []).length;
     if (cacheRows && cacheKey === key) return cacheRows;
     cacheKey = key; cacheRows = applyPolicies(applyClasses(buildRows(), null), null);
     return cacheRows;

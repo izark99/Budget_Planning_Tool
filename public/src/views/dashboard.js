@@ -6,6 +6,7 @@ import { M, MONTHS, RESULT, S, fmt, fmtShort, nkey, touch } from '../core/state.
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { el, render } from '../ui/dom.js';
+import { pager } from '../ui/widgets.js';
 import { runBudget } from './result.js';
 
 /* ==== 07b-view-dashboard.js ==== */
@@ -443,7 +444,11 @@ function viewDashboard() {
       .concat(ccs.map((c) => { return el('th', { class: 'num', text: c }); }))
       .concat([el('th', { class: 'num', text: t('fm.full_year') }), el('th', { class: 'num', text: t('dash.bq_dau_nguoi_thang') })]);
 
-    const body = gs.map((x) => {
+    /* Chỉ PHÂN TRANG các dòng nhóm; hàng thống kê và hàng tổng luôn nằm cuối
+       bảng, không bao giờ bị đẩy sang trang khác. */
+    const pgDash = pager(() => { drawGroups(); });
+    const groupTb = el('tbody');
+    const mkRow = (x) => {
       const rt = ratioOf(x);
       const cls = (baseline && x.pm >= 3 && rt >= 1.5) ? 'o' : ((baseline && x.pm >= 3 && rt <= 0.6) ? 'g' : '');
       return el('tr', {
@@ -458,20 +463,25 @@ function viewDashboard() {
         el('td', { class: 'num', text: fmt(x.total) }),
         el('td', { class: 'num' }, [cls ? el('span', { class: 'tag ' + cls, text: fmtShort(x.per) }) : el('span', { text: fmtShort(x.per) })])
       ]));
-    });
+    };
 
     /* dòng chỉ số thống kê trên cột bình quân đầu người */
     const perStats = seriesStats(gEntries.map((x) => { return x.per; }));
-    picked.forEach((s) => {
-      body.push(el('tr', { class: 'statrow' },
-        [el('td', {}, [el('span', { class: 'tag', text: s.t })]), el('td', {})]
-          .concat(ccs.map(() => { return el('td', {}); }))
-          .concat([el('td', {}), el('td', { class: 'num', text: fmt(perStats[s.k]) })])));
-    });
-    const totRow = [el('td', { text: t('export.total') }), el('td', { class: 'num', text: fmt(A.personMonths) })]
-      .concat(ccs.map((c) => { return el('td', { class: 'num', text: fmt(A.byCc[c] || 0) }); }))
-      .concat([el('td', { class: 'num', text: fmt(A.total) }), el('td', { class: 'num', text: fmtShort(perHead) })]);
-    body.push(el('tr', { class: 'tot' }, totRow));
+    function drawGroups() {
+      groupTb.innerHTML = '';
+      pgDash.apply(gs).forEach((x) => { groupTb.appendChild(mkRow(x)); });
+      picked.forEach((sd) => {
+        groupTb.appendChild(el('tr', { class: 'statrow' },
+          [el('td', {}, [el('span', { class: 'tag', text: sd.t })]), el('td', {})]
+            .concat(ccs.map(() => { return el('td', {}); }))
+            .concat([el('td', {}), el('td', { class: 'num', text: fmt(perStats[sd.k]) })])));
+      });
+      groupTb.appendChild(el('tr', { class: 'tot' },
+        [el('td', { text: t('export.total') }), el('td', { class: 'num', text: fmt(A.personMonths) })]
+          .concat(ccs.map((c) => { return el('td', { class: 'num', text: fmt(A.byCc[c] || 0) }); }))
+          .concat([el('td', { class: 'num', text: fmt(A.total) }), el('td', { class: 'num', text: fmtShort(perHead) })])));
+    }
+    drawGroups();
 
     wrap.appendChild(el('div', { class: 'panel' }, [
       el('header', {}, [
@@ -488,8 +498,8 @@ function viewDashboard() {
         html: t('dash.matrix_help', { base: fmt(Math.round(baseline)) })
       })]),
       el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
-        el('table', {}, [el('thead', {}, [el('tr', {}, head)]), el('tbody', {}, body)])
-      ])])
+        el('table', {}, [el('thead', {}, [el('tr', {}, head)]), groupTb])
+      ]), pgDash.node])
     ]));
   }
 

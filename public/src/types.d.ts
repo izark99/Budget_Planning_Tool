@@ -92,6 +92,11 @@ interface Accrual {
   }>;
 }
 
+/** Các tổ hợp do "Sinh sẵn từ định biên" dựng ra.
+    `truncated` mang chính con số trần khi bị cắt — nơi gọi dựa vào đó để cảnh
+    báo, thay vì cắt trong im lặng như bản cũ. */
+type ComboRows = Array<Record<string, any>> & { truncated?: number };
+
 /** Bộ lọc và tuỳ chọn của màn Bảng điều khiển, lưu trong S.ui.dash. */
 interface DashFilters {
   extra: Array<{ col: string; val: string }>;
@@ -132,6 +137,10 @@ interface ProjectState {
     collapsed?: Record<string, boolean>;
     /** Có thể thiếu trường: dashState() là nơi chuẩn hoá thành đủ bộ. */
     dash?: Partial<DashFilters>;
+    /** Số dòng mỗi trang, dùng chung cho mọi bảng dài. 0 = xem tất cả. */
+    pageSize?: number;
+    /** Trần cho "Sinh sẵn từ định biên". 0 hoặc thiếu = không giới hạn. */
+    comboLimit?: number;
     [k: string]: any;
   };
 }

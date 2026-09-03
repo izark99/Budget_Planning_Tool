@@ -6,7 +6,7 @@ import { S, fmt, nkey, numOf, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { confirmBox, el, render } from '../ui/dom.js';
-import { dataTable, foldPanel, panel } from '../ui/widgets.js';
+import { comboLimit, dataTable, foldPanel, panel } from '../ui/widgets.js';
 import { classMissCount } from './classes.js';
 
 /* Thư viện gốc nạp bằng <script defer> cổ điển. Trỏ tường minh vào window
@@ -29,17 +29,24 @@ function policyAvailableKeys(beforeIdx) {
 }
 
 function policyCombos(po) {
-  const rows = ENGINE.previewRows(), seen = {}, out = [];
+  const rows = ENGINE.previewRows();
+  /** @type {ComboRows} */
+  const out = [];
+  const seen = {};
+  const cap = comboLimit();
+  let hit = false;
   rows.forEach((r) => {
     const vals = (po.keys || []).map((k) => { return r[k] == null ? '' : String(r[k]).trim(); });
     const k = vals.map(nkey).join('|');
     if (seen[k]) return; seen[k] = 1;
+    if (cap && out.length >= cap) { hit = true; return; }
     const o = {};
     (po.keys || []).forEach((kc, j) => { o['k' + j] = vals[j]; });
     (po.outs || []).forEach((oc, j) => { o['v' + j] = ''; });
     out.push(o);
   });
-  return out.slice(0, 800);
+  if (hit) out.truncated = cap;
+  return out;
 }
 
 function viewPolicies() {

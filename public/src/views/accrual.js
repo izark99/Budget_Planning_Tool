@@ -11,7 +11,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { distinctVals, pickFile } from '../platform/io.js';
 import { confirmBox, el, render, toast } from '../ui/dom.js';
-import { downloadData, downloadTemplate, foldPanel, importMapped, panel } from '../ui/widgets.js';
+import { downloadData, downloadTemplate, foldPanel, importMapped, pager, panel } from '../ui/widgets.js';
 
 /* CHUỖI GIAO THỨC — tên cột của file mẫu .xlsx, đồng thời là khoá khớp khi
    nhập lại. Đổi là hỏng chức năng nhập file. Để ASCII không dấu cho chắc. */
@@ -127,7 +127,10 @@ function viewAccrual() {
       }
 
       const tb = el('tbody');
-      (a.rows || []).forEach((r, ri) => {
+      const pg = pager(() => { draw(); });
+      /* Nút xoá tìm lại vị trí thật bằng indexOf — chỉ số của trang hiện tại
+         không phải chỉ số trong a.rows. */
+      pg.apply(a.rows || []).forEach((r) => {
         const tds = [el('td', { class: 'nowrap', text: String(r.key == null ? '' : r.key) })];
         for (let m = 0; m < M; m++) {
           (function (m) {
@@ -146,7 +149,7 @@ function viewAccrual() {
         }
         tds.push(el('td', { style: 'width:32px' }, [el('button', {
           class: 'btn sm del', text: '✕',
-          onclick: function () { a.rows.splice(ri, 1); setRESULT(null); touch(); draw(); }
+          onclick: function () { const j = a.rows.indexOf(r); if (j >= 0) a.rows.splice(j, 1); setRESULT(null); touch(); draw(); }
         })]));
         tb.appendChild(el('tr', {}, tds));
       });
@@ -162,6 +165,7 @@ function viewAccrual() {
           tb
         ])
       ]));
+      body.appendChild(pg.node);
     }
     draw();
 
