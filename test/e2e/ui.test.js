@@ -807,6 +807,77 @@ describe('cột "Ngày nghỉ ngừng việc" ở màn Ngày công', () => {
   });
 });
 
+describe('soạn công thức: giữ chỗ và in lại cho dễ đọc', () => {
+  const MANY = `
+    st.S.formulas = [];
+    for (let i = 0; i < 30; i++) {
+      st.S.formulas.push({ id: 'f' + i, code: 'FC_' + String(i).padStart(2, '0'), name: 'Công thức ' + i,
+        mode: 'monthly', months: [1,2,3,4,5,6,7,8,9,10,11,12],
+        rules: [{ id: 'r' + i, name: 'Tất cả', cond: '', formula: '1' }] });
+    }
+    st.S.ui.fSel = 'f0'; fm.ENGINE.invalidate(); st.setRESULT(null);
+  `;
+
+  it('bấm một công thức ở giữa danh sách thì KHÔNG bị cuộn về đầu', async () => {
+    await inPage(page, MANY + 'return true;');
+    await goToView(page, 'Công thức chi phí');
+
+    await page.evaluate(() => { document.querySelector('.fclist').scrollTop = 400; });
+    await page.waitForTimeout(200);
+    const before = await page.evaluate(() => document.querySelector('.fclist').scrollTop);
+    expect(before).toBeGreaterThan(300);
+
+    /* Bấm một dòng đang nhìn thấy, không phải dòng đầu. */
+    await page.evaluate(() => {
+      const l = document.querySelector('.fclist');
+      const rows = [...l.querySelectorAll('.fcrow')];
+      const vis = rows.find((r) => r.getBoundingClientRect().top > l.getBoundingClientRect().top + 10);
+      vis.querySelector('.fcmain').click();
+    });
+    await page.waitForTimeout(500);
+
+    const after = await page.evaluate(() => document.querySelector('.fclist').scrollTop);
+    expect(Math.abs(after - before)).toBeLessThan(20);
+  });
+
+  it('nút Định dạng bẻ IF lồng nhau xuống dòng, và ô cao lên theo', async () => {
+    await inPage(page, `
+      st.S.formulas = [{ id: 'fx', code: 'FC_X', name: '', mode: 'monthly',
+        months: [1,2,3,4,5,6,7,8,9,10,11,12],
+        rules: [{ id: 'r', name: 'Tất cả', cond: '',
+          formula: 'IF([Dept]="AC", IF([Coefficient]>3, 100, 200), IF([Coefficient]>2, 300, 400))' }] }];
+      st.S.ui.fSel = 'fx'; fm.ENGINE.invalidate(); st.setRESULT(null);
+      return true;
+    `);
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Công thức chi phí');
+
+    const ta = page.locator('.rule .fx-wrap textarea').last();
+    const h0 = (await ta.boundingBox()).height;
+    expect(await ta.inputValue()).not.toContain('\n');
+
+    await page.locator('.rule .fx-wrap .fxfmt').last().click();
+    await page.waitForTimeout(400);
+
+    const after = await ta.inputValue();
+    expect(after.split('\n').length).toBeGreaterThan(3);
+    /* Ô phải cao lên, không bắt người dùng cuộn trong khung tí xíu. */
+    expect((await ta.boundingBox()).height).toBeGreaterThan(h0);
+    /* Và công thức vẫn hợp lệ — dòng kiểm cú pháp không báo lỗi. */
+    expect(await page.locator('.rule .fx-wrap .fxerr').count()).toBe(0);
+    /* Lưu đúng vào state. */
+    expect(await inPage(page, 'return st.S.formulas[0].rules[0].formula;')).toBe(after);
+  });
+
+  it('công thức đã gọn thì không hiện nút Định dạng', async () => {
+    await inPage(page, "st.S.formulas[0].rules[0].formula = '1 + 2'; st.setRESULT(null); return true;");
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Công thức chi phí');
+    const vis = await page.locator('.rule .fx-wrap .fxfmt').last().isVisible();
+    expect(vis).toBe(false);
+  });
+});
+
 describe('mọi màn hình', () => {
   it('mở được hết, không màn nào ném lỗi', async () => {
     const labels = await page.evaluate(() =>

@@ -53,18 +53,49 @@ function fxField(value, onChange, placeholder, onBlur) {
       msg.textContent = t('fx.valid') + (f.length ? ' ' + t('fx.valid.cols', { cols: f.join(', ') }) : '') + (n.length ? ' ' + t('fx.valid.vars', { vars: n.join(', ') }) : '');
     } else { msg.className = 'fxerr'; msg.textContent = '✕ ' + r.error; }
   }
+  /* Ô cao lên theo nội dung: công thức nhiều dòng mà ô cứ hai dòng thì phải
+     cuộn trong một khung tí xíu. Có trần để một công thức dài không đẩy hết mọi
+     thứ khác ra khỏi màn hình. */
+  function grow() {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight + 2, 420) + 'px';
+  }
+
   ta.addEventListener('focus', () => { activeFx = box; if (box._onFocus) box._onFocus(); });
-  ta.addEventListener('input', () => { onChange(ta.value); check(); });
+  ta.addEventListener('input', () => { onChange(ta.value); check(); grow(); });
   if (onBlur) ta.addEventListener('blur', onBlur);
   check();
   const assist = fxAssist(ta, onChange, check);
-  box.appendChild(ta); box.appendChild(assist); box.appendChild(msg);
+
+  /* Nút in lại cho dễ đọc. Chỉ hiện khi công thức đọc được VÀ in ra khác bản
+     đang có — không thì nó là cái nút bấm vào chẳng xảy ra gì. */
+  const fmtBtn = el('button', {
+    class: 'btn sm dim fxfmt', text: t('fx.format'), title: t('fx.format.title'),
+    /* Đừng để mất con trỏ khỏi ô đang soạn, y như chip chèn. */
+    onmousedown: keepFocus,
+    onclick: function () {
+      const out = FX.fxFormat(ta.value);
+      if (out === ta.value) return;
+      ta.value = out; onChange(out); check(); grow(); syncFmt();
+    }
+  });
+  function syncFmt() {
+    const v = ta.value.trim();
+    fmtBtn.style.display = (v && FX.fxFormat(ta.value) !== ta.value) ? '' : 'none';
+  }
+  ta.addEventListener('input', syncFmt);
+  syncFmt();
+
+  box.appendChild(ta); box.appendChild(assist);
+  box.appendChild(el('div', { class: 'fxfoot' }, [msg, el('div', { class: 'sp' }), fmtBtn]));
   box._insert = function (txt) {
     const s = ta.selectionStart, e = ta.selectionEnd;
     ta.value = ta.value.slice(0, s) + txt + ta.value.slice(e);
     ta.focus(); ta.selectionStart = ta.selectionEnd = s + txt.length;
-    onChange(ta.value); check();
+    onChange(ta.value); check(); grow(); syncFmt();
   };
+  /* Chiều cao ban đầu phải tính sau khi đã gắn vào trang mới có scrollHeight. */
+  box._grow = grow;
   return box;
 }
 

@@ -8,8 +8,16 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { distinctVals } from '../platform/io.js';
 import { confirmBox, el, esc, modal, render, ribbon, toast } from '../ui/dom.js';
-import { dragList, moveBeside, panel } from '../ui/widgets.js';
+import { dragList, moveBeside, panel, selection } from '../ui/widgets.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
+
+/* Bấm một công thức gọi render(), dựng lại cả thân trang — nên danh sách bị
+   cuộn về đỉnh và phải cuộn xuống tìm lại chỗ cũ. Giữ vị trí ở biến mức module
+   vì render() xoá sạch document.body, không có chỗ nào khác sống sót. */
+let listScroll = 0;
+/* Tập công thức đang chọn để kéo một lượt. Cũng phải ở mức module: render() xoá
+   sạch document.body nên không có chỗ nào khác sống sót qua một lần vẽ lại. */
+const fcSel = selection();
 
 function currentFC() {
   const f = S.formulas.filter((x) => { return x.id === S.ui.fSel; })[0];
@@ -30,7 +38,9 @@ function viewFormula() {
   /* --- danh sách --- */
   const list = el('div', { class: 'panel', style: 'margin:0' });
   list.appendChild(el('header', {}, [
-    el('h3', { text: 'Formula Code' }), el('div', { class: 'sp' }),
+    el('h3', { text: 'Formula Code' }),
+    fcSel.size() ? el('span', { class: 'tag g', text: t('table.info.picked', { n: fcSel.size() }) }) : null,
+    el('div', { class: 'sp' }),
     el('button', {
       class: 'btn sm', text: t('hc.them'), onclick: function () {
        
@@ -51,9 +61,9 @@ function viewFormula() {
   /* Kéo thả để sắp xếp — bấm ↑ ↓ từng nấc quá chậm khi có nhiều công thức.
      Cùng cơ chế bỏ kết quả đã tính như move(): thứ tự này là thứ tự cột ở màn
      Kết quả và trong file Excel xuất ra. */
-  const drag = dragList((from, to, before) => {
-    if (moveBeside(S.formulas, from, to, before)) { setRESULT(null); touch(); render(); }
-  });
+  const drag = dragList((items, to, before) => {
+    if (moveBeside(S.formulas, items, to, before)) { fcSel.clear(); setRESULT(null); touch(); render(); }
+  }, fcSel);
   S.formulas.forEach((f, idx) => {
     const on = fc && f.id === fc.id;
     /* ↑ ↓ đổi chỗ hai Formula Code trong S.formulas — giống hệt bảng Phân loại nhóm.
@@ -70,10 +80,12 @@ function viewFormula() {
        Không có tay nắm thì mỗi lần muốn chọn lại thành một cú kéo hụt. */
     const grip = el('div', { class: 'fcgrip', title: t('fm.drag_hint'), text: '⠿' });
     const row = el('div', {
-      class: 'fcrow' + (on ? ' on' : ''),
-      /* Bấm ↑/↓ hay tay nắm thì không nhảy sang soạn Formula Code khác. */
+      class: 'fcrow' + (on ? ' on' : '') + (fcSel.has(f) ? ' picked' : ''),
+      /* Bấm ↑/↓ hay tay nắm thì không nhảy sang soạn Formula Code khác.
+         Ctrl/Shift+bấm là CHỌN để kéo một lượt, không phải mở công thức đó. */
       onclick: function (e) {
         if (e.target.closest('button, .fcgrip')) return;
+        if (fcSel.click(e, f, S.formulas)) { e.preventDefault(); render(); return; }
         S.ui.fSel = f.id; touch(); render();
       }
     }, [
@@ -98,6 +110,9 @@ function viewFormula() {
     drag.attach(row, f, grip);
     ul.appendChild(row);
   });
+  ul.addEventListener('scroll', () => { listScroll = ul.scrollTop; });
+  /* Đặt lại sau khi trình duyệt đã dựng xong và biết chiều cao thật. */
+  requestAnimationFrame(() => { ul.scrollTop = listScroll; });
   list.appendChild(ul);
   /* Cột trái: danh sách Formula Code, rồi tới hộp gợi ý ở khoảng trống bên dưới. */
   const colLeft = el('div', { class: 'col-left' }, [list]);

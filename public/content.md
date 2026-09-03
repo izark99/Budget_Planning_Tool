@@ -110,11 +110,13 @@ table.comboLimit.hint: Số dòng tối đa mỗi lần bấm "Sinh sẵn từ �
 table.comboLimit.none: không giới hạn
 table.dragHint: Kéo để đổi thứ tự
 table.downloadTemplate: ⤓ Tải mẫu Excel
+table.dragMulti: Ctrl+bấm chọn thêm · Shift+bấm chọn cả dải · kéo tay nắm để đổi thứ tự
 table.exportData: ⤒ Xuất dữ liệu
 table.empty: Chưa có dòng nào
 table.filter.placeholder: Lọc…
 table.importExcel: Nhập từ Excel
 table.info.matched: · khớp {n}
+table.info.picked: đang chọn {n}
 table.info.rows: {n} dòng
 table.info.showing: · hiện {n}
 table.noData: Chưa có dữ liệu
@@ -256,6 +258,8 @@ fx.err.bracket.unclosed: Thiếu dấu ] đóng tên cột
 fx.err.expected: Thiếu "{tok}"
 fx.err.string.unclosed: Thiếu dấu " đóng chuỗi
 fx.err.trailing: Thừa ký tự sau biểu thức
+fx.format: ⤸ Định dạng
+fx.format.title: In lại cho dễ đọc — IF lồng nhau xuống dòng và thụt lề. Không đổi nghĩa công thức.
 fx.hint.col: cột
 fx.hint.param: tham số = {v}
 fx.insert: Chèn

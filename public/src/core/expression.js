@@ -463,6 +463,68 @@ const FX = (function () {
     return { fields: Object.keys(fields), names: Object.keys(names), monthDependent: monthDep };
   }
 
+  /* ---------- Định dạng lại công thức ----------
+     Đi thẳng từ CÂY, không chắp nối chuỗi: cây là thứ máy thật sự hiểu, nên bản
+     in ra không thể lệch nghĩa. Chốt an toàn ở cuối: đọc lại bản vừa in, cây
+     phải TRÙNG cây cũ, không trùng thì trả nguyên chuỗi gốc chứ đừng đụng vào. */
+  const PREC = { '=': 1, '<>': 1, '<': 1, '>': 1, '<=': 1, '>=': 1, '&': 2, '+': 3, '-': 3, '*': 4, '/': 4, '^': 5 };
+  /* Bẻ dòng khi một lời gọi dài hơn ngần này — IF lồng nhau là lý do có hàm này. */
+  const WRAP_AT = 56;
+
+  function emitStr(v) { return '"' + String(v).replace(/"/g, '""') + '"'; }
+
+  function emit(n, ind) {
+    const pad = '  '.repeat(ind);
+    switch (n.k) {
+      case 'num': return String(n.v);
+      case 'str': return emitStr(n.v);
+      case 'bool': return n.v ? 'TRUE' : 'FALSE';
+      case 'field': return '[' + n.v + ']';
+      case 'name': return n.v;
+      case 'neg': return '-' + wrap(n.a, 6, ind);
+      case 'pct': return wrap(n.a, 6, ind) + '%';
+      case 'bin': {
+        const pr = PREC[n.op];
+        /* Toán tử trong repo này kết hợp từ TRÁI (kể cả ^, theo Excel), nên vế
+           phải cùng bậc vẫn phải đóng ngoặc: a-(b-c) khác (a-b)-c. */
+        return wrap(n.a, pr, ind) + ' ' + n.op + ' ' + wrap(n.b, pr + 1, ind);
+      }
+      case 'call': {
+        const one = n.name + '(' + n.args.map((a) => { return emit(a, ind); }).join(', ') + ')';
+        if (one.length <= WRAP_AT && one.indexOf('\n') < 0) return one;
+        const inner = '  '.repeat(ind + 1);
+        return n.name + '(\n' + n.args.map((a) => { return inner + emit(a, ind + 1); }).join(',\n') + '\n' + pad + ')';
+      }
+      default: return '';
+    }
+  }
+
+  /** Đóng ngoặc khi con có bậc ưu tiên thấp hơn chỗ nó đứng. */
+  function wrap(n, need, ind) {
+    const body = emit(n, ind);
+    const pr = n.k === 'bin' ? PREC[n.op] : 99;
+    return pr < need ? '(' + body + ')' : body;
+  }
+
+  /**
+   * In lại công thức cho dễ đọc. Không đọc được, hoặc in ra rồi đọc lại không
+   * khớp cây cũ, thì trả nguyên chuỗi vào — thà xấu còn hơn sai.
+   * @param {string} src
+   * @returns {string}
+   */
+  function fxFormat(src) {
+    const raw = String(src == null ? '' : src);
+    if (!raw.trim()) return raw;
+    let ast;
+    try { ast = parse(raw); } catch { return raw; }
+    let out;
+    try { out = emit(ast, 0); } catch { return raw; }
+    try {
+      if (JSON.stringify(parse(out)) !== JSON.stringify(ast)) return raw;
+    } catch { return raw; }
+    return out;
+  }
+
   /* ---------- Public ---------- */
   /**
    * Biên dịch một biểu thức. Ném Error nếu sai cú pháp — dùng tryCompile() khi
@@ -492,7 +554,7 @@ const FX = (function () {
   const FUNC_LIST = Object.keys(FUNCS).concat(Object.keys(SIMPLE)).concat(['VLOOKUP']).sort();
 
   return {
-    compile, tryCompile, parse, analyze,
+    compile, tryCompile, parse, analyze, fxFormat,
     isErr, errText, toNum, toStr, toBool,
     FUNC_LIST, MONTH_VARS
   };

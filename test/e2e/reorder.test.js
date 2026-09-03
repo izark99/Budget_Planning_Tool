@@ -222,6 +222,127 @@ describe('Sinh sẵn sắp lại theo thứ tự công thức chi phí', () => {
   });
 });
 
+describe('chọn nhiều dòng rồi kéo một lượt', () => {
+  const SIX = SIX_FC;
+
+  const codes = () => page.evaluate(() =>
+    [...document.querySelectorAll('.fclist .fcrow .fcmain > div:first-child')].map((x) => x.textContent));
+  const picked = () => page.evaluate(() =>
+    [...document.querySelectorAll('.fclist .fcrow.picked .fcmain > div:first-child')].map((x) => x.textContent));
+
+  const clickRow = (i, mod) => page.locator('.fclist .fcrow').nth(i).locator('.fcmain').click({ modifiers: mod });
+
+  it('Ctrl+bấm nhặt từng dòng, không mở công thức đó ra soạn', async () => {
+    await inPage(page, SIX + 'return true;');
+    await goToView(page, 'Công thức chi phí');
+    const sel0 = await inPage(page, 'return st.S.ui.fSel;');
+
+    await clickRow(1, ['Control']);
+    await clickRow(3, ['Control']);
+    await page.waitForTimeout(300);
+
+    expect(await picked()).toEqual(['FC_B', 'FC_D']);
+    /* Chọn để kéo, không phải mở ra soạn — công thức đang mở không đổi. */
+    expect(await inPage(page, 'return st.S.ui.fSel;')).toBe(sel0);
+  });
+
+  it('Ctrl+bấm lần nữa thì bỏ chọn dòng đó', async () => {
+    await clickRow(1, ['Control']);
+    await page.waitForTimeout(300);
+    expect(await picked()).toEqual(['FC_D']);
+  });
+
+  it('Shift+bấm lấy cả dải tính từ mốc neo', async () => {
+    await inPage(page, SIX + 'return true;');
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Công thức chi phí');
+    await clickRow(1, ['Control']);
+    await clickRow(4, ['Shift']);
+    await page.waitForTimeout(300);
+    expect(await picked()).toEqual(['FC_B', 'FC_C', 'FC_D', 'FC_E']);
+  });
+
+  it('kéo một dòng trong khối thì cả khối đi theo, giữ thứ tự', async () => {
+    await inPage(page, SIX + 'return true;');
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Công thức chi phí');
+    /* Chọn B và D (rời nhau), kéo lên trước A. */
+    await clickRow(1, ['Control']);
+    await clickRow(3, ['Control']);
+    await page.waitForTimeout(300);
+
+    const rows = page.locator('.fclist .fcrow');
+    await rows.nth(1).locator('.fcgrip').dragTo(rows.nth(0), { targetPosition: { x: 20, y: 2 } });
+    await page.waitForTimeout(500);
+
+    expect(await codes()).toEqual(['FC_B', 'FC_D', 'FC_A', 'FC_C', 'FC_E', 'FC_F']);
+    expect(await inPage(page, 'return st.S.formulas.map((f) => f.code);'))
+      .toEqual(['FC_B', 'FC_D', 'FC_A', 'FC_C', 'FC_E', 'FC_F']);
+    /* Kéo xong thì bỏ chọn — khối đã về chỗ, giữ sáng nữa chỉ gây nhầm. */
+    expect(await picked()).toEqual([]);
+  });
+
+  it('kéo một dòng NGOÀI khối thì chỉ dòng đó đi, và khối bị bỏ chọn', async () => {
+    await inPage(page, SIX + 'return true;');
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Công thức chi phí');
+    await clickRow(1, ['Control']);
+    await clickRow(2, ['Control']);
+    await page.waitForTimeout(300);
+
+    const rows = page.locator('.fclist .fcrow');
+    await rows.nth(4).locator('.fcgrip').dragTo(rows.nth(0), { targetPosition: { x: 20, y: 2 } });
+    await page.waitForTimeout(500);
+    expect(await codes()).toEqual(['FC_E', 'FC_A', 'FC_B', 'FC_C', 'FC_D', 'FC_F']);
+  });
+});
+
+describe('bảng Cost Code: chọn nhiều dòng rồi kéo', () => {
+  const SEED = `
+    st.S.maps.costCode = [];
+    for (let i = 0; i < 200; i++) {
+      st.S.maps.costCode.push({ formulaCode: 'FC_' + String(i).padStart(3, '0'),
+        costCode: (i % 3 === 0 ? 'CC_LOC_' : 'CC_') + i, name: 'n' + i });
+    }
+    st.S.ui.pageSize = 25;
+  `;
+  const table = () => page.locator('.panel', { hasText: 'Cost Code ← Formula Code' }).first();
+  const ccOrder = () => inPage(page, 'return st.S.maps.costCode.map((x) => x.costCode);');
+  const shownCC = () => table().locator('tbody tr td:nth-child(3) input')
+    .evaluateAll((els) => els.map((e) => e.value));
+
+  it('Ctrl+bấm ba dòng rời nhau rồi kéo — ĐANG LỌC và ĐANG Ở TRANG 2', async () => {
+    await inPage(page, SEED + 'return true;');
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Phân loại chi phí');
+    await table().locator("input[placeholder^='Lọc']").fill('CC_LOC_');
+    await page.waitForTimeout(400);
+    await table().locator('.pager button', { hasText: 'Sau' }).first().click();
+    await page.waitForTimeout(400);
+
+    const shown = await shownCC();
+    const before = await ccOrder();
+    const rows = table().locator('tbody tr');
+    /* Chọn dòng 2, 4, 6 đang hiện rồi kéo lên trước dòng 1 đang hiện. */
+    for (const i of [1, 3, 5]) {
+      await rows.nth(i).locator('td.grip').click({ modifiers: ['Control'] });
+      await page.waitForTimeout(150);
+    }
+    expect(await table().locator('tbody tr.picked').count()).toBe(3);
+
+    await rows.nth(1).locator('td.grip').dragTo(rows.nth(0), { targetPosition: { x: 10, y: 2 } });
+    await page.waitForTimeout(500);
+
+    const after = await ccOrder();
+    expect(after).toHaveLength(200);
+    /* Ba dòng nằm liền nhau ngay trước dòng đích, THEO ĐÚNG thứ tự mảng gốc. */
+    const at = after.indexOf(shown[0]);
+    expect(after.slice(at - 3, at)).toEqual([shown[1], shown[3], shown[5]]);
+    /* Không mất dòng nào, không nhân bản dòng nào. */
+    expect(after.slice().sort()).toEqual(before.slice().sort());
+  });
+});
+
 describe('toàn bộ luồng', () => {
   it('không một lỗi JavaScript nào', () => {
     expect(errs, JSON.stringify(errs, null, 1)).toEqual([]);

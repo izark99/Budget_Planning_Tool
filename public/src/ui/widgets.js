@@ -19,24 +19,72 @@ const XLTABLE = window.XLTABLE;
    commit(kéo, đích, trước) nhận PHẦN TỬ chứ không nhận chỉ số: khi bảng đang
    lọc hoặc đang ở trang 2, chỉ số của DOM KHÔNG phải chỉ số của mảng gốc. Nơi
    gọi tự indexOf trong mảng thật — đúng mẹo mà nút xoá của dataTable đã dùng. */
-function dragList(commit) {
-  let dragged = null;
+/* Chọn nhiều dòng: Ctrl+bấm nhặt từng dòng, Shift+bấm lấy cả dải tính từ mốc
+   neo. Giữ theo DANH TÍNH phần tử chứ không theo chỉ số — bảng dựng lại tbody
+   mỗi lần gõ ô lọc và mỗi lần đổi trang, chỉ số không sống nổi qua đó. */
+function selection() {
+  let picked = [];        /* mảng chứ không phải Set: cần biết thứ tự để kéo khối */
+  let anchor = null;
+
+  const has = (it) => { return picked.indexOf(it) >= 0; };
+
+  return {
+    has, items() { return picked.slice(); },
+    size() { return picked.length; },
+    clear() { picked = []; anchor = null; },
+    /** Trả về true nếu đã xử lý như một cú bấm CHỌN (gọi nơi dùng vẽ lại). */
+    click(e, item, visible) {
+      if (e.shiftKey && anchor != null && visible.indexOf(anchor) >= 0) {
+        const a = visible.indexOf(anchor), b = visible.indexOf(item);
+        if (b >= 0) {
+          const lo = Math.min(a, b), hi = Math.max(a, b);
+          picked = visible.slice(lo, hi + 1);
+          return true;
+        }
+      }
+      if (e.ctrlKey || e.metaKey) {
+        picked = has(item) ? picked.filter((x) => { return x !== item; }) : picked.concat([item]);
+        anchor = item;
+        return true;
+      }
+      return false;
+    },
+    /* Kéo một dòng ĐANG được chọn thì kéo cả khối; kéo dòng ngoài thì bỏ chọn. */
+    forDrag(item) {
+      if (!has(item)) { picked = []; anchor = null; return [item]; }
+      return picked.slice();
+    }
+  };
+}
+
+/* commit(danh sách kéo, đích, trước/sau) — LUÔN nhận một mảng phần tử, kể cả khi
+   chỉ kéo một dòng. Nhận phần tử chứ không nhận chỉ số: khi bảng đang lọc hoặc
+   đang ở trang 2, chỉ số của DOM KHÔNG phải chỉ số của mảng gốc. */
+function dragList(commit, sel) {
+  let dragged = null;     /* mảng phần tử đang kéo */
+  const lit = [];         /* mọi hàng đang sáng, để dragend gỡ hết */
 
   function clear(node) { node.classList.remove('drop-before', 'drop-after'); }
+  function unlit() { while (lit.length) lit.pop().classList.remove('dragging'); }
 
   return {
     /** node = hàng; item = phần tử dữ liệu nó đại diện; grip = nơi bấm để kéo. */
     attach(node, item, grip) {
       (grip || node).setAttribute('draggable', 'true');
+      node._dragItem = item;
       node.addEventListener('dragstart', (e) => {
-        dragged = item;
+        dragged = sel ? sel.forDrag(item) : [item];
         /* Firefox không phát dragover nếu dataTransfer trống. */
         if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); }
-        node.classList.add('dragging');
+        /* Làm mờ MỌI hàng đang kéo, không riêng hàng khởi kéo. */
+        const box = node.parentElement || node;
+        [...box.children].forEach((ch) => {
+          if (dragged.indexOf(ch._dragItem) >= 0) { ch.classList.add('dragging'); lit.push(ch); }
+        });
       });
-      node.addEventListener('dragend', () => { dragged = null; node.classList.remove('dragging'); clear(node); });
+      node.addEventListener('dragend', () => { dragged = null; unlit(); clear(node); });
       node.addEventListener('dragover', (e) => {
-        if (dragged == null || dragged === item) return;
+        if (!dragged || dragged.indexOf(item) >= 0) return;
         e.preventDefault();
         if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
         /* Trên hay dưới đường giữa hàng quyết định thả trước hay sau. */
@@ -49,26 +97,33 @@ function dragList(commit) {
         e.preventDefault();
         const before = node.classList.contains('drop-before');
         clear(node);
-        if (dragged == null || dragged === item) return;
-        const from = dragged; dragged = null;
+        if (!dragged || dragged.indexOf(item) >= 0) return;
+        const from = dragged; dragged = null; unlit();
         commit(from, item, before);
       });
     }
   };
 }
 
-/** Chuyển `from` tới cạnh `to` trong chính mảng `arr`. Trả về false nếu không
-    đổi gì — nơi gọi khỏi phải vẽ lại và khỏi bỏ kết quả đã tính vô ích. */
-function moveBeside(arr, from, to, before) {
-  const i = arr.indexOf(from);
-  if (i < 0) return false;
-  arr.splice(i, 1);
+/** Chuyển cả KHỐI `items` tới cạnh `to` trong chính mảng `arr`, giữ nguyên thứ
+    tự tương đối trong khối. Trả về false nếu không đổi gì — nơi gọi khỏi phải vẽ
+    lại và khỏi bỏ kết quả đã tính vô ích. */
+function moveBeside(arr, items, to, before) {
+  const block = (Array.isArray(items) ? items : [items])
+    .filter((x) => { return arr.indexOf(x) >= 0; });
+  /* Thả lên chính một dòng đang kéo thì không có nghĩa gì. dragList đã chặn từ
+     dragover, chặn thêm ở đây để hàm này tự nó có một giao kèo rõ ràng. */
+  if (!block.length || block.indexOf(to) >= 0) return false;
+  /* Sắp theo đúng thứ tự ĐANG CÓ trong mảng gốc, không theo thứ tự người dùng bấm. */
+  block.sort((a, b) => { return arr.indexOf(a) - arr.indexOf(b); });
+  const was = arr.slice();
+  block.forEach((x) => { arr.splice(arr.indexOf(x), 1); });
   let j = arr.indexOf(to);
-  if (j < 0) { arr.splice(i, 0, from); return false; }
+  if (j < 0) { was.forEach((x, i) => { arr[i] = x; }); arr.length = was.length; return false; }
   if (!before) j++;
-  if (j === i) { arr.splice(i, 0, from); return false; }
-  arr.splice(j, 0, from);
-  return true;
+  arr.splice.apply(arr, [j, 0].concat(block));
+  /* Không đổi gì thì nói không đổi gì. */
+  return arr.some((x, i) => { return x !== was[i]; });
 }
 
 /* Sắp mảng theo thứ tự một danh sách khoá cho trước, ỔN ĐỊNH: khoá không có
@@ -367,6 +422,7 @@ function dataTable(cfg) {
   }
 
   let filter = '';
+  let shownNow = [];
   const pg = pager(() => { draw(); });
   /* Kéo thả sắp xếp, chỉ khi bảng bật cfg.reorder. commit nhận PHẦN TỬ nên
      moveBeside tự indexOf trong mảng gốc — nhờ vậy đang lọc hay đang ở trang 2
@@ -376,9 +432,10 @@ function dataTable(cfg) {
   const keyOfRow = (r) => {
     return cfg.columns.filter((c) => { return c.key; }).map((c) => { return nkey(r[c.k]); }).join('|');
   };
-  const drag = cfg.reorder ? dragList((from, to, before) => {
-    if (moveBeside(cfg.rows(), from, to, before)) { cfg.onChange && cfg.onChange(); draw(); }
-  }) : null;
+  const sel = cfg.reorder ? selection() : null;
+  const drag = cfg.reorder ? dragList((items, to, before) => {
+    if (moveBeside(cfg.rows(), items, to, before)) { sel.clear(); cfg.onChange && cfg.onChange(); draw(); }
+  }, sel) : null;
   function draw() {
     optCache = {}; buildDatalists();
     tb.innerHTML = '';
@@ -395,10 +452,12 @@ function dataTable(cfg) {
     });
     const matched = matchedRows.length;
     const shownRows = pg.apply(matchedRows);
+    /* Shift+bấm lấy dải trong danh sách ĐANG HIỆN (đã lọc, đúng trang). */
+    shownNow = shownRows;
     for (let i = 0; i < shownRows.length; i++) {
       const row = shownRows[i];
       (function (row) {
-        const grip = drag ? el('td', { class: 'grip', style: 'width:24px', title: t('table.dragHint'), text: '⠿' }) : null;
+        const grip = drag ? el('td', { class: 'grip', style: 'width:24px', title: t('table.dragMulti'), text: '⠿' }) : null;
         const tds = (grip ? [grip] : []).concat(cfg.columns.map((col) => {
           return el('td', { style: col.w ? 'width:' + col.w + 'px' : '' }, [cell(row, col)]);
         }));
@@ -410,8 +469,23 @@ function dataTable(cfg) {
             cfg.onChange && cfg.onChange(); draw();
           }
         })]));
-        const tr = el('tr', {}, tds);
-        if (drag) drag.attach(tr, row, grip);
+        const tr = el('tr', { class: sel && sel.has(row) ? 'picked' : '' }, tds);
+        if (drag) {
+          drag.attach(tr, row, grip);
+          /* Ctrl/Shift+bấm để chọn nhiều dòng rồi kéo một lượt.
+             Bảng này gần như toàn ô nhập, bấm chỗ nào cũng rơi vào một ô — nên
+             CHÍNH Ô TAY NẮM là chỗ chọn. Nó cũng là chỗ để kéo, nên hai việc
+             nằm cùng một nơi. Phần còn lại của hàng vẫn nhận nếu bấm trúng chỗ
+             trống, còn bấm vào ô nhập thì thôi: người ta đang sửa dữ liệu. */
+          const pick = (e) => {
+            if (sel.click(e, row, shownNow)) { e.preventDefault(); draw(); }
+          };
+          grip.addEventListener('click', pick);
+          tr.addEventListener('click', (e) => {
+            if (e.target.closest('input, select, textarea, button, td.grip')) return;
+            pick(e);
+          });
+        }
         frag.appendChild(tr);
       })(row);
     }
@@ -419,7 +493,8 @@ function dataTable(cfg) {
     const span = cfg.columns.length + (drag ? 2 : 1);
     if (!rows.length) tb.appendChild(el('tr', {}, [el('td', { colspan: span, class: 'empty', text: cfg.emptyText || t('table.empty') })]));
     else if (!matched) tb.appendChild(el('tr', {}, [el('td', { colspan: span, class: 'empty', text: t('table.noMatch', { kw: filter }) })]));
-    info.textContent = t('table.info.rows', { n: rows.length }) + (kw ? ' ' + t('table.info.matched', { n: matched }) : '');
+    info.textContent = t('table.info.rows', { n: rows.length }) + (kw ? ' ' + t('table.info.matched', { n: matched }) : '')
+      + (sel && sel.size() ? ' · ' + t('table.info.picked', { n: sel.size() }) : '');
   }
   const search = el('input', {
     type: 'text', placeholder: t('table.filter.placeholder'), style: 'width:130px',
@@ -566,4 +641,4 @@ function foldPanel(key, title, badges, actions, bodyNode, note) {
   return el('div', { class: 'panel' }, [head, body]);
 }
 
-export { comboLimit, dragList, moveBeside, pager, downloadTemplate, downloadData, importMapped, dataTable, readTable, panel, foldPanel };
+export { comboLimit, dragList, moveBeside, selection, pager, downloadTemplate, downloadData, importMapped, dataTable, readTable, panel, foldPanel };
