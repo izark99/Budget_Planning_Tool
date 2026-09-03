@@ -3,7 +3,7 @@
    Nguyên thủy vào/ra thuần: không dựng DOM, không gọi toast.
    Lỗi được ném lên cho tầng UI bắt và hiển thị.
    =========================================================== */
-import { M, MONTHS, S, RESULT, nkey } from '../core/state.js';
+import { CAL_FIELDS, M, MONTHS, S, RESULT, nkey, numOf } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 
@@ -126,7 +126,7 @@ function exportBudget(opt) {
       a5.push([]); a5.push([t('export.audit.calendar'), t('export.audit.scope'), t('export.audit.month'), t('export.audit.stdDays'), t('export.audit.otherDays')]);
       (S.calendar.tables || []).forEach((t) => {
         t.m.forEach((rec, k) => {
-          a5.push(['', t.scope || '*', MONTHS[k], rec.std, [rec.act, rec.hol, rec.leave, rec.other].join(' / ')]);
+          a5.push(['', t.scope || '*', MONTHS[k], rec.std, CAL_FIELDS.slice(1).map((f) => { return numOf(rec[f.k]); }).join(' / ')]);
         });
       });
       a5.push([]); a5.push([t('export.audit.formulas'), 'Formula Code', t('export.audit.group'), t('export.audit.cond'), t('export.audit.formula')]);

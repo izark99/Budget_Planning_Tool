@@ -23,6 +23,7 @@ export const ALLOWED = new Map([
   ['Ngày nghỉ lễ', 'CAL_FIELDS — tên cột file Excel ngày công'],
   ['Ngày nghỉ phép có lương', 'CAL_FIELDS — tên cột file Excel ngày công'],
   ['Ngày nghỉ có lương khác', 'CAL_FIELDS — tên cột file Excel ngày công'],
+  ['Ngày nghỉ ngừng việc', 'CAL_FIELDS — tên cột file Excel ngày công'],
 
   /* --- Giá trị mồi của defaultState(): ghi thẳng vào .json dự án của người dùng.
          Đổi ở đây thì file dự án cũ và mới không còn khớp nhau. --- */

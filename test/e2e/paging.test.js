@@ -188,3 +188,53 @@ describe('toàn bộ luồng', () => {
     expect(errs).toEqual([]);
   });
 });
+
+describe('thanh phân trang ẩn/hiện theo SỐ TRANG', () => {
+  /* LỖI: apply() so số dòng với hằng PAGE_SIZES[0] (25) chứ không so với cỡ
+     trang đang dùng. Cỡ 100 mà có 30 dòng thì chỉ một trang, vẫn hiện thanh
+     điều hướng vô nghĩa. Với các cỡ chọn được trên giao diện hai điều kiện
+     thường trùng nhau nên không ai gặp — nhưng nó vẫn sai. */
+  const seed = (n, size) => inPage(page, `
+    const rows = [];
+    for (let a = 0; a < ${n}; a++) rows.push({ ID: a, Dept: 'D' + a, Unit: 'U' + a, Coefficient: 1, __m: new Array(12).fill(1) });
+    st.S.hc = { headers: ['ID', 'Dept', 'Unit', 'Coefficient'], rows, file: 'to.xlsx', at: '' };
+    st.S.cols = [
+      { src: 'ID', alias: 'ID', role: 'key', month: null, type: 'num' },
+      { src: 'Dept', alias: 'Dept', role: 'attr', month: null, type: 'text' },
+      { src: 'Unit', alias: 'Unit', role: 'attr', month: null, type: 'text' },
+      { src: 'Coefficient', alias: 'Coefficient', role: 'attr', month: null, type: 'num' },
+    ];
+    st.S.ui.pageSize = ${size};
+    fm.ENGINE.invalidate(); st.setRESULT(null);
+    return true;
+  `);
+
+  const shown = () => page.evaluate(() => {
+    const p = [...document.querySelectorAll('.pager')].find((x) => x.closest('.panel'));
+    return p ? getComputedStyle(p).display !== 'none' : null;
+  });
+
+  it('cỡ trang 100, 30 dòng — MỘT trang thì ẩn', async () => {
+    await seed(30, 100);
+    await goToView(page, 'Định biên');
+    expect(await shown()).toBe(false);
+  });
+
+  it('cỡ trang 25, 30 dòng — hai trang thì hiện', async () => {
+    await seed(30, 25);
+    await goToView(page, 'Định biên');
+    expect(await shown()).toBe(true);
+  });
+
+  it('cỡ trang 25, đúng 25 dòng — một trang thì ẩn', async () => {
+    await seed(25, 25);
+    await goToView(page, 'Định biên');
+    expect(await shown()).toBe(false);
+  });
+
+  it('"Tất cả" với danh sách dài vẫn HIỆN — ô chọn cỡ trang nằm trong đó', async () => {
+    await seed(200, 0);
+    await goToView(page, 'Định biên');
+    expect(await shown()).toBe(true);
+  });
+});

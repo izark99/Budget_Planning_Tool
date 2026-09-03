@@ -2,13 +2,13 @@
    MÀN 2 — THIẾT LẬP
    Vai trò từng cột, hằng số toàn cục, và công thức dùng chung.
    =========================================================== */
-import { MONTHS, ROLES, S, fmt, nkey, setRESULT, touch, uid } from '../core/state.js';
+import { CAL_FIELDS, MONTHS, ROLES, S, SYS_VARS, fmt, nkey, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { FX } from '../core/expression.js';
 import { distinctVals } from '../platform/io.js';
 import { el, render } from '../ui/dom.js';
-import { foldPanel, panel } from '../ui/widgets.js';
+import { foldPanel, panel, readTable } from '../ui/widgets.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 import { guessRole } from './headcount.js';
 
@@ -175,6 +175,18 @@ function viewSetup() {
       el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: t('export.audit.name') }), el('th', { text: t('export.audit.value') }), el('th', { text: t('export.audit.note') }), el('th', { text: '' })])]), pb])
     ]),
     t('setup.params_help')));
+
+  /* Bảng tra biến hệ thống, chỉ đọc. Trước đây muốn biết một biến làm gì phải mở
+     thư viện công thức; giờ nó nằm ngay cạnh chỗ khai tham số. Cặp tên–diễn giải
+     lấy đúng chỗ mà thư viện công thức đã dựng, không chép lại. */
+  wrap.appendChild(foldPanel('setup_sysvars', t('setup.sysvars.title'), [], [],
+    readTable(
+      [t('setup.sysvars.th_var'), t('setup.sysvars.th_desc')],
+      SYS_VARS.map((v) => { return [v, t('fx.var.' + v)]; })
+        .concat(CAL_FIELDS.map((f) => { return [f.varName, t('fx.var.calField', { label: f.label })]; })),
+      { mono: [0], maxH: 'none' }
+    ),
+    t('setup.sysvars.help')));
 
   return wrap;
 }

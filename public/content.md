@@ -148,7 +148,7 @@ export.audit.month: Tháng
 export.audit.monthsPicked: Tháng trích
 export.audit.name: Tên
 export.audit.note: Ghi chú
-export.audit.otherDays: Thực tế / Lễ / Phép / Khác
+export.audit.otherDays: Thực tế / Lễ / Phép / Khác / Ngừng việc
 export.audit.params: THAM SỐ
 export.audit.pct: Mức %
 export.audit.period: Kỳ ngân sách
@@ -305,6 +305,7 @@ engine.rule.unnamed: nhóm
 engine.value.empty: (rỗng)
 engine.warn.ac.missing: Chưa có Account Code cho {k}
 engine.warn.bc.missing: Chưa có Budget Code cho {k}
+engine.warn.cal: Ngày công {scope} · {m}: tổng các cột {w} {n} ngày so với ngày công chuẩn
 engine.warn.cc.unmapped: Formula Code "{k}" chưa map Cost Code
 engine.warn.cen.unmapped: Đơn vị "{u}" chưa map Cost Center
 engine.warn.class.miss: Phân loại "{name}": {n} dòng không khớp bảng, dùng giá trị mặc định "{def}"
@@ -360,6 +361,10 @@ hc.them: + Thêm
 hc.tim_trong_bang: Tìm trong bảng…
 setup.cols_help: Tên trong cột <strong>Dùng trong công thức</strong> chính là thứ gõ giữa hai ngoặc vuông: <code>[Grade]</code>, <code>[Workplace Location]</code>. Vai trò <strong>Khoá nhân sự</strong> dùng để ghép tờ trình, <strong>Đơn vị</strong> để suy Cost Center, <strong>Cột tháng</strong> để lấy hệ số định biên. Cột đặt <strong>Bỏ qua</strong> sẽ biến mất khỏi mọi màn hình sau.
 setup.params_help: Gọi thẳng tên trong công thức: <code>[Coefficient]*LUONG_CO_SO</code>. Muốn dùng như phần trăm thì viết <code>TY_LE_BHXH_CTY%</code>.
+setup.sysvars.help: Gõ thẳng tên này vào công thức, không cần khai gì thêm. Khác tham số ở chỗ tham số là số bạn tự đặt, còn đây là số app tự biết theo từng dòng và từng tháng.
+setup.sysvars.th_desc: Dùng để làm gì
+setup.sysvars.th_var: Tên biến
+setup.sysvars.title: Biến hệ thống
 setup.th_distinct: Số giá trị
 setup.th_file_col: Cột trong file
 setup.th_formula_name: Dùng trong công thức
@@ -395,9 +400,11 @@ cal.dien_deu_12_thang: Điền đều 12 tháng
 cal.doi_chieu: Đối chiếu
 cal.gap_over: thừa {n} ngày
 cal.gap_short: thiếu {n} ngày
+cal.gap_word_over: thừa
+cal.gap_word_short: thiếu
 cal.guide_1: Cột Nhom: giá trị của cột đã chọn để phân lịch. Ghi * cho lịch dùng chung.
 cal.guide_2: Cột Thang: số từ 1 đến 12.
-cal.guide_3: Ngày công chuẩn nên bằng tổng của bốn cột còn lại.
+cal.guide_3: Ngày công chuẩn nên bằng tổng của các cột còn lại.
 cal.export_guide: Giữ nguyên hai cột Nhom và Thang. Nạp lại file này sẽ thay thế toàn bộ lịch ngày công đang có.
 cal.import_title: Nhập lịch ngày công
 cal.imported: Đã nhập {n} lịch
@@ -422,7 +429,7 @@ cal.ten_cot_nhom_sinh_ra: Tên cột nhóm sinh ra
 cal.them_bang_phan_loai: + Thêm bảng phân loại
 cal.them_lich_cho_mot_nhom: + Thêm lịch cho một nhóm
 cal.unnamed: Chưa đặt tên
-cal.vars_help: Dùng trong công thức bằng các biến: {vars}. Giá trị tự đổi theo tháng đang tính. Cột cuối kiểm tra ngày công chuẩn có bằng tổng bốn cột còn lại không.
+cal.vars_help: Dùng trong công thức bằng các biến: {vars}. Giá trị tự đổi theo tháng đang tính. Cột cuối kiểm tra ngày công chuẩn có bằng tổng các cột còn lại không.
 cal.vi_du_bang_dau_lay_khoa_unit_sinh: Ví dụ: bảng đầu lấy khoá Unit sinh ra cột “Nhóm lương”; bảng thứ hai lấy khoá Nhóm lương + Position sinh ra “Nhóm thưởng”.
 cal.xoa_bang: Xoá bảng
 cal.xoa_lich: Xoá lịch

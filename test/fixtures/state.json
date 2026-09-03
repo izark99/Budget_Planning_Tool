@@ -2,7 +2,8 @@
   "v": 2,
   "meta": {
     "name": "Ngân sách nhân sự",
-    "year": 2027
+    "year": 2027,
+    "changeSeq": 2
   },
   "hc": {
     "headers": [
@@ -583,7 +584,7 @@
       }
     ],
     "file": "dinh-bien-mau.xlsx",
-    "at": "11:20:43 3/9/2026"
+    "at": "15:44:30 3/9/2026"
   },
   "cols": [
     {
@@ -825,7 +826,7 @@
     "groupCol": "",
     "tables": [
       {
-        "id": "bsahb1m",
+        "id": "kuqxg79",
         "scope": "*",
         "m": [
           {
@@ -833,84 +834,96 @@
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           },
           {
             "std": 26,
             "act": 22,
             "hol": 1,
             "leave": 1,
-            "other": 2
+            "other": 2,
+            "stop": 0
           }
         ]
       }
@@ -918,7 +931,7 @@
   },
   "formulas": [
     {
-      "id": "dinawhm",
+      "id": "7jwibcq",
       "code": "FC_LUONG_HESO",
       "name": "Lương theo hệ số",
       "mode": "monthly",
@@ -938,7 +951,7 @@
       ],
       "rules": [
         {
-          "id": "i29i1s8",
+          "id": "bvxawh0",
           "name": "Tất cả",
           "cond": "",
           "formula": "LUONG_CO_BAN * DINH_BIEN * NGAY_CONG_THUC_TE / NGAY_CONG_CHUAN"
@@ -946,7 +959,7 @@
       ]
     },
     {
-      "id": "jc8b6l9",
+      "id": "0uj2pg9",
       "code": "FC_BHXH",
       "name": "BHXH-BHYT-BHTN phần công ty",
       "mode": "monthly",
@@ -966,7 +979,7 @@
       ],
       "rules": [
         {
-          "id": "u129e4m",
+          "id": "kgfgeux",
           "name": "Tất cả",
           "cond": "",
           "formula": "[Lương cơ bản] * TY_LE_BHXH_CTY% * DINH_BIEN"
@@ -974,7 +987,7 @@
       ]
     },
     {
-      "id": "oa6bsn0",
+      "id": "suqlfa7",
       "code": "FC_DIENTHOAI",
       "name": "Phụ cấp điện thoại",
       "mode": "monthly",
@@ -994,7 +1007,7 @@
       ],
       "rules": [
         {
-          "id": "p5sls97",
+          "id": "ypnylrx",
           "name": "Mặc định",
           "cond": "",
           "formula": "300000"
@@ -1002,7 +1015,7 @@
       ]
     },
     {
-      "id": "052u1qe",
+      "id": "p9c8wxt",
       "code": "FC_DULICH",
       "name": "Du lịch nghỉ mát",
       "mode": "spread",
@@ -1012,7 +1025,7 @@
       ],
       "rules": [
         {
-          "id": "9z1km60",
+          "id": "1l8iq45",
           "name": "Tất cả",
           "cond": "",
           "formula": "6000000"

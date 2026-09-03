@@ -129,6 +129,9 @@ function pager(onChange) {
       const size = pageSize();
       if (!size) {
         page = 0;
+        /* Chế độ "Tất cả" chỉ có một trang, nhưng vẫn phải hiện thanh khi danh
+           sách dài: ô CHỌN CỠ TRANG nằm trong chính thanh này, ẩn đi là khoá
+           luôn đường quay lại chế độ chia trang. */
         node.style.display = list.length > PAGE_SIZES[0] ? '' : 'none';
         info.textContent = t('table.page.info', { from: list.length ? 1 : 0, to: list.length, n: list.length });
         prev.disabled = next.disabled = true;
@@ -139,7 +142,9 @@ function pager(onChange) {
       if (page < 0) page = 0;
       const from = page * size;
       const slice = list.slice(from, from + size);
-      node.style.display = list.length > PAGE_SIZES[0] ? '' : 'none';
+      /* Ẩn/hiện theo SỐ TRANG chứ không so với hằng PAGE_SIZES[0]: cỡ trang 100
+         mà có 30 dòng thì chỉ một trang, thanh điều hướng chẳng để làm gì. */
+      node.style.display = pages > 1 ? '' : 'none';
       info.textContent = t('table.page.info', { from: list.length ? from + 1 : 0, to: from + slice.length, n: list.length });
       prev.disabled = page === 0;
       next.disabled = page >= pages - 1;
@@ -524,7 +529,12 @@ function readTable(headers, rows, opts) {
       el('thead', {}, [el('tr', {}, headers.map((h, i) => { return el('th', { class: opts.num && opts.num.indexOf(i) >= 0 ? 'num' : '', text: h }); }))]),
       el('tbody', {}, rows.length ? rows.map((r) => {
         return el('tr', { class: r.__cls || '' }, r.map((v, i) => {
-          return el('td', { class: (opts.num && opts.num.indexOf(i) >= 0 ? 'num ' : '') + (v === '' || v == null ? 'zero' : ''), text: v == null ? '' : String(v) });
+          /* opts.mono: cột nào là tên máy (biến, mã) thì cho chữ đơn cách, đọc
+             mới ra dấu gạch dưới và phân biệt được I với l. */
+          const cls = (opts.num && opts.num.indexOf(i) >= 0 ? 'num ' : '')
+            + (opts.mono && opts.mono.indexOf(i) >= 0 ? 'mono ' : '')
+            + (v === '' || v == null ? 'zero' : '');
+          return el('td', { class: cls, text: v == null ? '' : String(v) });
         }));
       }) : [el('tr', {}, [el('td', { colspan: headers.length, class: 'empty', text: opts.empty || t('table.noData') })])])
     ])

@@ -749,6 +749,64 @@ describe('nhắc lưu file .json', () => {
   });
 });
 
+describe('bảng biến hệ thống ở màn Thiết lập', () => {
+  it('liệt kê đủ mọi biến, có diễn giải, chữ đơn cách ở cột tên', async () => {
+    await goToView(page, 'Thiết lập');
+    const r = await page.evaluate(() => {
+      const p = [...document.querySelectorAll('.panel')]
+        .find((x) => x.textContent.includes('Biến hệ thống'));
+      if (!p) return null;
+      const rows = [...p.querySelectorAll('tbody tr')].map((tr) =>
+        [...tr.querySelectorAll('td')].map((c) => c.textContent.trim()));
+      const first = p.querySelector('tbody tr td');
+      return { rows, mono: first.classList.contains('mono'), fold: !!p.querySelector('header.fold') };
+    });
+    expect(r).not.toBeNull();
+    const names = r.rows.map((x) => x[0]);
+    /* Cả biến hệ thống lẫn biến ngày công. */
+    ['THANG', 'DINH_BIEN', 'SO_THANG', 'TONG_THANG', 'THANG_BAT_DAU',
+      'NGAY_CONG_CHUAN', 'NGAY_NGHI_NGUNG_VIEC'].forEach((v) => { expect(names).toContain(v); });
+    /* Biến nào cũng phải có diễn giải, không để trống. */
+    r.rows.forEach((x) => { expect(x[1].length).toBeGreaterThan(3); });
+    expect(r.mono).toBe(true);
+    expect(r.fold).toBe(true);
+  });
+});
+
+describe('cột "Ngày nghỉ ngừng việc" ở màn Ngày công', () => {
+  it('có cột mới trong bảng, và ô đối chiếu tính nó vào tổng', async () => {
+    await goToView(page, 'Ngày công');
+    const heads = await page.evaluate(() =>
+      [...document.querySelectorAll('.panel .tw th')].map((h) => h.textContent.trim()));
+    expect(heads).toContain('Ngày nghỉ ngừng việc');
+
+    /* Chuyển 1 ngày từ "khác" sang "ngừng việc" thì tổng không đổi → vẫn "khớp". */
+    await inPage(page, `
+      st.S.calendar.tables[0].m.forEach((rec) => { rec.other = rec.other - 1; rec.stop = 1; });
+      st.setRESULT(null); return true;
+    `);
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Ngày công');
+    const tags = await page.evaluate(() =>
+      [...document.querySelectorAll('.panel .tw tbody tr td:last-child .tag')].map((x) => x.textContent.trim()));
+    expect(tags.length).toBe(12);
+    expect([...new Set(tags)]).toEqual(['khớp']);
+
+    /* Bớt đi một ngày thì báo thiếu. */
+    await inPage(page, 'st.S.calendar.tables[0].m[0].stop = 0; st.setRESULT(null); return true;');
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Ngày công');
+    const t0 = await page.evaluate(() =>
+      document.querySelector('.panel .tw tbody tr td:last-child .tag').textContent.trim());
+    expect(t0).toContain('thiếu');
+
+    await inPage(page, `
+      st.S.calendar.tables[0].m.forEach((rec) => { rec.other = rec.other + 1; rec.stop = 0; });
+      st.setRESULT(null); return true;
+    `);
+  });
+});
+
 describe('mọi màn hình', () => {
   it('mở được hết, không màn nào ném lỗi', async () => {
     const labels = await page.evaluate(() =>

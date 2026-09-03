@@ -45,11 +45,29 @@ const CAL_FIELDS = [
   { k: 'act', label: 'Ngày công làm việc thực tế', varName: 'NGAY_CONG_THUC_TE', def: 22 },
   { k: 'hol', label: 'Ngày nghỉ lễ', varName: 'NGAY_NGHI_LE', def: 1 },
   { k: 'leave', label: 'Ngày nghỉ phép có lương', varName: 'NGAY_NGHI_PHEP', def: 1 },
-  { k: 'other', label: 'Ngày nghỉ có lương khác', varName: 'NGAY_NGHI_KHAC', def: 2 }
+  { k: 'other', label: 'Ngày nghỉ có lương khác', varName: 'NGAY_NGHI_KHAC', def: 2 },
+  /* Tách khỏi "ngày nghỉ có lương khác" để nhìn ra ngay. Mồi 0 chứ không bớt của
+     cột cũ — không đoán được trong đống "khác" cũ có bao nhiêu ngày ngừng việc.
+     ĐẶT CUỐI: ô đối chiếu cộng CAL_FIELDS.slice(1), std phải ở đầu. */
+  { k: 'stop', label: 'Ngày nghỉ ngừng việc', varName: 'NGAY_NGHI_NGUNG_VIEC', def: 0 }
 ];
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 function allMonths() { return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; }
+
+/* Lịch từ localStorage hay .json cũ thiếu hẳn khoá của cột mới thêm: load() và
+   openProject() đều Object.assign NÔNG nên S.calendar bị thay nguyên khối. Đọc
+   thì an toàn (numOf(undefined) = 0) nhưng ô nhập hiện undefined và ô đối chiếu
+   báo lệch oan. Điền khoá thiếu bằng giá trị mồi, KHÔNG đụng số đã khai. */
+function normaliseCalendar(cal) {
+  if (!cal || !cal.tables) return cal;
+  cal.tables.forEach((tbl) => {
+    (tbl.m || []).forEach((rec) => {
+      CAL_FIELDS.forEach((f) => { if (rec[f.k] === undefined) rec[f.k] = f.def; });
+    });
+  });
+  return cal;
+}
 
 function blankCalTable(scope) {
   return {
@@ -119,7 +137,11 @@ let dirty = false;
    S/RESULT ở module khác phải đi qua hai hàm này. Chỗ ĐỌC vẫn viết
    `S.hc.rows` / `RESULT` như cũ nhờ live binding. */
 /** @param {ProjectState} next */
-function setS(next) { S = next; }
+/* Mọi đường thay nguyên khối state đều đi qua đây — mở file dự án, nạp lại từ
+   localStorage, đặt state trong bộ kiểm. Chuẩn hoá lịch ở đúng một chỗ này thay
+   vì rải ra từng nơi gọi, nếu không thì state cũ và mới lệch nhau đúng cái khoá
+   vừa thêm. */
+function setS(next) { S = next; normaliseCalendar(S.calendar); }
 /** @param {BudgetResult|null} next */
 function setRESULT(next) { RESULT = next; }
 
@@ -131,6 +153,8 @@ function load() {
     S = Object.assign(defaultState(), o);
     S.ui = S.ui || { view: 'hc' };
     S.ui.collapsed = S.ui.collapsed || {};
+    /* Lịch lưu từ trước khi thêm cột mới thiếu khoá — điền lại trước khi dùng. */
+    normaliseCalendar(S.calendar);
     S.maps = Object.assign({ costCode: [], costCenter: [], budgetCode: [], accountCode: [] }, S.maps || {});
     S.shared = S.shared || [];
     S.accruals = S.accruals || [];
@@ -196,7 +220,7 @@ function fmtNum(v) {
 export {
   setNotifier,
   LS_KEY, M, MONTHS, ROLES, CAL_FIELDS, SYS_VARS,
-  uid, allMonths, blankCalTable, defaultState,
+  uid, allMonths, blankCalTable, normaliseCalendar, defaultState,
   S, RESULT, dirty, setS, setRESULT,
   save, load, touch, installAutosave, markExported, needsExport,
   NF, fmt, fmtShort, nkey, numOf, NF_NUM, fmtNum

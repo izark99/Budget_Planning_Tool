@@ -450,7 +450,7 @@ const FX = (function () {
     if (node.b) walk(node.b, fn);
     if (node.args) node.args.forEach((x) => { walk(x, fn); });
   }
-  const MONTH_VARS = ['THANG', 'DINH_BIEN', 'SO_THANG', 'NGAY_CONG_CHUAN', 'NGAY_CONG_THUC_TE', 'NGAY_NGHI_LE', 'NGAY_NGHI_PHEP', 'NGAY_NGHI_KHAC'];
+  const MONTH_VARS = ['THANG', 'DINH_BIEN', 'SO_THANG', 'NGAY_CONG_CHUAN', 'NGAY_CONG_THUC_TE', 'NGAY_NGHI_LE', 'NGAY_NGHI_PHEP', 'NGAY_NGHI_KHAC', 'NGAY_NGHI_NGUNG_VIEC'];
   function analyze(ast) {
     const fields = {}, names = {}; let monthDep = false;
     walk(ast, (n) => {

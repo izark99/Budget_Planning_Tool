@@ -8,7 +8,7 @@
    Tầng NGHIỆP VỤ: biết định biên là gì, Formula Code là gì. Gọi xuống
    expression.js để tính biểu thức; expression.js không biết gì về nơi này.
    =========================================================== */
-import { CAL_FIELDS, MONTHS, S, nkey, numOf } from './state.js';
+import { CAL_FIELDS, fmt, MONTHS, nkey, numOf, S } from './state.js';
 import { t } from './content.js';
 import { FX } from './expression.js';
 
@@ -327,6 +327,21 @@ const ENGINE = (function () {
     const idCol = roleCol('key'), posCol = roleCol('position'), unitCol = roleCol('unit');
     const fcs = (S.formulas || []).filter((f) => { return f.active !== false; });
     const nF = fcs.length;
+
+    /* Ô đối chiếu ở màn Ngày công chỉ báo tại chỗ; ai không mở màn đó thì không
+       biết. Nêu luôn ở đây để nó nổi lên màn Kết quả cùng các cảnh báo khác. */
+    (S.calendar && S.calendar.tables || []).forEach((tbl) => {
+      (tbl.m || []).forEach((rec, k) => {
+        const used = CAL_FIELDS.slice(1).reduce((a, f) => { return a + numOf(rec[f.k]); }, 0);
+        const gap = numOf(rec.std) - used;
+        if (gap) {
+          warnings.push({
+            type: 'cal',
+            msg: t('engine.warn.cal', { scope: tbl.scope || '*', m: MONTHS[k], n: fmt(Math.abs(gap)), w: gap > 0 ? t('cal.gap_word_short') : t('cal.gap_word_over') })
+          });
+        }
+      });
+    });
 
     if (monthCols().length !== M) warnings.push({ type: 'month', msg: t('engine.warn.month') });
     if (!unitCol) warnings.push({ type: 'role', msg: t('engine.warn.unitcol') });
