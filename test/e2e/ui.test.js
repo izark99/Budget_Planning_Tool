@@ -636,6 +636,40 @@ describe('ảnh hưởng của tăng lương', () => {
     expect(ok).toBe(true);
   });
 
+  it('tách theo cách nào thì tổng vẫn bằng raiseTotal', async () => {
+    await goToView(page, 'Kết quả');
+    const opts = await page.evaluate(() => {
+      const p = [...document.querySelectorAll('.panel')]
+        .find((x) => x.textContent.includes('Ảnh hưởng của tăng lương'));
+      return [...p.querySelectorAll('select option')].map((o) => o.value);
+    });
+    /* Có cả Formula Code, Cost Code lẫn cột nhóm/thuộc tính của định biên. */
+    expect(opts).toContain('Formula Code');
+    expect(opts).toContain('Cost Code');
+    expect(opts.length).toBeGreaterThan(3);
+
+    const total = await inPage(page, 'return st.RESULT.raiseTotal;');
+    /* Thử bốn cách tách, kể cả một cột thuộc tính của dòng định biên. */
+    for (const by of [opts[0], opts[1], opts[2], opts[opts.length - 1]]) {
+      await page.evaluate((v) => {
+        const p = [...document.querySelectorAll('.panel')]
+          .find((x) => x.textContent.includes('Ảnh hưởng của tăng lương'));
+        const sel = p.querySelector('select');
+        sel.value = v; sel.dispatchEvent(new Event('change', { bubbles: true }));
+      }, by);
+      await page.waitForTimeout(500);
+
+      const sum = await page.evaluate(() => {
+        const p = [...document.querySelectorAll('.panel')]
+          .find((x) => x.textContent.includes('Ảnh hưởng của tăng lương'));
+        const tbs = [...p.querySelectorAll('tbody')];
+        const tot = tbs[tbs.length - 1].querySelector('tr.tot');
+        return tot.querySelectorAll('td')[1].textContent.replace(/\D/g, '');
+      });
+      expect(sum, 'tách theo ' + by).toBe(String(total));
+    }
+  });
+
   it('Dashboard có thẻ "Do tăng lương", khớp đúng con số của màn Kết quả', async () => {
     await goToView(page, 'Dashboard');
     const tile = await page.evaluate(() => {

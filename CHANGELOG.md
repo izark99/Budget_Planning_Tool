@@ -4,6 +4,53 @@ Gộp theo đợt việc, mới nhất ở trên. Dự án chưa đánh số phi
 
 ---
 
+## Đợt 7 — Thao tác nhanh, xuất Excel có định dạng · 2026-09-03
+
+Tám việc nữa. Ba việc chạm vào phần lõi: thanh tiến trình phải cắt được vòng tính, bộ xuất
+Excel viết lại từ đầu, và cột ngày công mới chạm vào bộ nhớ đệm eval.
+
+### Phân trang ẩn theo SỐ TRANG
+`apply()` so số dòng với hằng 25 chứ không so với cỡ trang đang dùng — cỡ 100 mà có 30 dòng
+thì chỉ một trang, vẫn hiện thanh điều hướng vô nghĩa. Nhánh "Tất cả" giữ nguyên ngưỡng cũ:
+ô chọn cỡ trang nằm bên trong chính thanh này, ẩn đi là khoá luôn đường quay lại.
+
+### Bảng biến hệ thống · cột "Ngày nghỉ ngừng việc"
+Bảng tra biến chỉ đọc ở màn Thiết lập, lấy đúng cặp tên–diễn giải mà thư viện công thức đã
+dựng. Cột ngày công thứ 6 tách khỏi "ngày nghỉ có lương khác"; bảng ngày công lặp theo
+`CAL_FIELDS` nên màn đó **không phải sửa dòng nào**. Chỗ nguy hiểm là `MONTH_VARS` của máy
+biểu thức: thiếu tên biến mới ở đó thì công thức dùng nó bị đệm qua 12 tháng và trả giá trị
+tháng 1 cho cả năm — sai số liệu mà không lỗi nào nổ ra.
+
+### Chọn nhiều dòng để kéo một lượt
+Ctrl+bấm nhặt từng dòng, Shift+bấm lấy cả dải. Giữ theo **danh tính phần tử** chứ không theo
+chỉ số — bảng dựng lại `tbody` mỗi lần gõ ô lọc và mỗi lần đổi trang. Ở bảng Cost Code gần
+như mọi ô đều là ô nhập nên **chính ô tay nắm** là chỗ chọn, cũng là chỗ để kéo.
+
+### Định dạng công thức
+`FX.fxFormat()` in lại từ **cây**, không chắp nối chuỗi. Chốt an toàn: đọc lại bản vừa in,
+cây phải trùng cây cũ, không trùng thì trả nguyên chuỗi gốc. 18 công thức phủ mọi loại nút
+được kiểm hai lần — cây không đổi, và **tính ra cùng một số**.
+
+### Thanh tiến trình khi chạy tính
+`ENGINE.runAsync()` nhường lại cho trình duyệt ở hai mốc tự nhiên đã có sẵn. `run()` đồng bộ
+giữ nguyên — vẫn là đường mà bộ kiểm và golden đi qua. Có phép kiểm chứng minh hai bản cho
+ra **trùng từng con số**.
+
+### Xuất Excel có định dạng
+Bản SheetJS trong repo là bản cộng đồng: ghi được độ rộng cột và định dạng số nhưng **không
+ghi được tô đậm, tô nền, viền hay đóng băng dòng** — id phông/nền/viền bị ghi cứng bằng 0.
+Đã thử trên chính file trong repo để chắc, chứ không đoán.
+
+Nhưng `vendor/xltable.js` đã tự viết đủ những thứ đó từ lâu, chỉ vướng chuyện nó chuyên cho
+một sheet. `platform/xlsx-write.js` đi đúng cách đó, mở cho nhiều sheet: tiêu đề đậm có nền
+và gạch chân, đóng băng dòng 1, độ rộng cột theo nội dung, định dạng số theo từng cột, dòng
+TỔNG in đậm, lọc tự động. Không thêm thư viện, không đụng vào `vendor/`.
+
+`golden-result.json` **không đổi một ký tự**. Trong file xuất ra, **không một ô có giá trị
+nào đổi** — chỉ 37 ô RỖNG nay không ghi nữa, đúng chuẩn .xlsx và cho file gọn hơn.
+
+---
+
 ## Đợt 6 — Kéo thả, hai lỗi thật, và ảnh hưởng tăng lương · 2026-09-03
 
 Mười góp ý nữa sau khi mang app vào việc thật. Hai trong số đó là **lỗi thật đã tìm ra

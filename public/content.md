@@ -647,7 +647,7 @@ res.n_diffs: {n} lượt lệch
 res.not_run_hint: Số liệu chỉ được tính khi bạn bấm nút bên dưới, để tránh chạy lại mỗi lần mở màn hình.
 res.pivot_title: Theo Account / Budget / Cost Code / Cost Center
 res.raise_before: Ngân sách nếu không tăng lương
-res.raise_by_fc: Tách theo Formula Code
+res.raise_by: Tách theo
 res.raise_hint: So với chính bộ khai báo này nhưng <strong>bỏ hết mọi đợt tăng</strong>. Các đợt nhân chồng lên nhau nên phần của từng đợt tính theo thứ tự khai báo — nhờ vậy cộng lại đúng bằng tổng.
 res.raise_none: Chưa khai đợt tăng lương nào
 res.raise_th_amount: Tiền tăng thêm

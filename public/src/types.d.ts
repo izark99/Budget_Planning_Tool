@@ -153,6 +153,8 @@ interface ProjectState {
     comboLimit?: number;
     /** Hỏi trước khi tắt tab khi còn thay đổi chưa lưu ra file. Mặc định bật. */
     warnOnClose?: boolean;
+    /** Bảng ảnh hưởng tăng lương đang tách theo cột nào. */
+    raiseBy?: string;
     [k: string]: any;
   };
 }

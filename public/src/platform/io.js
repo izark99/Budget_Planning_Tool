@@ -4,6 +4,7 @@
    Lỗi được ném lên cho tầng UI bắt và hiển thị.
    =========================================================== */
 import { CAL_FIELDS, M, MONTHS, S, RESULT, nkey, numOf } from '../core/state.js';
+import { buildWorkbook } from './xlsx-write.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 
@@ -66,7 +67,11 @@ async function apiLogout() {
 function exportBudget(opt) {
   const R = RESULT;
   {
-    const wb = XLSX.utils.book_new();
+    /* Mỗi sheet: { name, aoa, fmt, totalRows } — fmt là kiểu định dạng THEO CỘT
+       nên tiền ra tiền, hệ số ra hệ số, tháng ra số nguyên. */
+    const sheets = [];
+    const money = (n) => { return new Array(n).fill('money'); };
+    const text = (n) => { return new Array(n).fill('text'); };
     const acols = ENGINE.attrCols().map((c) => { return c.alias; })
       .concat((S.classes || []).map((c) => { return c.name; }).filter(Boolean));
     const fcs = R.formulas;
@@ -82,7 +87,10 @@ function exportBudget(opt) {
           line.push(tot); a.push(line);
         }
       }
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a), 'NganSach_TheoNguoi');
+      sheets.push({
+        name: 'NganSach_TheoNguoi', aoa: a,
+        fmt: text(acols.length).concat(['int', 'num'], money(fcs.length + 1))
+      });
     }
 
     if (opt.pivot) {
@@ -90,7 +98,7 @@ function exportBudget(opt) {
       R.pivot.forEach((p) => {
         a2.push(/** @type {any[]} */ ([p.accountCode, p.budgetCode, p.costCode, p.costCenter, p.formulaCode, p.formulaName]).concat(p.m).concat([p.total]));
       });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a2), 'TongHop_PhanLoai');
+      sheets.push({ name: 'TongHop_PhanLoai', aoa: a2, fmt: text(6).concat(money(M + 1)) });
     }
 
     if (opt.fc) {
@@ -103,7 +111,10 @@ function exportBudget(opt) {
         (fc.months || []).map((x) => { return 'T' + String(x).padStart(2, '0'); }).join(' ')]).concat(mt).concat([R.totalsByFc[c]]));
       });
       a3.push(/** @type {any[]} */ ([t('export.total'), '', '', '']).concat(R.monthTotals).concat([R.grand]));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a3), 'TongHop_FormulaCode');
+      sheets.push({
+        name: 'TongHop_FormulaCode', aoa: a3,
+        fmt: text(4).concat(money(M + 1)), totalRows: [a3.length - 1]
+      });
     }
 
     if (opt.conflict) {
@@ -111,7 +122,10 @@ function exportBudget(opt) {
       R.conflicts.forEach((c) => {
         a4.push([c.no, c.id, c.position, c.unit, c.formulaCode, c.costCode, c.month, c.formula, c.exception, c.rule, c.final, c.diff ? 'CO' : '', c.won ? 'To trinh' : 'Cong thuc']);
       });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a4), 'DoiChieu_ToTrinh');
+      sheets.push({
+        name: 'DoiChieu_ToTrinh', aoa: a4,
+        fmt: text(6).concat(['int', 'money', 'money', 'text', 'money', 'text', 'text'])
+      });
     }
 
     if (opt.audit) {
@@ -148,7 +162,7 @@ function exportBudget(opt) {
           (r.formulas || []).join(' ') || t('export.audit.all'),
           impact[r.id] == null ? '' : Math.round(impact[r.id])]);
       });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a5), 'BanKhaiBao');
+      sheets.push({ name: 'BanKhaiBao', aoa: a5, fmt: text(6) });
     }
 
     if (opt.long) {
@@ -173,11 +187,15 @@ function exportBudget(opt) {
           }
         }
       }
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(a6), 'ChiTiet_Dong');
+      sheets.push({ name: 'ChiTiet_Dong', aoa: a6, fmt: text(8).concat(['int', 'money']) });
     }
 
     const fn = 'NganSach_' + (S.meta.year || '') + '_' + new Date().toISOString().slice(0, 10) + '.xlsx';
-    XLSX.writeFile(wb, fn, { compression: true });
+    /* Uint8Array -> BlobPart: cắt đúng vùng đang dùng của bộ đệm. */
+    const bytes = buildWorkbook(sheets);
+    downloadBlob(new Blob([bytes.slice().buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    }), fn);
     return fn;
   }
 }

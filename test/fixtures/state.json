@@ -584,7 +584,7 @@
       }
     ],
     "file": "dinh-bien-mau.xlsx",
-    "at": "15:44:30 3/9/2026"
+    "at": "16:06:51 3/9/2026"
   },
   "cols": [
     {
@@ -826,7 +826,7 @@
     "groupCol": "",
     "tables": [
       {
-        "id": "kuqxg79",
+        "id": "bzj3izw",
         "scope": "*",
         "m": [
           {
@@ -931,7 +931,7 @@
   },
   "formulas": [
     {
-      "id": "7jwibcq",
+      "id": "fiyvp3r",
       "code": "FC_LUONG_HESO",
       "name": "Lương theo hệ số",
       "mode": "monthly",
@@ -951,7 +951,7 @@
       ],
       "rules": [
         {
-          "id": "bvxawh0",
+          "id": "9ncx1l5",
           "name": "Tất cả",
           "cond": "",
           "formula": "LUONG_CO_BAN * DINH_BIEN * NGAY_CONG_THUC_TE / NGAY_CONG_CHUAN"
@@ -959,7 +959,7 @@
       ]
     },
     {
-      "id": "0uj2pg9",
+      "id": "mdjhmhr",
       "code": "FC_BHXH",
       "name": "BHXH-BHYT-BHTN phần công ty",
       "mode": "monthly",
@@ -979,7 +979,7 @@
       ],
       "rules": [
         {
-          "id": "kgfgeux",
+          "id": "d3pbens",
           "name": "Tất cả",
           "cond": "",
           "formula": "[Lương cơ bản] * TY_LE_BHXH_CTY% * DINH_BIEN"
@@ -987,7 +987,7 @@
       ]
     },
     {
-      "id": "suqlfa7",
+      "id": "6jcilkb",
       "code": "FC_DIENTHOAI",
       "name": "Phụ cấp điện thoại",
       "mode": "monthly",
@@ -1007,7 +1007,7 @@
       ],
       "rules": [
         {
-          "id": "ypnylrx",
+          "id": "h7nss7b",
           "name": "Mặc định",
           "cond": "",
           "formula": "300000"
@@ -1015,7 +1015,7 @@
       ]
     },
     {
-      "id": "p9c8wxt",
+      "id": "0jm450l",
       "code": "FC_DULICH",
       "name": "Du lịch nghỉ mát",
       "mode": "spread",
@@ -1025,7 +1025,7 @@
       ],
       "rules": [
         {
-          "id": "1l8iq45",
+          "id": "umt9ql4",
           "name": "Tất cả",
           "cond": "",
           "formula": "6000000"

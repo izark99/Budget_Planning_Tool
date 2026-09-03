@@ -2,7 +2,7 @@
    MÀN 10 — KẾT QUẢ NGÂN SÁCH
    Tách nguyên văn từ khối 08-view-result-boot.js (phần kết quả).
    =========================================================== */
-import { M, MONTHS, RESULT, S, fmt, fmtNum, fmtShort, setRESULT } from '../core/state.js';
+import { M, MONTHS, RESULT, S, fmt, fmtNum, fmtShort, nkey, setRESULT, touch } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { exportBudget } from '../platform/io.js';
@@ -125,18 +125,63 @@ function viewResult() {
       el('td', { class: 'num', text: fmtNum(Math.round(share(R.raiseTotal) * 100) / 100) + '%' })
     ]));
 
-    /* Tách theo Formula Code: gộp mọi đợt lại cho từng mã. */
-    const byFc = {};
-    R.raiseImpact.forEach((x) => {
-      Object.keys(x.byFc).forEach((k) => { byFc[k] = (byFc[k] || 0) + x.byFc[k]; });
-    });
-    const fcRows = Object.keys(byFc).sort((a, b) => { return byFc[b] - byFc[a]; }).map((k) => {
+    /* Tách theo cách người dùng chọn — không chỉ theo Formula Code.
+       Ảnh hưởng TỔNG của từng dòng là data − dataNoRaise, đã có sẵn, nên gộp
+       theo bất kỳ cột nào cũng chỉ là một vòng lặp; không phải bắt máy tính lại. */
+    const ccOf = {};
+    (S.maps.costCode || []).forEach((x) => { ccOf[nkey(x.formulaCode)] = x.costCode || t('engine.map.none'); });
+    const GRP_FC = 'Formula Code', GRP_CC = 'Cost Code';
+    const grpCols = [GRP_FC, GRP_CC]
+      .concat((S.classes || []).map((c) => { return c.name; }).filter(Boolean))
+      .concat(ENGINE.attrCols().map((c) => { return c.alias; }));
+    if (grpCols.indexOf(S.ui.raiseBy) < 0) S.ui.raiseBy = GRP_FC;
+
+    function raiseBreakdown(by) {
+      /** @type {Record<string, number>} */
+      const acc = {};
+      if (by === GRP_FC || by === GRP_CC) {
+        R.raiseImpact.forEach((x) => {
+          Object.keys(x.byFc).forEach((code) => {
+            const k = by === GRP_FC ? code : (ccOf[nkey(code)] || t('engine.map.none'));
+            acc[k] = (acc[k] || 0) + x.byFc[code];
+          });
+        });
+        return acc;
+      }
+      /* Theo một cột của dòng định biên: cộng chênh lệch từng dòng. */
+      for (let c = 0; c < R.data.length; c++) {
+        const a = R.data[c], a0 = R.dataNoRaise[c];
+        for (let i = 0; i < R.rows.length; i++) {
+          let d = 0;
+          for (let m = 0; m < M; m++) d += a[i * M + m] - a0[i * M + m];
+          if (!d) continue;
+          const v = R.rows[i][by];
+          const k = String(v == null || v === '' ? t('engine.map.none') : v).trim();
+          acc[k] = (acc[k] || 0) + d;
+        }
+      }
+      return acc;
+    }
+
+    const byGrp = raiseBreakdown(S.ui.raiseBy);
+    const fcRows = Object.keys(byGrp).sort((a, b) => { return byGrp[b] - byGrp[a]; }).map((k) => {
       return el('tr', {}, [
-        el('td', { class: 'mono', text: k }),
-        el('td', { class: 'num money', text: fmt(byFc[k]) }),
-        el('td', { class: 'num', text: fmtNum(Math.round(share(byFc[k]) * 100) / 100) + '%' })
+        el('td', { class: S.ui.raiseBy === GRP_FC || S.ui.raiseBy === GRP_CC ? 'mono' : '', text: k }),
+        el('td', { class: 'num money', text: fmt(byGrp[k]) }),
+        el('td', { class: 'num', text: fmtNum(Math.round(share(byGrp[k]) * 100) / 100) + '%' })
       ]);
     });
+    /* Hàng tổng: gộp theo cách nào thì tổng vẫn phải bằng raiseTotal. */
+    fcRows.push(el('tr', { class: 'tot' }, [
+      el('td', { text: t('res.tong_cong') }),
+      el('td', { class: 'num', text: fmt(Object.keys(byGrp).reduce((a, k) => { return a + byGrp[k]; }, 0)) }),
+      el('td', { class: 'num', text: fmtNum(Math.round(share(R.raiseTotal) * 100) / 100) + '%' })
+    ]));
+
+    const grpSel = el('select', {
+      style: 'width:auto',
+      onchange: function (e) { S.ui.raiseBy = e.target.value; touch(); render(); }
+    }, grpCols.map((c) => { return el('option', { value: c, selected: S.ui.raiseBy === c, text: c }); }));
 
     wrap.appendChild(el('div', { class: 'panel' }, [
       el('header', {}, [
@@ -159,17 +204,19 @@ function viewResult() {
           el('tbody', {}, rows)
         ])
       ])]),
-      fcRows.length ? el('div', { class: 'body' }, [el('h4', { class: 'sec', text: t('res.raise_by_fc') })]) : null,
-      fcRows.length ? el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
+      el('div', { class: 'body' }, [el('div', { class: 'row', style: 'align-items:center;gap:10px' }, [
+        el('h4', { class: 'sec', style: 'margin:0', text: t('res.raise_by') }), grpSel
+      ])]),
+      el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
         el('table', {}, [
           el('thead', {}, [el('tr', {}, [
-            el('th', { text: 'Formula Code' }),
+            el('th', { text: S.ui.raiseBy }),
             el('th', { class: 'num', text: t('res.raise_th_amount') }),
             el('th', { class: 'num', text: t('res.raise_th_share') })
           ])]),
           el('tbody', {}, fcRows)
         ])
-      ])]) : null
+      ])])
     ]));
   }
 
