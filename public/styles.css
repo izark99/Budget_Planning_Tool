@@ -78,6 +78,12 @@ button, input, select, textarea { font: inherit; color: inherit; }
   color: #E2EAE8; padding: 6px 8px; border-radius: var(--r); cursor: pointer; font-size: 12px;
 }
 .railfoot button:hover { background: rgba(255,255,255,.14); }
+/* Trạng thái "đã lưu ra file .json chưa" — nói thẳng ở đây thay vì chỉ chờ lúc
+   đóng tab mới nhắc. */
+.savest { font-size: 11px; color: #7C9195; margin: -2px 0 6px; }
+.savest.warn { color: var(--ochre); }
+.wclose { display: flex; align-items: center; gap: 6px; margin-top: 8px; cursor: pointer; }
+.wclose input { width: auto; margin: 0; }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .topbar {

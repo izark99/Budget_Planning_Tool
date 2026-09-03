@@ -31,6 +31,9 @@ rail.logout: ⏻  Đăng xuất
 rail.open_project: ⤒  Mở file dự án
 rail.reset: ↺  Xoá hết, làm lại
 rail.save_project: ⤓  Lưu file dự án (.json)
+rail.saved_at: ✓ Đã lưu file lúc {at}
+rail.unsaved: ⚠ Chưa lưu ra file .json
+rail.warn_on_close: Hỏi trước khi tắt tab
 view.cal.sub: Ngày công chuẩn và ngày nghỉ có lương từng tháng
 view.cal.tab: Ngày công
 view.cal.title: Ngày công & ngày nghỉ
@@ -60,6 +63,10 @@ btn.agree: Đồng ý
 btn.cancel: Huỷ
 btn.close: Đóng
 btn.import: Nhập dữ liệu
+confirm.logout.body: Dữ liệu vẫn nằm trong trình duyệt của máy này, nhưng bạn CHƯA lưu ra file .json. Xoá cache trình duyệt hoặc đổi máy là mất. Lưu một bản trước khi đi?
+confirm.logout.justGo: Đăng xuất luôn
+confirm.logout.saveFirst: Lưu file .json rồi đăng xuất
+confirm.logout.title: Đăng xuất
 confirm.reset_all: Xoá toàn bộ dữ liệu đang có và bắt đầu lại?
 confirm.table.clear: Xoá sạch {n} dòng của bảng này?
 err.bad_project_file: Không phải file dự án hợp lệ

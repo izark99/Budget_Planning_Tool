@@ -4,11 +4,11 @@
    lấy nguyên văn từ khối SHELL của 08-view-result-boot.js.
    Phần xác thực thay hẳn cho AUTH_URL + localStorage cũ.
    =========================================================== */
-import { S, RESULT, setS, setRESULT, defaultState, save, load, touch, installAutosave, setNotifier, fmt, nkey } from './core/state.js';
+import { S, RESULT, setS, setRESULT, defaultState, save, load, touch, installAutosave, markExported, needsExport, setNotifier, fmt, nkey } from './core/state.js';
 import { loadContent, t } from './core/content.js';
 import { ENGINE } from './core/engine.js';
 import { pickFile, downloadBlob, apiSession, apiLogout } from './platform/io.js';
-import { confirmBox, el, setRenderer, toast } from './ui/dom.js';
+import { confirmBox, el, modal, setRenderer, toast } from './ui/dom.js';
 import { viewHC } from './views/headcount.js';
 import { viewSetup } from './views/setup.js';
 import { viewClasses } from './views/classes.js';
@@ -77,9 +77,22 @@ function shellRender() {
     })),
     el('div', { class: 'railfoot' }, [
       el('button', { text: t('rail.save_project'), onclick: saveProject }),
+      /* Nói thẳng trạng thái thay vì chỉ chờ lúc đóng tab mới nhắc. */
+      S.hc.rows.length ? el('div', {
+        class: 'savest' + (needsExport() ? ' warn' : ''),
+        text: needsExport() ? t('rail.unsaved')
+          : t('rail.saved_at', { at: new Date(S.meta.exportedAt).toLocaleTimeString('vi-VN') })
+      }) : null,
       el('button', { text: t('rail.open_project'), onclick: openProject }),
       el('button', { text: t('rail.reset'), onclick: resetAll }),
       el('button', { text: t('rail.logout'), onclick: logout }),
+      el('label', { class: 'wclose' }, [
+        el('input', {
+          type: 'checkbox', checked: S.ui.warnOnClose !== false,
+          onchange: function (e) { S.ui.warnOnClose = e.target.checked; touch(); }
+        }),
+        el('span', { text: t('rail.warn_on_close') })
+      ]),
       el('div', { style: 'margin-top:8px', text: t('rail.local_note') })
     ])
   ]);
@@ -98,9 +111,13 @@ function shellRender() {
 }
 
 function saveProject() {
+  /* Đánh dấu TRƯỚC khi đóng gói: file phải tự mang mốc "đã lưu", nếu không thì
+     mở lại nó ra là lập tức báo "chưa lưu ra file". */
+  markExported();
   downloadBlob(new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' }),
     'ngansach_' + (S.meta.year || '') + '_' + new Date().toISOString().slice(0, 10) + '.json');
   toast(t('toast.save_project'), 'good');
+  shellRender();
 }
 function openProject() {
   pickFile('.json', (f) => {
@@ -149,8 +166,17 @@ async function checkSessionAlive() {
 }
 
 async function logout() {
-  await apiLogout();
-  location.href = '/login';
+  /* Dữ liệu KHÔNG mất khi đăng xuất — localStorage vẫn còn. Cái thiếu là bản sao
+     ra file .json, nên chỉ hỏi khi thật sự chưa có bản nào mới. */
+  if (!needsExport()) { await apiLogout(); location.href = '/login'; return; }
+  modal(t('confirm.logout.title'), el('p', { text: t('confirm.logout.body'), style: 'margin:0' }), [
+    { label: t('btn.cancel') },
+    { label: t('confirm.logout.justGo'), onclick: function () { apiLogout().then(() => { location.href = '/login'; }); } },
+    {
+      label: t('confirm.logout.saveFirst'), cls: 'pri',
+      onclick: function () { saveProject(); apiLogout().then(() => { location.href = '/login'; }); }
+    }
+  ]);
 }
 
 /* ===========================================================

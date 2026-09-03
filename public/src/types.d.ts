@@ -113,7 +113,17 @@ interface DashFilters {
 interface ProjectState {
   /** Số hiệu định dạng; load() từ chối tệp có v khác. */
   v: number;
-  meta: { name: string; year: number };
+  meta: {
+    name: string;
+    year: number;
+    /** Số lần sửa, và giá trị của nó tại lần lưu ra file .json gần nhất. Chênh
+     *  nhau nghĩa là có thay đổi chưa có bản sao mang đi được. Dùng bộ đếm chứ
+     *  không dùng mốc thời gian để không lọt thao tác trong cùng một mili-giây. */
+    changeSeq?: number;
+    exportedSeq?: number;
+    /** Mốc lần lưu ra file gần nhất — chỉ để hiện "Đã lưu lúc …". */
+    exportedAt?: number;
+  };
   hc: { headers: string[]; rows: HcRow[]; file: string; at: string };
   cols: ColDef[];
   params: Array<{ name: string; value: number; note: string }>;
@@ -141,6 +151,8 @@ interface ProjectState {
     pageSize?: number;
     /** Trần cho "Sinh sẵn từ định biên". 0 hoặc thiếu = không giới hạn. */
     comboLimit?: number;
+    /** Hỏi trước khi tắt tab khi còn thay đổi chưa lưu ra file. Mặc định bật. */
+    warnOnClose?: boolean;
     [k: string]: any;
   };
 }

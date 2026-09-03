@@ -4,6 +4,67 @@ Gộp theo đợt việc, mới nhất ở trên. Dự án chưa đánh số phi
 
 ---
 
+## Đợt 6 — Kéo thả, hai lỗi thật, và ảnh hưởng tăng lương · 2026-09-03
+
+Mười góp ý nữa sau khi mang app vào việc thật. Hai trong số đó là **lỗi thật đã tìm ra
+nguyên nhân**, một là **khoảng trống nghiệp vụ** giấu suốt từ đầu.
+
+### Hai lỗi thật `d5d797f`
+- **Chip chèn ghi vào ô đã bị vứt.** Ô công thức dùng chung lấy `drawShared` làm `onBlur`.
+  Bấm chip là một `mousedown` nên textarea **blur trước** → cả khối dựng lại → `activeFx`
+  trỏ vào ô đã rời DOM. Tới lượt `click` thì `_insert()` ghi vào ô ma đó, mà `onChange`
+  vẫn ghi thẳng vào dữ liệu. Bấm N lần thì tới lần dựng lại sau, cả N đoạn hiện ra một
+  lượt — đúng như người dùng báo. Sửa: chip chặn ngay `mousedown`, đúng cách mà bảng gợi
+  ý khi gõ đã làm từ đầu.
+- **Tên bắt đầu bằng chữ số.** Ô nhập tên tham số lọc `[^A-Z0-9_]`, tức app **cho phép**
+  đặt `13TH_LUONG`. Nhưng `tokenize()` thử số trước khi thử tên nên nó tách thành số `13`
+  rồi tên `TH_LUONG`, người dùng nhận "Thừa ký tự sau biểu thức". App hứa một đằng, máy
+  đọc một nẻo — sửa ở máy vì chính app đã hứa.
+
+### Hai biến hệ thống mới `d5d797f`
+`TONG_THANG` (số tháng dòng đó có định biên) và `THANG_BAT_DAU` (tháng đầu tiên có định
+biên). Cả hai là hằng của từng **dòng** nên **không** nằm trong `MONTH_VARS` — nhét vào đó
+là ép mọi công thức dùng chúng eval lại 12 lần. Bộ ba biến cũ đang chép tay ở bốn chỗ, gom
+về hằng `SYS_VARS`.
+
+### Giao diện `2333576`
+- Hộp gợi ý chèn thành `.panel` thật, đúng hình danh sách Formula Code — tiêu đề nằm ngoài
+  vùng cuộn nên xoá hẳn được mẹo `sticky` + lề âm của đợt trước.
+- Dải thẻ "thử trên một dòng" chia hàng đều: 12 thẻ ra **6 + 6** thay vì 7 + 5.
+- Công thức thêm mới chèn ngay **sau** cái đang chọn.
+- "Công thức dùng chung" và "Tham số dùng chung" gấp lại được.
+
+### Kéo thả sắp xếp `d648dab`
+Bấm ↑ ↓ từng nấc quá chậm. Dùng DnD gốc HTML5 qua ba hàm dùng chung (`dragList`,
+`moveBeside`, `sortByKeys`). **Then chốt:** `commit` nhận **phần tử** chứ không nhận chỉ
+số — khi bảng đang lọc hoặc đang ở trang 2, chỉ số DOM không phải chỉ số mảng. Nút "Sinh
+sẵn" của bảng Cost Code nay sắp lại cho khớp thứ tự công thức chi phí.
+
+### Ảnh hưởng của tăng lương `e50bf4b`
+App áp tăng lương vào số rồi **vứt luôn giá trị gốc**, nên không màn nào nói được nó làm
+ngân sách đội lên bao nhiêu. Nay đo bằng cách chạy lại lượt tính với danh sách đợt tăng
+cắt dần: đóng góp đợt k = Aₖ − Aₖ₋₁, cộng dồn theo thứ tự nên **các phần cộng lại đúng
+bằng tổng**.
+
+**Vì sao chạy lại cả lượt chứ không nhân chia tại chỗ cho rẻ:** đợt tăng có **hai** đường
+vào số liệu — liệt kê đích danh một công thức *dùng chung* thì nó được áp bên trong chính
+công thức đó, còn lại thì áp ở vòng tính. Bản đầu đo ở vòng ngoài nên bỏ sót hẳn đường thứ
+nhất, và chính file mẫu dùng đúng đường đó: báo **0 đồng** thay vì 35.426.659.
+
+Màn Kết quả có panel từng đợt, Dashboard có thẻ và cột "Do tăng lương", sheet "Bản khai
+báo" có thêm cột tiền. `golden-result.json` **không đổi một ký tự**; `golden-export.json`
+chỉ đổi đúng hai ô mới.
+
+### Nhắc lưu file .json
+Nói cho đúng trước: dữ liệu **không** mất khi tắt tab hay đăng xuất — có tự lưu
+`localStorage` cộng một lượt xả ở `beforeunload`. Cái thật sự thiếu là **bản sao ra file**:
+`localStorage` gắn với đúng một trình duyệt trên đúng một máy. Nay thanh bên nói thẳng
+"chưa lưu ra file", đăng xuất thì hỏi lại, và tắt tab thì trình duyệt hỏi — có công tắc
+tắt được vì hộp thoại đó hiện ở mọi lần đóng. Dùng **bộ đếm số lần sửa** chứ không dùng
+mốc thời gian: hai thao tác trong cùng một mili-giây với lần lưu sẽ lọt qua phép so mốc.
+
+---
+
 ## Đợt 5 — Dùng thật rồi báo lại · 2026-09-03
 
 Bốn đợt góp ý từ người dùng sau khi mang app vào việc thật. Phần lớn là giao diện,

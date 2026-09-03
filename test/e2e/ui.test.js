@@ -668,6 +668,87 @@ describe('ảnh hưởng của tăng lương', () => {
   });
 });
 
+describe('nhắc lưu file .json', () => {
+  /* Dữ liệu KHÔNG mất khi tắt tab — có tự lưu localStorage cộng một lượt xả ở
+     beforeunload, và đăng xuất cũng không xoá. Cái thật sự thiếu là bản sao ra
+     file .json: localStorage gắn với đúng một trình duyệt trên đúng một máy. */
+  it('thanh bên báo "chưa lưu ra file" khi có thay đổi', async () => {
+    await inPage(page, 'st.S.meta.exportedSeq = 0; st.touch(); return true;');
+    await goToView(page, 'Định biên');
+    const txt = await page.evaluate(() => {
+      const n = document.querySelector('.railfoot .savest');
+      return n ? { text: n.textContent, warn: n.classList.contains('warn') } : null;
+    });
+    expect(txt).not.toBeNull();
+    expect(txt.warn).toBe(true);
+    expect(txt.text).toContain('Chưa lưu');
+  });
+
+  it('lưu xong thì báo đã lưu, và không còn coi là chưa lưu', async () => {
+    await inPage(page, `
+      const app = await import('/src/app.js');
+      st.markExported();
+      return { needs: st.needsExport(), at: st.S.meta.exportedAt };
+    `);
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Định biên');
+    const r = await page.evaluate(() => {
+      const n = document.querySelector('.railfoot .savest');
+      return n ? { text: n.textContent, warn: n.classList.contains('warn') } : null;
+    });
+    expect(r.warn).toBe(false);
+    expect(r.text).toContain('Đã lưu');
+    expect(await inPage(page, 'return st.needsExport();')).toBe(false);
+  });
+
+  it('sửa tiếp thì lại thành chưa lưu', async () => {
+    await inPage(page, 'st.markExported(); st.touch(); return true;');
+    expect(await inPage(page, 'return st.needsExport();')).toBe(true);
+  });
+
+  it('công tắc "hỏi trước khi tắt tab" bật sẵn và tắt được', async () => {
+    await goToView(page, 'Định biên');
+    const box = page.locator('.railfoot .wclose input');
+    expect(await box.isChecked()).toBe(true);
+    await box.uncheck();
+    expect(await inPage(page, 'return st.S.ui.warnOnClose;')).toBe(false);
+    await box.check();
+    expect(await inPage(page, 'return st.S.ui.warnOnClose;')).toBe(true);
+  });
+
+  /* Thứ người dùng thật sự yêu cầu: tắt tab thì trình duyệt hỏi lại. Không đọc
+     được chữ trong hộp thoại đó, nhưng kiểm được cái quyết định nó có hiện hay
+     không — bộ nghe beforeunload có gọi preventDefault hay không. */
+  const willAsk = () => page.evaluate(() => {
+    const e = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(e);
+    return e.defaultPrevented;
+  });
+
+  it('còn thay đổi chưa lưu thì tắt tab bị hỏi lại', async () => {
+    await inPage(page, 'st.S.ui.warnOnClose = true; st.S.meta.exportedSeq = 0; st.touch(); return true;');
+    expect(await willAsk()).toBe(true);
+  });
+
+  it('lưu rồi thì tắt tab đi thẳng, không hỏi', async () => {
+    await inPage(page, 'st.markExported(); return true;');
+    expect(await willAsk()).toBe(false);
+  });
+
+  it('tắt công tắc thì không hỏi nữa dù còn thay đổi', async () => {
+    await inPage(page, 'st.S.ui.warnOnClose = false; st.S.meta.exportedSeq = 0; st.touch(); return true;');
+    expect(await willAsk()).toBe(false);
+    await inPage(page, 'st.S.ui.warnOnClose = true; return true;');
+  });
+
+  it('chưa nạp định biên thì không nhắc gì — chưa có gì để mà lưu', async () => {
+    const saved = await inPage(page, 'return JSON.stringify(st.S.hc);');
+    await inPage(page, 'st.S.hc = { headers: [], rows: [], file: "", at: "" }; return true;');
+    expect(await inPage(page, 'return st.needsExport();')).toBe(false);
+    await inPage(page, 'st.S.hc = JSON.parse(a); return true;', saved);
+  });
+});
+
 describe('mọi màn hình', () => {
   it('mở được hết, không màn nào ném lỗi', async () => {
     const labels = await page.evaluate(() =>

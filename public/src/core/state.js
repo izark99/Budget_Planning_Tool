@@ -139,15 +139,38 @@ function load() {
 }
 let saveT = null, quotaWarned = false;
 function touch() {
-  dirty = true; clearTimeout(saveT);
+  /* Đếm SỐ LẦN sửa chứ không ghi mốc thời gian: hai thao tác trong cùng một
+     mili-giây với lần lưu sẽ lọt qua phép so mốc, còn bộ đếm thì không. */
+  dirty = true; S.meta.changeSeq = (S.meta.changeSeq || 0) + 1; clearTimeout(saveT);
   saveT = setTimeout(() => {
     if (!save() && !quotaWarned) { quotaWarned = true; notify(t('toast.autosave.fail'), 'bad'); }
   }, 700);
 }
 
+/* DỮ LIỆU KHÔNG MẤT KHI TẮT TAB — có tự lưu vào localStorage cộng một lượt xả ở
+   beforeunload, và đăng xuất cũng không xoá. Cái thật sự thiếu là BẢN SAO RA
+   FILE .json: localStorage gắn với đúng một trình duyệt trên đúng một máy, xoá
+   cache là hết. Hai hàm dưới đây theo dõi đúng khoảng cách đó, không phải
+   khoảng cách "đã lưu localStorage hay chưa". */
+function markExported() {
+  S.meta.exportedSeq = S.meta.changeSeq || 0;
+  S.meta.exportedAt = Date.now();                   /* chỉ để hiện "Đã lưu lúc …" */
+  save();
+}
+function needsExport() {
+  if (!S.hc.rows.length) return false;              /* chưa có gì để mà lưu */
+  return (S.meta.changeSeq || 0) > (S.meta.exportedSeq || 0);
+}
+
 /* Trước đây đăng ký ngay ở cấp cao nhất của script; giờ app.js gọi tường minh. */
 function installAutosave() {
-  window.addEventListener('beforeunload', () => { if (dirty) save(); });
+  window.addEventListener('beforeunload', (e) => {
+    if (dirty) save();
+    /* Trình duyệt không cho đổi chữ trong hộp thoại này, chỉ cho bật/tắt. Nó
+       hiện ở MỌI lần đóng khi còn thay đổi chưa lưu ra file, nên phải tắt được
+       — công tắc nằm ở thanh bên. */
+    if (S.ui.warnOnClose !== false && needsExport()) { e.preventDefault(); e.returnValue = ''; }
+  });
 }
 
 /* ---------- Số ---------- */
@@ -175,6 +198,6 @@ export {
   LS_KEY, M, MONTHS, ROLES, CAL_FIELDS, SYS_VARS,
   uid, allMonths, blankCalTable, defaultState,
   S, RESULT, dirty, setS, setRESULT,
-  save, load, touch, installAutosave,
+  save, load, touch, installAutosave, markExported, needsExport,
   NF, fmt, fmtShort, nkey, numOf, NF_NUM, fmtNum
 };
