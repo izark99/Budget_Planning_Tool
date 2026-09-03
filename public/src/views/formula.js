@@ -8,7 +8,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { distinctVals } from '../platform/io.js';
 import { confirmBox, el, esc, modal, render, ribbon, toast } from '../ui/dom.js';
-import { panel } from '../ui/widgets.js';
+import { dragList, moveBeside, panel } from '../ui/widgets.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 
 function currentFC() {
@@ -48,6 +48,12 @@ function viewFormula() {
   const ul = el('div', { class: 'body tight fclist' });
   const ccOf = {};
   (S.maps.costCode || []).forEach((x) => { ccOf[nkey(x.formulaCode)] = x.costCode; });
+  /* Kéo thả để sắp xếp — bấm ↑ ↓ từng nấc quá chậm khi có nhiều công thức.
+     Cùng cơ chế bỏ kết quả đã tính như move(): thứ tự này là thứ tự cột ở màn
+     Kết quả và trong file Excel xuất ra. */
+  const drag = dragList((from, to, before) => {
+    if (moveBeside(S.formulas, from, to, before)) { setRESULT(null); touch(); render(); }
+  });
   S.formulas.forEach((f, idx) => {
     const on = fc && f.id === fc.id;
     /* ↑ ↓ đổi chỗ hai Formula Code trong S.formulas — giống hệt bảng Phân loại nhóm.
@@ -60,11 +66,18 @@ function viewFormula() {
       S.formulas[to] = f; S.formulas[idx] = other;
       setRESULT(null); touch(); render();
     }
-    ul.appendChild(el('div', {
+    /* Tay nắm riêng: kéo từ đây, còn bấm vào phần còn lại vẫn là chọn công thức.
+       Không có tay nắm thì mỗi lần muốn chọn lại thành một cú kéo hụt. */
+    const grip = el('div', { class: 'fcgrip', title: t('fm.drag_hint'), text: '⠿' });
+    const row = el('div', {
       class: 'fcrow' + (on ? ' on' : ''),
-      /* Bấm ↑/↓ thì chỉ đổi thứ tự, không nhảy sang soạn Formula Code khác. */
-      onclick: function (e) { if (e.target.closest('button')) return; S.ui.fSel = f.id; touch(); render(); }
+      /* Bấm ↑/↓ hay tay nắm thì không nhảy sang soạn Formula Code khác. */
+      onclick: function (e) {
+        if (e.target.closest('button, .fcgrip')) return;
+        S.ui.fSel = f.id; touch(); render();
+      }
     }, [
+      grip,
       el('div', { class: 'fcmain' }, [
         el('div', { style: 'font:600 12px var(--mono)', text: f.code }),
         el('div', { style: 'font-size:12.5px;color:var(--soft)', text: f.name || '' }),
@@ -79,7 +92,11 @@ function viewFormula() {
         el('button', { class: 'btn sm', text: '↑', disabled: idx === 0, onclick: function () { move(idx - 1); } }),
         el('button', { class: 'btn sm', text: '↓', disabled: idx === S.formulas.length - 1, onclick: function () { move(idx + 1); } })
       ])
-    ]));
+    ]);
+    /* Giữ cả ↑ ↓: kéo là đường nhanh, nút là đường chắc khi danh sách đang cuộn
+       hoặc khi dùng bàn phím. */
+    drag.attach(row, f, grip);
+    ul.appendChild(row);
   });
   list.appendChild(ul);
   /* Cột trái: danh sách Formula Code, rồi tới hộp gợi ý ở khoảng trống bên dưới. */

@@ -101,6 +101,7 @@ table.clear: Xoá sạch
 table.comboLimit: Trần sinh
 table.comboLimit.hint: Số dòng tối đa mỗi lần bấm "Sinh sẵn từ định biên". Để trống nghĩa là không giới hạn — sinh đủ mọi tổ hợp có trong định biên.
 table.comboLimit.none: không giới hạn
+table.dragHint: Kéo để đổi thứ tự
 table.downloadTemplate: ⤓ Tải mẫu Excel
 table.exportData: ⤒ Xuất dữ liệu
 table.empty: Chưa có dòng nào
@@ -468,6 +469,7 @@ fm.created_groups: Đã tạo {n} nhóm
 fm.da_xoa_sach: Đã xoá sạch
 fm.dieu_kien_loi: điều kiện lỗi
 fm.dieu_kien_nhom: Điều kiện nhóm
+fm.drag_hint: Kéo để đổi thứ tự
 fm.dinh_nghia_phan_bo: Định nghĩa & phân bổ
 fm.du_kien_tang_luong: Dự kiến tăng lương
 fm.full_year: Cả năm

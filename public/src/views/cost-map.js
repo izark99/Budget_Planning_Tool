@@ -115,6 +115,11 @@ function viewMaps() {
     onChange: chg, onImported: chgNow,
     tableName: 'tblMapCostCode', sheetName: 'CostCode', title: 'Cost Code theo Formula Code',
     prefill: function () { return S.formulas.map((f) => { return { formulaCode: f.code, costCode: '', name: f.name || '' }; }); },
+    /* Bảng này khoá theo Formula Code nên thứ tự của nó có nghĩa: kéo thả để tự
+       sắp, và nút Sinh sẵn sắp lại cho khớp đúng thứ tự công thức chi phí. Ba
+       bảng ánh xạ còn lại không khoá theo thứ tự công thức nên không bật. */
+    reorder: true,
+    orderKeys: function () { return S.formulas.map((f) => { return nkey(f.code); }); },
     guide: [t('maps.cc_guide')]
   }), t('maps.cc_note')));
 

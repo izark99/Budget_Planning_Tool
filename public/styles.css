@@ -252,6 +252,20 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .fcrow > .fcmain { flex: 1; min-width: 0; }
 .fcmove { display: flex; flex-direction: column; gap: 3px; }
 .fcmove .btn { height: 20px; padding: 0 7px; font-size: 11px; }
+/* Tay nắm kéo: kéo từ đây, bấm chỗ khác vẫn là chọn công thức. */
+.fcgrip { color: var(--rule); cursor: grab; font-size: 15px; line-height: 1.1; user-select: none; padding-top: 1px; }
+.fcrow:hover .fcgrip { color: var(--soft); }
+.fcgrip:active { cursor: grabbing; }
+/* Vạch chỉ chỗ sắp thả, và hàng đang kéo mờ đi. Dùng chung cho danh sách
+   Formula Code lẫn các bảng bật cfg.reorder. */
+.dragging { opacity: .4; }
+.drop-before { box-shadow: inset 0 2px 0 0 var(--mineral); }
+.drop-after { box-shadow: inset 0 -2px 0 0 var(--mineral); }
+tr.drop-before > td { box-shadow: inset 0 2px 0 0 var(--mineral); }
+tr.drop-after > td { box-shadow: inset 0 -2px 0 0 var(--mineral); }
+/* Tay nắm trong bảng dữ liệu sửa tại chỗ. */
+td.grip { color: var(--rule); cursor: grab; text-align: center; user-select: none; }
+tr:hover > td.grip { color: var(--soft); }
 /* Thanh phân trang dưới mỗi bảng dài. */
 .pager { display: flex; align-items: center; gap: 8px; padding: 7px 2px 0; flex-wrap: wrap; }
 .pager .muted { color: var(--soft); font-size: 12px; }

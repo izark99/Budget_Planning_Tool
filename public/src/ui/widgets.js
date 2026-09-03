@@ -12,6 +12,80 @@ import { confirmBox, el, modal, toast } from './dom.js';
 /* SheetJS/XLTABLE nạp bằng thẻ <script> nên nằm trên window, không import được. */
 const XLTABLE = window.XLTABLE;
 
+/* ---------- Kéo thả sắp xếp dùng chung ----------
+   Bấm ↑ ↓ từng nấc quá chậm khi danh sách dài. Dùng DnD gốc của HTML5 — cùng
+   API mà ô thả file ở màn Định biên đã dùng, không thêm khái niệm mới.
+
+   commit(kéo, đích, trước) nhận PHẦN TỬ chứ không nhận chỉ số: khi bảng đang
+   lọc hoặc đang ở trang 2, chỉ số của DOM KHÔNG phải chỉ số của mảng gốc. Nơi
+   gọi tự indexOf trong mảng thật — đúng mẹo mà nút xoá của dataTable đã dùng. */
+function dragList(commit) {
+  let dragged = null;
+
+  function clear(node) { node.classList.remove('drop-before', 'drop-after'); }
+
+  return {
+    /** node = hàng; item = phần tử dữ liệu nó đại diện; grip = nơi bấm để kéo. */
+    attach(node, item, grip) {
+      (grip || node).setAttribute('draggable', 'true');
+      node.addEventListener('dragstart', (e) => {
+        dragged = item;
+        /* Firefox không phát dragover nếu dataTransfer trống. */
+        if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); }
+        node.classList.add('dragging');
+      });
+      node.addEventListener('dragend', () => { dragged = null; node.classList.remove('dragging'); clear(node); });
+      node.addEventListener('dragover', (e) => {
+        if (dragged == null || dragged === item) return;
+        e.preventDefault();
+        if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+        /* Trên hay dưới đường giữa hàng quyết định thả trước hay sau. */
+        const b = node.getBoundingClientRect();
+        clear(node);
+        node.classList.add(e.clientY < b.top + b.height / 2 ? 'drop-before' : 'drop-after');
+      });
+      node.addEventListener('dragleave', () => { clear(node); });
+      node.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const before = node.classList.contains('drop-before');
+        clear(node);
+        if (dragged == null || dragged === item) return;
+        const from = dragged; dragged = null;
+        commit(from, item, before);
+      });
+    }
+  };
+}
+
+/** Chuyển `from` tới cạnh `to` trong chính mảng `arr`. Trả về false nếu không
+    đổi gì — nơi gọi khỏi phải vẽ lại và khỏi bỏ kết quả đã tính vô ích. */
+function moveBeside(arr, from, to, before) {
+  const i = arr.indexOf(from);
+  if (i < 0) return false;
+  arr.splice(i, 1);
+  let j = arr.indexOf(to);
+  if (j < 0) { arr.splice(i, 0, from); return false; }
+  if (!before) j++;
+  if (j === i) { arr.splice(i, 0, from); return false; }
+  arr.splice(j, 0, from);
+  return true;
+}
+
+/* Sắp mảng theo thứ tự một danh sách khoá cho trước, ỔN ĐỊNH: khoá không có
+   trong danh sách xuống cuối và giữ nguyên thứ tự tương đối giữa chúng. Không
+   vứt dòng nào — bảng ánh xạ mất một dòng là mất một dòng ngân sách. */
+function sortByKeys(arr, keys, keyOf) {
+  const rank = {};
+  keys.forEach((k, i) => { if (rank[k] === undefined) rank[k] = i; });
+  const at = arr.map((r, i) => { return { r, i, k: rank[keyOf(r)] }; });
+  at.sort((a, b) => {
+    const ka = a.k === undefined ? keys.length : a.k, kb = b.k === undefined ? keys.length : b.k;
+    return ka - kb || a.i - b.i;
+  });
+  at.forEach((x, i) => { arr[i] = x.r; });
+  return arr;
+}
+
 /* ---------- Thanh phân trang dùng chung ----------
    Mọi bảng dài trong app đi qua đây, nên cỡ trang chọn một lần là áp cho tất cả
    và sống qua lần mở sau (lưu ở S.ui.pageSize).
@@ -289,6 +363,17 @@ function dataTable(cfg) {
 
   let filter = '';
   const pg = pager(() => { draw(); });
+  /* Kéo thả sắp xếp, chỉ khi bảng bật cfg.reorder. commit nhận PHẦN TỬ nên
+     moveBeside tự indexOf trong mảng gốc — nhờ vậy đang lọc hay đang ở trang 2
+     vẫn thả đúng chỗ, chỉ số DOM không dính dáng gì. */
+  /* Khoá nhận dạng một dòng: ghép các cột đánh dấu key — đúng khoá mà nút Sinh
+     sẵn dùng để khử trùng, nên cfg.orderKeys() chỉ việc trả về cùng dạng chuỗi. */
+  const keyOfRow = (r) => {
+    return cfg.columns.filter((c) => { return c.key; }).map((c) => { return nkey(r[c.k]); }).join('|');
+  };
+  const drag = cfg.reorder ? dragList((from, to, before) => {
+    if (moveBeside(cfg.rows(), from, to, before)) { cfg.onChange && cfg.onChange(); draw(); }
+  }) : null;
   function draw() {
     optCache = {}; buildDatalists();
     tb.innerHTML = '';
@@ -308,9 +393,10 @@ function dataTable(cfg) {
     for (let i = 0; i < shownRows.length; i++) {
       const row = shownRows[i];
       (function (row) {
-        const tds = cfg.columns.map((col) => {
+        const grip = drag ? el('td', { class: 'grip', style: 'width:24px', title: t('table.dragHint'), text: '⠿' }) : null;
+        const tds = (grip ? [grip] : []).concat(cfg.columns.map((col) => {
           return el('td', { style: col.w ? 'width:' + col.w + 'px' : '' }, [cell(row, col)]);
-        });
+        }));
         tds.push(el('td', { style: 'width:32px' }, [el('button', {
           class: 'btn sm del', text: '✕',
           onclick: function () {
@@ -319,12 +405,15 @@ function dataTable(cfg) {
             cfg.onChange && cfg.onChange(); draw();
           }
         })]));
-        frag.appendChild(el('tr', {}, tds));
+        const tr = el('tr', {}, tds);
+        if (drag) drag.attach(tr, row, grip);
+        frag.appendChild(tr);
       })(row);
     }
     tb.appendChild(frag);
-    if (!rows.length) tb.appendChild(el('tr', {}, [el('td', { colspan: cfg.columns.length + 1, class: 'empty', text: cfg.emptyText || t('table.empty') })]));
-    else if (!matched) tb.appendChild(el('tr', {}, [el('td', { colspan: cfg.columns.length + 1, class: 'empty', text: t('table.noMatch', { kw: filter }) })]));
+    const span = cfg.columns.length + (drag ? 2 : 1);
+    if (!rows.length) tb.appendChild(el('tr', {}, [el('td', { colspan: span, class: 'empty', text: cfg.emptyText || t('table.empty') })]));
+    else if (!matched) tb.appendChild(el('tr', {}, [el('td', { colspan: span, class: 'empty', text: t('table.noMatch', { kw: filter }) })]));
     info.textContent = t('table.info.rows', { n: rows.length }) + (kw ? ' ' + t('table.info.matched', { n: matched }) : '');
   }
   const search = el('input', {
@@ -392,13 +481,17 @@ function dataTable(cfg) {
     el('button', { class: 'btn sm', text: t('table.addRow'), onclick: function () { cfg.rows().push(cfg.blank ? cfg.blank() : {}); cfg.onChange && cfg.onChange(); draw(); } }),
     cfg.prefill ? el('button', { class: 'btn sm', text: t('table.prefill'), onclick: function () {
       const rows = cfg.rows(), have = {};
-      rows.forEach((r) => { have[cfg.columns.filter((c) => { return c.key; }).map((c) => { return nkey(r[c.k]); }).join('|')] = 1; });
+      rows.forEach((r) => { have[keyOfRow(r)] = 1; });
       let add = 0;
       const gen = cfg.prefill();
       gen.forEach((p) => {
-        const k = cfg.columns.filter((c) => { return c.key; }).map((c) => { return nkey(p[c.k]); }).join('|');
+        const k = keyOfRow(p);
         if (have[k]) return; have[k] = 1; rows.push(p); add++;
       });
+      /* Sinh sẵn xong thì sắp lại cả bảng theo thứ tự nguồn (bảng Cost Code lấy
+         đúng thứ tự Formula Code). Sắp ỔN ĐỊNH: dòng có khoá lạ — không còn
+         trong nguồn nữa — xuống cuối mà vẫn giữ thứ tự tương đối, không mất dòng. */
+      if (cfg.orderKeys) sortByKeys(rows, cfg.orderKeys(), keyOfRow);
       cfg.onChange && cfg.onChange(); draw();
       /* Chạm trần thì nói thẳng — cắt trong im lặng chính là lỗi cũ. */
       if (gen.truncated) toast(t('toast.table.comboTruncated', { n: gen.truncated }), 'bad');
@@ -412,7 +505,9 @@ function dataTable(cfg) {
   ]));
   wrap.appendChild(el('div', { class: 'tw' }, [
     el('table', {}, [
-      el('thead', {}, [el('tr', {}, cfg.columns.map((c) => { return el('th', { text: c.label }); }).concat([el('th', { text: '' })]))]),
+      el('thead', {}, [el('tr', {}, (drag ? [el('th', { text: '' })] : [])
+        .concat(cfg.columns.map((c) => { return el('th', { text: c.label }); }))
+        .concat([el('th', { text: '' })]))]),
       tb
     ])
   ]));
@@ -461,4 +556,4 @@ function foldPanel(key, title, badges, actions, bodyNode, note) {
   return el('div', { class: 'panel' }, [head, body]);
 }
 
-export { comboLimit, pager, downloadTemplate, downloadData, importMapped, dataTable, readTable, panel, foldPanel };
+export { comboLimit, dragList, moveBeside, pager, downloadTemplate, downloadData, importMapped, dataTable, readTable, panel, foldPanel };
