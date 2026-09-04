@@ -18,6 +18,14 @@
   --row-hover: #FAFBF8;
   --rule: #CBD3CD;
   --rule-2: #E1E6DF;
+  /* --edge: đường bao của THÀNH PHẦN TƯƠNG TÁC (nút, ô nhập). Tách khỏi --rule
+     vì --rule còn làm MÀU CHỮ cho tay nắm kéo (.fcgrip, td.grip, .tvfx) — những
+     thứ cố ý mờ cho tới khi rê chuột vào; nâng --rule là làm chúng nổi lên theo.
+     Giữ ≥ 3:1 so với mặt nút và mặt panel, đúng ngưỡng WCAG cho đường bao. */
+  --edge: #7E8681;
+  /* Mặt của nút ghost. Ở chế độ sáng bằng đúng --panel như trước; ở chế độ tối
+     nâng lên một bậc để nút đọc thành một khối chứ không tan vào mặt panel. */
+  --btn-bg: #FFFFFF;
   --mineral: #14664F;
   --mineral-2: #E4EFE9;
   --mineral-3: #A9CFBC;
@@ -85,6 +93,8 @@
   --row-hover: #1B262A;
   --rule: #2F3D43;
   --rule-2: #253238;
+  --edge: #6A7B82;
+  --btn-bg: #202B30;
   --mineral: #55B694;
   --mineral-2: #16302A;
   --mineral-3: #2F5F4F;
@@ -251,7 +261,7 @@ h4.sec { margin: 0 0 8px; }
 .hint code { font: 12px var(--mono); background: var(--bone-2); padding: 1px 4px; border-radius: 2px; }
 
 .btn {
-  background: var(--panel); border: 1px solid var(--rule); border-radius: var(--r);
+  background: var(--btn-bg); border: 1px solid var(--edge); border-radius: var(--r);
   height: var(--ctl); padding: 0 12px;
   cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   white-space: nowrap; flex: 0 0 auto;
@@ -267,7 +277,7 @@ h4.sec { margin: 0 0 8px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 
 input[type=text], input[type=number], input[type=password], select, textarea {
-  border: 1px solid var(--rule); border-radius: var(--r); background: var(--field); width: 100%;
+  border: 1px solid var(--edge); border-radius: var(--r); background: var(--field); width: 100%;
   font-size: 13px;
 }
 input[type=text], input[type=number], input[type=password], select {
@@ -356,7 +366,7 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .rule > .h { display: flex; gap: 8px; align-items: center; padding: 7px 10px; background: var(--bone-2); border-bottom: 1px solid var(--rule-2); }
 .rule > .h .idx { font: 600 11px var(--mono); color: var(--soft); }
 .rule > .h input.nm { border: 0; background: transparent; font-weight: 600; padding: 0 4px; width: 210px; height: calc(var(--ctl) - 6px); }
-.rule > .h input.nm:focus { background: var(--field); border: 1px solid var(--rule); }
+.rule > .h input.nm:focus { background: var(--field); border: 1px solid var(--edge); }
 .rule > .b { padding: 9px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
 .rule > .b textarea.fx { min-height: 44px; }
 .split > .panel:first-child .body.tight { max-height: 62vh; overflow: auto; }

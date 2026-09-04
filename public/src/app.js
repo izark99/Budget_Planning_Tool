@@ -8,7 +8,7 @@ import { S, RESULT, setS, setRESULT, defaultState, save, load, touch, installAut
 import { loadContent, t } from './core/content.js';
 import { ENGINE } from './core/engine.js';
 import { pickFile, downloadBlob, apiSession, apiLogout } from './platform/io.js';
-import { confirmBox, el, modal, setRenderer, toast } from './ui/dom.js';
+import { confirmBox, el, keepCaret, modal, setRenderer, toast } from './ui/dom.js';
 import { initTheme, themeSelect } from './ui/theme.js';
 import { viewHC } from './views/headcount.js';
 import { viewSetup } from './views/setup.js';
@@ -117,8 +117,13 @@ function shellRender() {
     el('div', { class: 'content' }, [cur.fn()])
   ]);
 
-  document.body.innerHTML = '';
-  document.body.appendChild(el('div', { class: 'shell' }, [rail, main]));
+  /* Chỗ DUY NHẤT xoá sạch document.body. Bọc bằng keepCaret để ô đang gõ và vị
+     trí con trỏ sống qua lần dựng lại — nếu không, gõ xong bấm sang ô khác là
+     con trỏ rơi mất và phải bấm lần thứ hai. */
+  keepCaret(() => {
+    document.body.innerHTML = '';
+    document.body.appendChild(el('div', { class: 'shell' }, [rail, main]));
+  });
 }
 
 function saveProject() {

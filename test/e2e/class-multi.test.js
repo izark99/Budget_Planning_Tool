@@ -3,7 +3,7 @@
    Bảng khai từ trước chỉ có một cột và KHÔNG được chuyển đổi lúc nạp, nên phép
    kiểm này đi cả hai đường: bảng cũ dựng bằng tay trong state, và bảng mới tạo
    bằng nút trên màn hình. */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { chromium } from 'playwright';
 import { LAUNCH } from '../helpers/env.mjs';
 import { startServer } from '../helpers/server.mjs';
@@ -182,6 +182,149 @@ describe('thêm cột giá trị thứ hai', () => {
     const cl = (await getState(page)).classes[0];
     expect(cl.outs).toHaveLength(1);
     expect(cl.def).toEqual(['']);
+  });
+});
+
+/* LỖI ĐÃ BÁO: "Ô input khi gõ xong, click ô khác phải click 2 lần thì con trỏ
+   mới chuyển sang ô đó."
+
+   Đây là phần chưa xong của lần vá trước. renderSoon() hoãn render() đúng một
+   nhịp setTimeout(0) — mà một nhịp thì RƠI ĐƯỢC vào khoảng giữa mousedown và
+   mouseup, nên cây DOM bị dựng lại trước khi cú bấm kịp đáp xuống. Hoãn một
+   nhịp là một cuộc đua, không phải một bản vá.
+
+   Phải bấm bằng CHUỘT THẬT: el.click() chỉ bắn mỗi sự kiện click nên không tái
+   hiện được chuỗi mousedown → blur → mouseup → click. */
+describe('con trỏ sống qua lần dựng lại', () => {
+  const TWO_OUTS = `
+    st.S.classes = [{ id: 'cf', name: 'B', keys: ['Dept'],
+      outs: [{ name: 'A1', type: 'text' }, { name: 'A2', type: 'text' }],
+      rows: [], def: ['', ''] }];
+    st.S.ui.collapsed = {}; fm.ENGINE.invalidate(); st.setRESULT(null);
+  `;
+  /** Dòng khai cột giá trị — chỉ dòng này mới có ô chọn kiểu bên cạnh. */
+  const outRows = () => page.locator('.content .row', { has: page.locator('select') });
+  const focused = () => page.evaluate(() => {
+    const a = document.activeElement;
+    if (!a || a === document.body) return { tag: 'BODY' };
+    return { tag: a.tagName, value: a.value, caret: a.selectionStart, ph: a.placeholder || '' };
+  });
+
+  beforeEach(async () => {
+    await inPage(page, TWO_OUTS + 'return true;');
+    await goToView(page, 'Kết quả');
+    await goToView(page, 'Phân loại nhóm');
+  });
+
+  it('gõ tên cột rồi bấm MỘT lần sang ô mặc định: con trỏ vào đúng ô đó', async () => {
+    const row = outRows().nth(0);
+    const name = row.locator('input').first();
+    const def = row.locator('input').nth(1);
+
+    await name.click();
+    await name.fill('DOI_TEN');
+    await def.click();
+    await page.waitForTimeout(600);        /* đủ lâu cho mọi lần dựng hoãn nổ hết */
+
+    const f = await focused();
+    expect(f.tag).toBe('INPUT');
+    /* Đúng Ô MẶC ĐỊNH, không phải ô tên: nhận ra bằng chính hint text của nó. */
+    expect(f.ph).toBe('Mặc định');
+    /* Và tên vừa gõ vẫn được ghi nhận. */
+    expect((await getState(page)).classes[0].outs[0].name).toBe('DOI_TEN');
+  });
+
+  it('gõ xong bấm sang ô TÊN của cột kế cũng vào ngay lần đầu', async () => {
+    const first = outRows().nth(0).locator('input').first();
+    const second = outRows().nth(1).locator('input').first();
+
+    await first.click();
+    await first.fill('X1');
+    await second.click();
+    await page.waitForTimeout(600);
+
+    const f = await focused();
+    expect(f.tag).toBe('INPUT');
+    expect(f.value).toBe('A2');
+  });
+
+  it('đường bàn phím: gõ rồi Tab sang ô kế, con trỏ không rơi mất', async () => {
+    const name = outRows().nth(0).locator('input').first();
+    await name.click();
+    await name.fill('BAN_PHIM');
+    await page.keyboard.press('Tab');
+    await page.waitForTimeout(600);
+
+    const f = await focused();
+    expect(f.tag).not.toBe('BODY');
+  });
+
+  /* Chiều ngược lại — chỗ dễ làm hỏng nhất khi khôi phục con trỏ: bấm một NÚT
+     thì tuyệt đối không được nhét con trỏ vào một ô nhập nào đó cùng thứ tự. */
+  it('bấm NÚT thì KHÔNG khôi phục con trỏ vào ô nhập nào cả', async () => {
+    await outRows().nth(0).locator('input').first().click();
+    await page.locator('.content button', { hasText: 'Thêm cột giá trị' }).click();
+    await page.waitForTimeout(600);
+
+    const f = await focused();
+    expect(['INPUT', 'TEXTAREA']).not.toContain(f.tag);
+  });
+
+  /* Chuyển màn cũng vậy: bấm tab điều hướng không được để con trỏ nhảy vào một
+     ô nhập của màn mới. */
+  it('bấm tab điều hướng thì con trỏ không nhảy vào ô nhập của màn mới', async () => {
+    await outRows().nth(0).locator('input').first().click();
+    await goToView(page, 'Thiết lập');
+    await page.waitForTimeout(400);
+
+    const f = await focused();
+    expect(['INPUT', 'TEXTAREA']).not.toContain(f.tag);
+  });
+});
+
+/* LỖI ĐÃ BÁO: "Ô input có hint text nhưng bị khúc." Ô "mặc định khi không khớp"
+   dùng placeholder 23 ký tự trong khung 150px chữ đơn cách — cần 180px mà chỉ
+   có 132px. Quét MỌI ô chứ không chốt cứng một chuỗi, để lần sau đổi chữ dài ra
+   là bắt được ngay. */
+describe('hint text phải vừa khung', () => {
+  const measure = () => page.evaluate(() => {
+    const row = [...document.querySelectorAll('.content .row')].filter((x) => x.querySelector('select'));
+    const out = [];
+    row.forEach((r) => {
+      r.querySelectorAll('input').forEach((i) => {
+        if (!i.placeholder) return;
+        const cs = getComputedStyle(i);
+        const c = document.createElement('canvas').getContext('2d');
+        c.font = cs.fontSize + ' ' + cs.fontFamily;
+        const avail = i.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        out.push({ ph: i.placeholder, need: c.measureText(i.placeholder).width, avail });
+      });
+    });
+    return out;
+  });
+
+  it('màn Phân loại nhóm: mọi hint text nằm gọn trong ô của nó', async () => {
+    await inPage(page, `
+      st.S.classes = [{ id: 'cw', name: 'B', keys: ['Dept'],
+        outs: [{ name: 'A1', type: 'text' }], rows: [], def: [''] }];
+      st.S.ui.collapsed = {}; fm.ENGINE.invalidate(); st.setRESULT(null); return true;
+    `);
+    await goToView(page, 'Phân loại nhóm');
+    const got = await measure();
+    expect(got.length).toBeGreaterThan(0);
+    got.forEach((x) => { expect([x.ph, x.need <= x.avail]).toEqual([x.ph, true]); });
+  });
+
+  it('màn Cài đặt chính sách cũng vậy — cùng khối khai cột', async () => {
+    await inPage(page, `
+      st.S.policies = [{ id: 'pw', name: 'CS', keys: ['Dept'],
+        outs: [{ name: 'M', type: 'num' }], rows: [], def: [0] }];
+      st.S.ui.collapsed = {}; fm.ENGINE.invalidate(); st.setRESULT(null); return true;
+    `);
+    await goToView(page, 'Cài đặt chính sách');
+    const got = await measure();
+    expect(got.length).toBeGreaterThan(0);
+    got.forEach((x) => { expect([x.ph, x.need <= x.avail]).toEqual([x.ph, true]); });
   });
 });
 

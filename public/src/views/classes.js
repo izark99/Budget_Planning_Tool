@@ -205,7 +205,12 @@ function viewClasses() {
           el('input', {
             type: 'text', class: 'fx', style: 'width:150px' + (o.type === 'num' ? ';text-align:right' : ''),
             value: o.type === 'num' ? fmtNum(classDef(cl, j)) : (classDef(cl, j) || ''),
-            placeholder: t('cal.mac_dinh_khi_khong_khop'),
+            /* Hint NGẮN, đúng khoá mà màn Cài đặt chính sách dùng: câu dài
+               "Mặc định khi không khớp" cần 180px trong khung 150px chữ đơn
+               cách nên bị cắt ngang giữa từ. Câu đầy đủ chuyển sang title, và
+               nhãn của cả khối vốn đã ghi "(tên · kiểu · mặc định khi không
+               khớp)" nên không mất nghĩa. */
+            placeholder: t('export.audit.default'), title: t('cal.mac_dinh_khi_khong_khop'),
             onfocus: function (e) {
               if (o.type !== 'num') return;
               const d = classDef(cl, j);

@@ -33,6 +33,7 @@
   --mineral-2: #E4EFE9;
   --danger: #8E2B2B;
   --focus: #2E7D8F;
+  --edge: #7E8681;
   --field: #FFFFFF;
   --rail-bg: #0F1D24;
   --pri-bg: #0F1D24;
@@ -62,6 +63,7 @@
   --mineral-2: #16302A;
   --danger: #E48585;
   --focus: #5CB9CC;
+  --edge: #6A7B82;
   --rail-bg: #080F12;
   --pri-bg: #E3EAE7;
   --pri-bg-2: #FFFFFF;
@@ -92,7 +94,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 
 label.f { display: block; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--soft); margin-bottom: 3px; }
 input[type=password], input[type=text] {
-  border: 1px solid var(--rule); border-radius: var(--r); background: var(--field); width: 100%;
+  border: 1px solid var(--edge); border-radius: var(--r); background: var(--field); width: 100%;
   font-size: 13px; height: var(--ctl); padding: 0 34px 0 8px; line-height: normal;
   color: var(--ink);
 }
@@ -110,7 +112,7 @@ input[type=password]::-ms-reveal, input[type=password]::-ms-clear { display: non
 .pwwrap .eye:hover { color: var(--ink); }
 .pwwrap .eye:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 .btn {
-  background: var(--panel); border: 1px solid var(--rule); border-radius: var(--r);
+  background: var(--panel); border: 1px solid var(--edge); border-radius: var(--r);
   height: var(--ctl); padding: 0 12px;
   cursor: pointer; font-size: 13px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   white-space: nowrap; font-family: inherit;

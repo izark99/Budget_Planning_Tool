@@ -13,7 +13,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { chromium } from 'playwright';
 import { LAUNCH, TEST_ENV } from '../helpers/env.mjs';
 import { startServer } from '../helpers/server.mjs';
-import { collectErrors, goToView, importHeadcount, loginToApp } from '../helpers/browser.mjs';
+import { collectErrors, goToView, importHeadcount, inPage, loginToApp } from '../helpers/browser.mjs';
 
 let server, browser;
 
@@ -217,6 +217,76 @@ describe('màn đăng nhập ở chế độ tối', () => {
     await p.waitForURL(server.base + '/', { timeout: 15000 });
     await p.waitForSelector('.shell .rail');
     await c.close();
+  });
+});
+
+/* LỖI ĐÃ BÁO: "Nút trắng và nút đen đang bị lệch chiều cao."
+
+   Đo ra thì HÌNH HỌC GIỐNG HỆT NHAU — cùng 32px, cùng top, không bóng, không
+   outline, nên hai hộp không thể lệch. Cái lệch là ĐỘ TƯƠNG PHẢN CỦA ĐƯỜNG
+   VIỀN: viền nút ghost chỉ đạt 1,51:1 so với chính nền nó (nút đặc đạt 13,85:1),
+   mờ tới mức mắt đọc nó nhỏ hơn nút đặc ngay bên cạnh. Chuẩn WCAG cho đường bao
+   một thành phần giao diện là 3:1.
+
+   Vì vậy phép kiểm này canh HAI thứ: hộp phải bằng nhau (và không được xê dịch
+   khi chỉnh màu), và đường bao phải đọc được. */
+describe('nút và ô nhập: hộp bằng nhau, đường bao đọc được', () => {
+  const lum = (c) => {
+    const [r, g, b] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map((x) => {
+      const v = Number(x) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const ratio = (a, b) => {
+    const x = lum(a), y = lum(b);
+    return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+  };
+
+  it('nút viền và nút đặc cao BẰNG NHAU, cùng mép trên', async () => {
+    const { ctx, page } = await open('dark');
+    await importHeadcount(page);
+    await goToView(page, 'Phân loại nhóm');
+    const box = await page.evaluate(() =>
+      [...document.querySelectorAll('.content .panel > header button.btn')]
+        .map((b) => ({ cls: b.className, h: b.getBoundingClientRect().height, top: b.getBoundingClientRect().top })));
+    expect(box.length).toBeGreaterThanOrEqual(2);
+    expect(box.every((b) => b.h === box[0].h)).toBe(true);
+    expect(box.every((b) => b.top === box[0].top)).toBe(true);
+    await ctx.close();
+  });
+
+  it('đường bao nút ghost và ô nhập đạt 3:1 — ở CẢ HAI chế độ', async () => {
+    for (const scheme of ['dark', 'light']) {
+      const { ctx, page } = await open(scheme);
+      await importHeadcount(page);
+      /* Cần một bảng phân loại thì màn này mới có ô nhập để mà đo. */
+      await inPage(page, `
+        st.S.classes = [{ id: 'ce', name: 'B', keys: ['Dept'],
+          outs: [{ name: 'A1', type: 'text' }], rows: [['AC', 'x']], def: [''] }];
+        st.S.ui.collapsed = {}; fm.ENGINE.invalidate(); st.setRESULT(null); return true;
+      `);
+      await goToView(page, 'Phân loại nhóm');
+      const got = await page.evaluate(() => {
+        const panelBg = getComputedStyle(document.querySelector('.panel')).backgroundColor;
+        const pick = (sel) => {
+          const n = document.querySelector(sel);
+          if (!n) return null;
+          const cs = getComputedStyle(n);
+          return { border: cs.borderTopColor, bg: cs.backgroundColor };
+        };
+        return { panelBg, btn: pick('.content .panel > header button.btn:not(.pri)'), inp: pick('.content input[type=text]') };
+      });
+      for (const key of ['btn', 'inp']) {
+        expect([scheme, key, got[key] !== null]).toEqual([scheme, key, true]);
+        /* So với nền của CHÍNH NÓ và với mặt panel phía sau — hở chỗ nào cũng là hở. */
+        expect([scheme, key, 'nền riêng', ratio(got[key].border, got[key].bg) >= 3])
+          .toEqual([scheme, key, 'nền riêng', true]);
+        expect([scheme, key, 'mặt panel', ratio(got[key].border, got.panelBg) >= 3])
+          .toEqual([scheme, key, 'mặt panel', true]);
+      }
+      await ctx.close();
+    }
   });
 });
 

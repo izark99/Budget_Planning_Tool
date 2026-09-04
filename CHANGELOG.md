@@ -4,6 +4,53 @@ Gộp theo đợt việc, mới nhất ở trên. Dự án chưa đánh số phi
 
 ---
 
+## Đợt 8c — Ba lỗi giao diện · 2026-09-04
+
+### Click hai lần mới chuyển được con trỏ sang ô khác
+**Phần chưa xong của lần vá trước.** Đợt 8b hoãn `render()` đúng một nhịp
+`setTimeout(0)` — mà một nhịp thì **rơi được vào khoảng giữa `mousedown` và `mouseup`**,
+nên cây DOM vẫn bị dựng lại trước khi cú bấm kịp đáp xuống. Hoãn một nhịp là một cuộc đua,
+không phải một bản vá; nó chỉ thu hẹp cửa sổ thua chứ không đóng lại.
+
+Nay hai mảnh, cần cả hai:
+
+- `renderSoon()` **đợi hẳn cú bấm kết thúc**: `mousedown` bật cờ, `mouseup` hạ cờ qua một
+  nhịp — nhịp đó rơi sau khi `click` đã phát xong, vì `click` được phát đồng bộ ngay sau
+  `mouseup` trong cùng một lượt. Nghe ở `window` để cú bấm thả ra ngoài trang vẫn hạ cờ.
+- `keepCaret()` **giữ con trỏ qua lần dựng lại**: ghi nhớ ô đang gõ trước khi xoá body,
+  dựng xong thì trả con trỏ về đúng ô ấy, đúng vị trí ký tự. Nhớ theo *thứ tự trong danh
+  sách ô nhập*, không theo khoá riêng — lần dựng lại do đổi tên giữ nguyên hình dạng form
+  nên thứ tự N vẫn là đúng ô đó.
+
+Cố ý **không** tính nút bấm là "ô nhập": bấm một nút (thêm cột, hay tab điều hướng) là
+chuyển việc, trả con trỏ về "cái nút thứ N" của màn mới thì vô nghĩa và còn cướp con trỏ.
+Hai phép kiểm canh riêng chiều ngược này.
+
+`shellRender()` là chỗ duy nhất xoá `document.body`, nên bọc ở đó là xong cho **cả 9 nơi**
+gọi `renderSoon()`.
+
+### Nút viền và nút đặc trông lệch chiều cao
+Đo ra thì **hình học giống hệt nhau** — cùng 32px, cùng mép trên, không bóng, không
+outline. Cái lệch là **độ tương phản của đường viền**: viền nút ghost chỉ đạt **1,51:1** so
+với chính nền nó, trong khi nút đặc đạt **13,85:1**. Mờ tới mức mắt đọc nút đó nhỏ hơn nút
+đặc ngay bên cạnh. Chuẩn WCAG cho đường bao một thành phần giao diện là 3:1; chế độ sáng
+cũng hỏng y hệt (1,53:1).
+
+Thêm biến `--edge` riêng cho đường bao thành phần tương tác, **không** nâng thẳng `--rule`:
+`--rule` còn làm màu chữ cho tay nắm kéo, vốn cố ý mờ cho tới khi rê chuột vào. Thêm
+`--btn-bg` để nút ghost ở chế độ tối không tan vào mặt panel. Nay 3,3–3,8:1 ở tối và
+3,2–3,7:1 ở sáng. Phép kiểm chốt cả hai: hộp phải bằng nhau (để lần sau chỉnh màu không
+xê dịch hình học) **và** đường bao phải đạt 3:1, đo thật bằng công thức WCAG.
+
+### Hint text bị cắt ngang giữa từ
+Ô "mặc định" ở màn Phân loại nhóm dùng placeholder 23 ký tự trong khung 150px chữ đơn
+cách: cần **180px** mà chỉ có **132px**. Lỗi chép khối — màn Cài đặt chính sách, nơi khối
+này chép sang, vốn dùng đúng khoá ngắn `export.audit.default`. Đổi lại cho khớp, câu đầy đủ
+chuyển sang `title`. Phép kiểm quét **mọi** ô có hint ở cả hai màn và so bề rộng chữ (đo
+bằng canvas với đúng font đang áp) với lòng ô, nên lần sau đổi chữ dài ra là bắt được.
+
+---
+
 ## Đợt 8b — Ba lỗi sau khi dùng thật · 2026-09-04
 
 ### "Thêm cột giá trị" phải bấm hai lần
