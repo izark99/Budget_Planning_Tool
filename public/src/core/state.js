@@ -204,6 +204,22 @@ function normaliseMaps(s) {
 }
 
 function setS(next) { S = next; normaliseCalendar(S.calendar); normaliseMaps(S); }
+
+/* Đọc một file dự án .json thành state đầy đủ, hoặc ném lỗi nếu nó không phải
+   dự án. ĐÚNG MỘT định nghĩa "file hợp lệ" cho cả nút "Mở file dự án" lẫn màn
+   So sánh — hai định nghĩa là sớm muộn cũng lệch nhau, rồi một file mở được
+   bằng đường này lại không mở được bằng đường kia.
+   Không gọi setS(): người gọi quyết định làm gì với state trả về. */
+function projectFromJson(text) {
+  const o = JSON.parse(text);
+  if (!o || !o.hc) throw new Error(t('err.bad_project_file'));
+  const next = Object.assign(defaultState(), o);
+  next.policies = next.policies || [];
+  next.shared = next.shared || [];
+  next.accruals = next.accruals || [];
+  next.ui = next.ui || { view: 'hc' };
+  return next;
+}
 /** @param {BudgetResult|null} next */
 function setRESULT(next) { RESULT = next; }
 
@@ -283,7 +299,7 @@ export {
   LS_KEY, M, MONTHS, ROLES, CAL_FIELDS, SYS_VARS, MAP_TABLES,
   uid, allMonths, blankCalTable, normaliseCalendar, defaultState,
   classOuts, classDef, ensureClassOuts,
-  S, RESULT, dirty, setS, setRESULT,
+  S, RESULT, dirty, setS, setRESULT, projectFromJson,
   save, load, touch, installAutosave, markExported, needsExport,
   NF, fmt, fmtShort, nkey, numOf, NF_NUM, fmtNum
 };

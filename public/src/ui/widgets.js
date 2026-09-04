@@ -8,6 +8,7 @@ import { S, uid, nkey, numOf, fmtNum, touch } from '../core/state.js';
 import { t } from '../core/content.js';
 import { pickFile, readWorkbook, sheetAoa, dedupeHeaders } from '../platform/io.js';
 import { confirmBox, el, modal, toast } from './dom.js';
+import { withUndo } from './undo.js';
 
 /* SheetJS/XLTABLE nạp bằng thẻ <script> nên nằm trên window, không import được. */
 const XLTABLE = window.XLTABLE;
@@ -714,9 +715,11 @@ function dataTable(cfg) {
         tds.push(el('td', { style: 'width:32px' }, [el('button', {
           class: 'btn sm del', text: '✕',
           onclick: function () {
-            const all = cfg.rows(), j = all.indexOf(row);
-            if (j >= 0) all.splice(j, 1);
-            cfg.onChange && cfg.onChange(); draw();
+            withUndo(t('toast.row.deleted'), () => {
+              const all = cfg.rows(), j = all.indexOf(row);
+              if (j >= 0) all.splice(j, 1);
+              cfg.onChange && cfg.onChange(); draw();
+            });
           }
         })]));
         const tr = el('tr', { class: sel && sel.has(row) ? 'picked' : '' }, tds);
@@ -780,16 +783,19 @@ function dataTable(cfg) {
     importMapped(file, cfg.title || t('btn.import'),
       cfg.columns.map((c) => { return { k: c.k, label: c.label, required: !!c.required }; }),
       (out) => {
-        const rows = cfg.rows();
-        if (cfg.replaceOnImport !== false) rows.length = 0;
-        out.forEach((o) => {
-          const r = cfg.blank ? cfg.blank() : {};
-          cfg.columns.forEach((c) => { r[c.k] = c.type === 'num' ? numOf(o[c.k]) : (o[c.k] == null ? '' : String(o[c.k]).trim()); });
-          rows.push(r);
+        /* Nhập mặc định THAY SẠCH bảng đang có: về chữ nghĩa không phải "xoá",
+           nhưng mất dữ liệu y hệt — nên cũng mời hoàn tác. */
+        withUndo(t('toast.import.rows', { n: out.length }), () => {
+          const rows = cfg.rows();
+          if (cfg.replaceOnImport !== false) rows.length = 0;
+          out.forEach((o) => {
+            const r = cfg.blank ? cfg.blank() : {};
+            cfg.columns.forEach((c) => { r[c.k] = c.type === 'num' ? numOf(o[c.k]) : (o[c.k] == null ? '' : String(o[c.k]).trim()); });
+            rows.push(r);
+          });
+          cfg.onChange && cfg.onChange(); draw();
+          cfg.onImported && cfg.onImported();
         });
-        cfg.onChange && cfg.onChange(); draw();
-        cfg.onImported && cfg.onImported();
-        toast(t('toast.import.rows', { n: out.length }), 'good');
       });
   }
 
@@ -797,10 +803,11 @@ function dataTable(cfg) {
     const rows = cfg.rows();
     if (!rows.length) { toast(t('toast.table.empty')); return; }
     confirmBox(t('confirm.table.clear', { n: rows.length }), () => {
-      rows.length = 0;
-      cfg.onChange && cfg.onChange(); draw();
-      cfg.onImported && cfg.onImported();
-      toast(t('toast.table.cleared'));
+      withUndo(t('toast.table.cleared'), () => {
+        rows.length = 0;
+        cfg.onChange && cfg.onChange(); draw();
+        cfg.onImported && cfg.onImported();
+      });
     });
   }
 

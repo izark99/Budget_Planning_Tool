@@ -533,6 +533,16 @@ tr:hover > td.grip { color: var(--soft); }
   padding: 10px 14px; border-radius: var(--r); font-size: 13px; box-shadow: var(--shadow-pop);
   max-width: 380px;
 }
+/* Toast có nút (Hoàn tác): chữ và nút nằm cùng hàng. Nút phải đọc được trên
+   nền tối của toast ở CẢ HAI chế độ — nền toast là --toast-bg, không theo
+   --panel, nên nút phải tự khai màu chứ không dùng .btn mặc định. */
+.toast { display: flex; align-items: center; gap: 12px; }
+.toast > span { flex: 1; }
+.toast .btn {
+  flex: 0 0 auto; height: 24px; padding: 0 10px; font-size: 12px;
+  background: transparent; color: inherit; border-color: currentColor; opacity: .85;
+}
+.toast .btn:hover { opacity: 1; background: rgba(127,127,127,.22); border-color: currentColor; }
 .toast.bad { background: var(--danger); color: var(--on-ochre); }
 .toast.good { background: var(--mineral); color: var(--on-mineral); }
 
@@ -630,3 +640,9 @@ tr.statrow td { background: var(--bone-2); color: var(--ink-3); border-bottom: 1
 /* Phần do tăng lương, nép ở CUỐI thanh — cùng ý với cột chồng ở biểu đồ tháng. */
 .hbar > i > b { position: absolute; right: 0; top: 0; bottom: 0; background: var(--ochre); border-radius: 0 2px 2px 0; display: block; }
 
+
+/* ---------- Màn 13 · So sánh hai kịch bản ----------
+   Bốn cột số đứng cạnh nhau thì rất dễ đọc nhầm sang cột bên; cho chúng bề rộng
+   tối thiểu bằng nhau và giữ cột tên đủ rộng để mắt bám được hàng. */
+.cmptbl th:first-child, .cmptbl td:first-child { min-width: 170px; }
+.cmptbl th.num, .cmptbl td.num { min-width: 116px; }

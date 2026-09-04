@@ -6,6 +6,7 @@ import { S, fmt, nkey, numOf, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { confirmBox, el, render, renderSoon } from '../ui/dom.js';
+import { withUndo } from '../ui/undo.js';
 import { comboLimit, dataTable, foldPanel, panel } from '../ui/widgets.js';
 import { classMissCount } from './classes.js';
 
@@ -173,8 +174,10 @@ function viewPolicies() {
           el('button', {
             class: 'btn sm del', text: '✕', title: t('pol.bo_cot_nay'),
             onclick: function () {
-              po.outs.splice(j, 1); (po.def || []).splice(j, 1);
-              po._objs = null; ENGINE.invalidate(); setRESULT(null); touch(); render();
+              withUndo(t('cal.da_bo_cot_gia_tri'), () => {
+                po.outs.splice(j, 1); (po.def || []).splice(j, 1);
+                po._objs = null; ENGINE.invalidate(); setRESULT(null); touch(); render();
+              });
             }
           })
         ]));
@@ -223,7 +226,7 @@ function viewPolicies() {
       [
         el('button', { class: 'btn sm', text: '↑', onclick: function () { if (idx > 0) { const t = S.policies[idx - 1]; S.policies[idx - 1] = po; S.policies[idx] = t; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
         el('button', { class: 'btn sm', text: '↓', onclick: function () { if (idx < S.policies.length - 1) { const t = S.policies[idx + 1]; S.policies[idx + 1] = po; S.policies[idx] = t; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
-        el('button', { class: 'btn sm del', text: t('cal.xoa_bang'), onclick: function () { confirmBox(t('pol.confirm_delete', { name: po.name || '' }), () => { S.policies.splice(idx, 1); ENGINE.invalidate(); setRESULT(null); touch(); render(); }); } })
+        el('button', { class: 'btn sm del', text: t('cal.xoa_bang'), onclick: function () { confirmBox(t('pol.confirm_delete', { name: po.name || '' }), () => { withUndo(t('cal.da_xoa_bang'), () => { S.policies.splice(idx, 1); ENGINE.invalidate(); setRESULT(null); touch(); render(); }); }); } })
       ],
       el('div', {}, [head, editor])
     ));

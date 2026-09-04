@@ -42,6 +42,9 @@ view.cal.sub: Ngày công chuẩn và ngày nghỉ có lương từng tháng
 view.cal.tab: Ngày công
 view.cal.title: Ngày công & ngày nghỉ
 view.class.sub: Bảng tham chiếu sinh ra cột nhóm cho công thức
+view.cmp.sub: So bản đang làm với một file dự án .json đã lưu
+view.cmp.tab: So sánh
+view.cmp.title: So sánh hai kịch bản
 view.dash.sub: Lọc theo Cost Code và nhóm, tìm chỗ bất thường
 view.dash.tab: Dashboard
 view.dash.title: Dashboard soát số
@@ -77,11 +80,14 @@ err.bad_project_file: Không phải file dự án hợp lệ
 modal.confirm.title: Xác nhận
 
 # Toast
+undo.btn: ↶ Hoàn tác
+undo.done: Đã hoàn tác
 toast.autosave.fail: Không lưu tự động được. Hãy dùng “Lưu file dự án (.json)”.
 toast.error: Lỗi: {e}
 toast.fx.inserted: Đã chèn vào ô công thức
 toast.import.rows: Đã nhập {n} dòng
 toast.open_project: Đã mở file dự án
+toast.row.deleted: Đã xoá dòng
 toast.reset_done: Đã làm mới
 toast.save_project: Đã lưu file dự án
 toast.table.added: Đã thêm {n} dòng
@@ -396,7 +402,18 @@ hc.tham_so_dung_chung: Tham số dùng chung
 hc.them: + Thêm
 hc.tim_trong_bang: Tìm trong bảng…
 setup.cols_help: Tên trong cột <strong>Dùng trong công thức</strong> chính là thứ gõ giữa hai ngoặc vuông: <code>[Grade]</code>, <code>[Workplace Location]</code>. Vai trò <strong>Khoá nhân sự</strong> dùng để ghép tờ trình, <strong>Đơn vị</strong> để suy Cost Center, <strong>Cột tháng</strong> để lấy hệ số định biên. Cột đặt <strong>Bỏ qua</strong> sẽ biến mất khỏi mọi màn hình sau.
+setup.da_xoa_cong_thuc_chung: Đã xoá công thức dùng chung
+setup.da_xoa_tham_so: Đã xoá tham số
 setup.params_help: Gọi thẳng tên trong công thức: <code>[Coefficient]*LUONG_CO_SO</code>. Muốn dùng như phần trăm thì viết <code>TY_LE_BHXH_CTY%</code>.
+setup.shared.add: + Thêm công thức
+setup.shared.bad: Sai cú pháp
+setup.shared.dup: Trùng tên gọi
+setup.shared.empty: Chưa khai công thức dùng chung nào
+setup.shared.formula: Biểu thức
+setup.shared.help: Đặt tên cho một biểu thức rồi gọi lại ở nhiều công thức chi phí: viết <code>LUONG_CO_BAN</code> hoặc <code>[Lương cơ bản]</code>. Khác <strong>tham số</strong> ở chỗ tham số là một con số cố định, còn đây là biểu thức tính theo từng dòng và từng tháng. Sửa một chỗ thì mọi công thức gọi tới đều đổi theo. Chỗ này <strong>không tự làm tròn</strong> — cần thì viết <code>ROUND()</code> trong công thức chi phí.
+setup.shared.name: Diễn giải
+setup.shared.title: Công thức dùng chung
+setup.shared.untitled: (chưa đặt tên)
 setup.sysvars.help: Gõ thẳng tên này vào công thức, không cần khai gì thêm. Khác tham số ở chỗ tham số là số bạn tự đặt, còn đây là số app tự biết theo từng dòng và từng tháng.
 setup.sysvars.th_desc: Dùng để làm gì
 setup.sysvars.th_var: Tên biến
@@ -407,15 +424,6 @@ setup.th_formula_name: Dùng trong công thức
 setup.th_role: Vai trò
 setup.th_sample: Giá trị mẫu
 setup.th_type: Kiểu
-setup.shared.title: Công thức dùng chung
-setup.shared.add: + Thêm công thức
-setup.shared.name: Diễn giải
-setup.shared.formula: Biểu thức
-setup.shared.empty: Chưa khai công thức dùng chung nào
-setup.shared.dup: Trùng tên gọi
-setup.shared.bad: Sai cú pháp
-setup.shared.untitled: (chưa đặt tên)
-setup.shared.help: Đặt tên cho một biểu thức rồi gọi lại ở nhiều công thức chi phí: viết <code>LUONG_CO_BAN</code> hoặc <code>[Lương cơ bản]</code>. Khác <strong>tham số</strong> ở chỗ tham số là một con số cố định, còn đây là biểu thức tính theo từng dòng và từng tháng. Sửa một chỗ thì mọi công thức gọi tới đều đổi theo. Chỗ này <strong>không tự làm tròn</strong> — cần thì viết <code>ROUND()</code> trong công thức chi phí.
 
 # Màn 3-5 · Phân loại nhóm & Ngày công
 cal.ap_cho_tat_ca: áp cho tất cả
@@ -432,6 +440,9 @@ cal.classes_help: Mỗi bảng lấy một hoặc nhiều cột làm khoá rồi
 cal.confirm_delete_class: Xoá bảng phân loại "{name}"?
 cal.cot_gia_tri_sinh_ra: Cột giá trị sinh ra (tên · kiểu · mặc định khi không khớp)
 cal.cot_khoa_bam_de_chon: Cột khoá — bấm để chọn
+cal.da_bo_cot_gia_tri: Đã bỏ cột giá trị
+cal.da_xoa_bang: Đã xoá bảng
+cal.da_xoa_lich: Đã xoá bảng lịch
 cal.da_xoa_sach_du_lieu: Đã xoá sạch dữ liệu
 cal.dien_deu_12_thang: Điền đều 12 tháng
 cal.doi_chieu: Đối chiếu
@@ -517,6 +528,8 @@ fm.cost_center_theo_don_vi: Cost Center theo đơn vị
 fm.cot_mo_la_thang_khong_trich_so: Cột mờ là tháng không trích. Số màu cam là tháng có tờ trình can thiệp.
 fm.create_groups: Tạo nhóm
 fm.created_groups: Đã tạo {n} nhóm
+fm.da_xoa_cong_thuc: Đã xoá Formula Code
+fm.da_xoa_nhom: Đã xoá nhóm quy tắc
 fm.da_xoa_sach: Đã xoá sạch
 fm.dieu_kien_loi: điều kiện lỗi
 fm.dieu_kien_nhom: Điều kiện nhóm
@@ -626,6 +639,7 @@ maps.word_unit: đơn vị
 
 # Màn 9 · Tăng lương
 raise.cond_placeholder: Bỏ trống = áp cho tất cả
+raise.da_xoa_dot: Đã xoá đợt tăng lương
 raise.n_rows: {n} dòng áp dụng
 raise.scope_apply: Áp cho các giá trị đã chọn
 raise.scope_by_col: Chọn theo cột…
@@ -779,6 +793,40 @@ dash.sort_total: Đang xếp theo tổng tiền
 dash.spread: chênh cao thấp {n}
 dash.stats_help: Chọn chỉ số cần xem — chúng áp cho mọi dãy số bên dưới, vẽ thành đường tham chiếu trên biểu đồ 12 tháng và thêm dòng vào cuối ma trận. P25 và P75 nội suy tuyến tính, giống <code>PERCENTILE.INC</code> của Excel.
 dash.ty_trong: Tỷ trọng
+
+# Màn 13 · So sánh hai kịch bản
+cmp.by_dim: Chênh lệch theo chiều gộp
+cmp.card_a: Tổng bản đang làm
+cmp.card_b: Tổng bản đối chiếu
+cmp.card_diff: Chênh lệch
+cmp.chua_chay: Chưa chạy tính
+cmp.chua_chay_hint: So sánh đọc từ kết quả đã tính của bản đang làm. Bấm nút bên dưới để chạy.
+cmp.clear: Bỏ bản đối chiếu
+cmp.col_a: Bản đang làm
+cmp.col_b: Bản đối chiếu
+cmp.col_diff: Chênh
+cmp.diff_pct: {p}% · {n} đ
+cmp.dim: Xem chênh lệch theo
+cmp.file_none: Chưa chọn file
+cmp.help: Bản đối chiếu được chạy trong bộ nhớ rồi trả lại ngay bản đang làm — dữ liệu hiện tại không bị đụng vào, và bản đối chiếu mất khi tải lại trang.
+cmp.loaded: Đã tính xong bản đối chiếu — {file}
+cmp.months: Chênh lệch 12 tháng
+cmp.n_rows: {n} dòng
+cmp.new_row: mới
+cmp.no_file: Chưa có bản đối chiếu
+cmp.no_file_hint: Mở một file dự án .json đã lưu để so với bản đang làm.
+cmp.of_which_raise: trong đó do tăng lương {n}
+cmp.open: ⤒  Mở file dự án .json để so
+cmp.pick: Bản đối chiếu
+cmp.run_now: ▶  Chạy tính ngay
+cmp.struct_hint: Con số chênh lệch bên dưới vẫn cộng đúng, nhưng đọc nó phải nhớ mấy điểm này.
+cmp.struct_title: Hai bản khác nhau về cấu trúc
+cmp.warn.col_a: Cột định biên chỉ có ở bản đang làm: {list}
+cmp.warn.col_b: Cột định biên chỉ có ở bản đối chiếu: {list}
+cmp.warn.fc_a: Formula Code chỉ có ở bản đang làm: {list}
+cmp.warn.fc_b: Formula Code chỉ có ở bản đối chiếu: {list}
+cmp.warn.rows: Số dòng định biên khác nhau — bản đang làm {a}, bản đối chiếu {b}
+cmp.warn.year: Năm ngân sách khác nhau — bản đang làm {a}, bản đối chiếu {b}
 
 # Khởi động
 boot.no_localstorage: <strong>Trình duyệt không cho lưu tự động.</strong> Dữ liệu sẽ mất khi đóng tab — bấm “Lưu file dự án (.json)” trước khi thoát.

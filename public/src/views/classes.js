@@ -6,7 +6,8 @@
 import { S, classDef, classOuts, ensureClassOuts, fmt, fmtNum, nkey, numOf, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
-import { confirmBox, el, render, renderSoon, toast } from '../ui/dom.js';
+import { confirmBox, el, render, renderSoon } from '../ui/dom.js';
+import { withUndo } from '../ui/undo.js';
 import { comboLimit, dataTable, foldPanel, panel } from '../ui/widgets.js';
 
 /* SheetJS/XLTABLE nạp bằng thẻ <script> nên nằm trên window, không import được. */
@@ -83,8 +84,10 @@ function viewClasses() {
       el('button', {
         class: 'btn sm del', text: t('cal.xoa_sach_du_lieu_moi_bang'), onclick: function () {
           confirmBox(t('cal.xoa_sach_dong_du_lieu_cua_tat_ca'), () => {
-            S.classes.forEach((c) => { c.rows = []; c._objs = null; });
-            ENGINE.invalidate(); setRESULT(null); touch(); render(); toast(t('cal.da_xoa_sach_du_lieu'));
+            withUndo(t('cal.da_xoa_sach_du_lieu'), () => {
+              S.classes.forEach((c) => { c.rows = []; c._objs = null; });
+              ENGINE.invalidate(); setRESULT(null); touch(); render();
+            });
           });
         }
       }),
@@ -226,14 +229,16 @@ function viewClasses() {
           classOuts(cl).length > 1 ? el('button', {
             class: 'btn sm del', text: '✕', title: t('pol.bo_cot_nay'),
             onclick: function () {
-              const c2 = ensureClassOuts(cl);
-              c2.outs.splice(j, 1); (c2.def || []).splice(j, 1);
-              /* Dòng dữ liệu là [...khoá, ...giá trị] nên bỏ một cột phải bỏ
-                 đúng ô đó ở mọi dòng, không thì các cột sau lệch hết. */
-              cl.rows = (cl.rows || []).map((r) => {
-                const r2 = r.slice(); r2.splice(keys.length + j, 1); return r2;
+              withUndo(t('cal.da_bo_cot_gia_tri'), () => {
+                const c2 = ensureClassOuts(cl);
+                c2.outs.splice(j, 1); (c2.def || []).splice(j, 1);
+                /* Dòng dữ liệu là [...khoá, ...giá trị] nên bỏ một cột phải bỏ
+                   đúng ô đó ở mọi dòng, không thì các cột sau lệch hết. */
+                cl.rows = (cl.rows || []).map((r) => {
+                  const r2 = r.slice(); r2.splice(keys.length + j, 1); return r2;
+                });
+                cl._objs = null; ENGINE.invalidate(); setRESULT(null); touch(); render();
               });
-              cl._objs = null; ENGINE.invalidate(); setRESULT(null); touch(); render();
             }
           }) : null
         ]));
@@ -286,7 +291,7 @@ function viewClasses() {
       [
         el('button', { class: 'btn sm', text: '↑', onclick: function () { if (idx > 0) { const other = S.classes[idx - 1]; S.classes[idx - 1] = cl; S.classes[idx] = other; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
         el('button', { class: 'btn sm', text: '↓', onclick: function () { if (idx < S.classes.length - 1) { const other = S.classes[idx + 1]; S.classes[idx + 1] = cl; S.classes[idx] = other; ENGINE.invalidate(); setRESULT(null); touch(); render(); } } }),
-        el('button', { class: 'btn sm del', text: t('cal.xoa_bang'), onclick: function () { confirmBox(t('cal.confirm_delete_class', { name: cl.name || '' }), () => { S.classes.splice(idx, 1); ENGINE.invalidate(); setRESULT(null); touch(); render(); }); } })
+        el('button', { class: 'btn sm del', text: t('cal.xoa_bang'), onclick: function () { confirmBox(t('cal.confirm_delete_class', { name: cl.name || '' }), () => { withUndo(t('cal.da_xoa_bang'), () => { S.classes.splice(idx, 1); ENGINE.invalidate(); setRESULT(null); touch(); render(); }); }); } })
       ],
       el('div', {}, [head, editor])));
   });

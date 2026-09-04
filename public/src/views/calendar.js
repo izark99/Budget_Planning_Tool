@@ -7,6 +7,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { pickFile } from '../platform/io.js';
 import { el, esc, render, renderSoon, toast } from '../ui/dom.js';
+import { withUndo } from '../ui/undo.js';
 import { downloadData, downloadTemplate, importMapped, panel } from '../ui/widgets.js';
 
 function viewCalendar() {
@@ -70,7 +71,7 @@ function viewCalendar() {
           for (let k = 1; k < M; k++) CAL_FIELDS.forEach((f) => { tbl.m[k][f.k] = first[f.k]; });
           setRESULT(null); touch(); render();
         } }),
-        cal.tables.length > 1 ? el('button', { class: 'btn sm del', text: t('cal.xoa_lich'), onclick: function () { cal.tables.splice(idx, 1); setRESULT(null); touch(); render(); } }) : null
+        cal.tables.length > 1 ? el('button', { class: 'btn sm del', text: t('cal.xoa_lich'), onclick: function () { withUndo(t('cal.da_xoa_lich'), () => { cal.tables.splice(idx, 1); setRESULT(null); touch(); render(); }); } }) : null
       ]),
       el('div', { class: 'body' }, [el('p', {
         class: 'hint',

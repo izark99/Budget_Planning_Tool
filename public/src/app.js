@@ -4,12 +4,13 @@
    lấy nguyên văn từ khối SHELL của 08-view-result-boot.js.
    Phần xác thực thay hẳn cho AUTH_URL + localStorage cũ.
    =========================================================== */
-import { S, RESULT, setS, setRESULT, defaultState, save, load, touch, installAutosave, markExported, needsExport, setNotifier, fmt, nkey } from './core/state.js';
+import { S, RESULT, setS, setRESULT, defaultState, projectFromJson, save, load, touch, installAutosave, markExported, needsExport, setNotifier, fmt, nkey } from './core/state.js';
 import { loadContent, t } from './core/content.js';
 import { ENGINE } from './core/engine.js';
 import { pickFile, downloadBlob, apiSession, apiLogout } from './platform/io.js';
 import { confirmBox, el, keepCaret, modal, setRenderer, toast } from './ui/dom.js';
 import { initTheme, themeSelect } from './ui/theme.js';
+import { withUndo } from './ui/undo.js';
 import { viewHC } from './views/headcount.js';
 import { viewSetup } from './views/setup.js';
 import { viewClasses } from './views/classes.js';
@@ -22,6 +23,7 @@ import { viewRaise } from './views/raise.js';
 import { viewResult, runBudget } from './views/result.js';
 import { viewDashboard } from './views/dashboard.js';
 import { viewAccrual } from './views/accrual.js';
+import { viewCompare } from './views/compare.js';
 
 const VIEWS = [
   { k: 'hc', n: '1', t: 'dash.kind_row', title: 'hc.bang_dinh_bien', sub: 'view.hc.sub', fn: viewHC },
@@ -35,7 +37,8 @@ const VIEWS = [
   { k: 'raise', n: '9', t: 'view.raise.tab', title: 'fm.du_kien_tang_luong', sub: 'view.raise.sub', fn: viewRaise },
   { k: 'accrual', n: '10', t: 'view.accrual.tab', title: 'view.accrual.title', sub: 'view.accrual.sub', fn: viewAccrual },
   { k: 'result', n: '11', t: 'view.result.tab', title: 'view.result.title', sub: 'view.result.sub', fn: viewResult },
-  { k: 'dash', n: '12', t: 'view.dash.tab', title: 'view.dash.title', sub: 'view.dash.sub', fn: viewDashboard }
+  { k: 'dash', n: '12', t: 'view.dash.tab', title: 'view.dash.title', sub: 'view.dash.sub', fn: viewDashboard },
+  { k: 'cmp', n: '13', t: 'view.cmp.tab', title: 'view.cmp.title', sub: 'view.cmp.sub', fn: viewCompare }
 ];
 
 function badgeFor(k) {
@@ -140,17 +143,10 @@ function openProject() {
     const fr = new FileReader();
     fr.onload = function (e) {
       try {
-        const o = JSON.parse(/** @type {string} */ (e.target.result));
-        if (!o || !o.hc) throw new Error(t('err.bad_project_file'));
-        /* ESM không cho gán lại binding đã import: dựng object mới rồi setS().
-           Các bước gán bên trong giữ nguyên thứ tự như bản gốc. */
-        const next = Object.assign(defaultState(), o);
-        /* Bảng ánh xạ thiếu bảng và lịch thiếu khoá do setS() điền — một chỗ duy nhất. */
-        next.policies = next.policies || [];
-        next.shared = next.shared || [];
-        next.accruals = next.accruals || [];
-        next.ui = next.ui || { view: 'hc' };
-        setS(next);
+        /* Kiểm và chuẩn hoá ở state.js, dùng chung với màn So sánh — xem
+           projectFromJson(). ESM không cho gán lại binding đã import nên phải
+           dựng object mới rồi setS(); setS() lo nốt lịch và bảng ánh xạ. */
+        setS(projectFromJson(/** @type {string} */ (e.target.result)));
         ENGINE.invalidate(); setRESULT(null); save(); shellRender();
         toast(t('toast.open_project'), 'good');
         noticeBudKeyReset();
@@ -169,7 +165,9 @@ function noticeBudKeyReset() {
 
 function resetAll() {
   confirmBox(t('confirm.reset_all'), () => {
-    setS(defaultState()); ENGINE.invalidate(); setRESULT(null); save(); shellRender(); toast(t('toast.reset_done'));
+    withUndo(t('toast.reset_done'), () => {
+      setS(defaultState()); ENGINE.invalidate(); setRESULT(null); save(); shellRender();
+    });
   });
 }
 

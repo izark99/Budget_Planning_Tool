@@ -11,6 +11,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { distinctVals, pickFile } from '../platform/io.js';
 import { confirmBox, el, render, toast } from '../ui/dom.js';
+import { withUndo } from '../ui/undo.js';
 import { downloadData, downloadTemplate, foldPanel, importMapped, pager, panel } from '../ui/widgets.js';
 
 /* CHUỖI GIAO THỨC — tên cột của file mẫu .xlsx, đồng thời là khoá khớp khi
@@ -115,7 +116,7 @@ function viewAccrual() {
         (a.rows || []).length ? el('button', {
           class: 'btn sm del', text: t('table.clear'), onclick: function () {
             confirmBox(t('acc.confirm_clear', { code: fc.code }), () => {
-              a.rows = []; setRESULT(null); touch(); draw();
+              withUndo(t('toast.table.cleared'), () => { a.rows = []; setRESULT(null); touch(); draw(); });
             });
           }
         }) : null
@@ -149,7 +150,7 @@ function viewAccrual() {
         }
         tds.push(el('td', { style: 'width:32px' }, [el('button', {
           class: 'btn sm del', text: '✕',
-          onclick: function () { const j = a.rows.indexOf(r); if (j >= 0) a.rows.splice(j, 1); setRESULT(null); touch(); draw(); }
+          onclick: function () { withUndo(t('toast.row.deleted'), () => { const j = a.rows.indexOf(r); if (j >= 0) a.rows.splice(j, 1); setRESULT(null); touch(); draw(); }); }
         })]));
         tb.appendChild(el('tr', {}, tds));
       });

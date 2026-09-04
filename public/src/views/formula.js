@@ -8,6 +8,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { distinctVals } from '../platform/io.js';
 import { confirmBox, el, esc, modal, render, renderSoon, ribbon, toast } from '../ui/dom.js';
+import { withUndo } from '../ui/undo.js';
 import { dragList, moveBeside, panel, selection } from '../ui/widgets.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 
@@ -129,8 +130,10 @@ function viewFormula() {
       el('button', {
         class: 'btn sm del', text: t('fm.xoa'), onclick: function () {
           confirmBox(t('fm.confirm_delete_fc', { code: fc.code }), () => {
-            S.formulas = S.formulas.filter((x) => { return x.id !== fc.id; });
-            S.ui.fSel = null; setRESULT(null); touch(); render();
+            withUndo(t('fm.da_xoa_cong_thuc'), () => {
+              S.formulas = S.formulas.filter((x) => { return x.id !== fc.id; });
+              S.ui.fSel = null; setRESULT(null); touch(); render();
+            });
           });
         }
       })
@@ -192,7 +195,7 @@ function viewFormula() {
           el('div', { class: 'sp' }),
           el('button', { class: 'btn sm', text: '↑', onclick: function () { if (i > 0) { const t = fc.rules[i - 1]; fc.rules[i - 1] = r; fc.rules[i] = t; setRESULT(null); touch(); drawRules(); } } }),
           el('button', { class: 'btn sm', text: '↓', onclick: function () { if (i < fc.rules.length - 1) { const t = fc.rules[i + 1]; fc.rules[i + 1] = r; fc.rules[i] = t; setRESULT(null); touch(); drawRules(); } } }),
-          el('button', { class: 'btn sm del', text: '✕', onclick: function () { fc.rules.splice(i, 1); setRESULT(null); touch(); drawRules(); } })
+          el('button', { class: 'btn sm del', text: '✕', onclick: function () { withUndo(t('fm.da_xoa_nhom'), () => { fc.rules.splice(i, 1); setRESULT(null); touch(); drawRules(); }); } })
         ]),
         el('div', { class: 'b' }, [
           el('div', {}, [el('label', { class: 'f', text: t('fm.dieu_kien_nhom') }), condBox]),

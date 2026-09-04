@@ -6,7 +6,8 @@ import { S, fmt, nkey, setRESULT, touch } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { distinctVals } from '../platform/io.js';
-import { confirmBox, el, render, toast } from '../ui/dom.js';
+import { confirmBox, el, render } from '../ui/dom.js';
+import { withUndo } from '../ui/undo.js';
 import { dataTable, foldPanel } from '../ui/widgets.js';
 
 function neededCombos() {
@@ -100,9 +101,11 @@ function viewMaps() {
       el('button', {
         class: 'btn sm del', text: t('fm.xoa_sach_ca_nam_bang'), onclick: function () {
           confirmBox(t('fm.xoa_sach_du_lieu_cua_ca_nam_bang'), () => {
-            mp.costCode.length = 0; mp.costCenter.length = 0; mp.division.length = 0;
-            mp.budgetCode.length = 0; mp.accountCode.length = 0;
-            setRESULT(null); touch(); render(); toast(t('fm.da_xoa_sach'));
+            withUndo(t('fm.da_xoa_sach'), () => {
+              mp.costCode.length = 0; mp.costCenter.length = 0; mp.division.length = 0;
+              mp.budgetCode.length = 0; mp.accountCode.length = 0;
+              setRESULT(null); touch(); render();
+            });
           });
         }
       })

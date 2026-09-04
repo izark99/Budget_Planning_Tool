@@ -114,6 +114,28 @@ interface DashFilters {
   [k: string]: any;
 }
 
+/** Bản tóm tắt NHỎ của một lượt tính, dùng cho màn So sánh. Cố ý không giữ
+ *  `data` — mảng đó của dự án lớn cỡ chục MB, mà so sánh chỉ cần các tổng. */
+interface CompareSummary {
+  name: string;
+  year: number;
+  /** Tên file .json đã mở; rỗng với bản đang làm. */
+  file: string;
+  grand: number;
+  /** Phần tiền do tăng lương của chính bản này; 0 khi không khai đợt nào. */
+  raise: number;
+  months: number[];
+  nRows: number;
+  byFc: Record<string, number>;
+  byCc: Record<string, number>;
+  /** byCol[tên cột][giá trị] = tiền. Cột lấy theo state CỦA CHÍNH BẢN ĐÓ. */
+  byCol: Record<string, Record<string, number>>;
+  /** Các cột gộp được, đúng thứ tự hiện trên ô chọn chiều. */
+  cols: string[];
+  fcCodes: string[];
+  attrCols: string[];
+}
+
 /** Trạng thái dự án — thứ được ghi vào localStorage và vào file .json. */
 interface ProjectState {
   /** Số hiệu định dạng; load() từ chối tệp có v khác. */
@@ -165,6 +187,8 @@ interface ProjectState {
     warnOnClose?: boolean;
     /** Bảng ảnh hưởng tăng lương đang tách theo cột nào. */
     raiseBy?: string;
+    /** Màn So sánh: đang xem chênh lệch theo chiều gộp nào. */
+    cmp?: { dim?: string };
     [k: string]: any;
   };
 }

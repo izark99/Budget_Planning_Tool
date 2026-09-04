@@ -6,6 +6,7 @@ import { S, allMonths, numOf, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { pickFile } from '../platform/io.js';
 import { el, render, ribbon, toast } from '../ui/dom.js';
+import { withUndo } from '../ui/undo.js';
 import { downloadData, downloadTemplate, importMapped, pager, tableView } from '../ui/widgets.js';
 
 function viewExc() {
@@ -55,7 +56,7 @@ function viewExc() {
           el('option', { value: 'ADD', selected: e.rule === 'ADD', text: t('fm.cong_them') })
         ])]),
         el('td', {}, [el('input', { type: 'text', value: e.note || '', oninput: function (ev) { e.note = ev.target.value; touch(); } })]),
-        el('td', { style: 'width:32px' }, [el('button', { class: 'btn sm del', text: '✕', onclick: function () { const j = S.exceptions.indexOf(e); if (j >= 0) S.exceptions.splice(j, 1); setRESULT(null); touch(); draw(); } })])
+        el('td', { style: 'width:32px' }, [el('button', { class: 'btn sm del', text: '✕', onclick: function () { withUndo(t('toast.row.deleted'), () => { const j = S.exceptions.indexOf(e); if (j >= 0) S.exceptions.splice(j, 1); setRESULT(null); touch(); draw(); }); } })])
       ]));
     });
     if (!S.exceptions.length) tb.appendChild(el('tr', {}, [el('td', { colspan: 10, class: 'empty', text: t('fm.chua_co_to_trinh_nao') })]));

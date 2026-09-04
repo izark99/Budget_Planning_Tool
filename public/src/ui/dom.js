@@ -133,11 +133,24 @@ function el(tag, attrs, kids) {
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, (c) => { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
 let toastT = null;
-function toast(msg, kind) {
+/* `action` = { label, onclick } dựng thêm một nút ngay trong toast. Có nút thì
+   để LÂU HƠN hẳn: 3,2 giây không đủ để kịp nhận ra mình vừa bấm nhầm rồi với
+   tay lên bấm Hoàn tác. `onGone` để nơi gọi thả thứ nó đang giữ khi toast tắt. */
+function toast(msg, kind, action, onGone) {
   const old = document.querySelector('.toast'); if (old) old.remove();
-  const t = el('div', { class: 'toast ' + (kind || ''), text: msg });
+  const t = el('div', { class: 'toast ' + (kind || '') }, [
+    el('span', { text: msg }),
+    action ? el('button', {
+      class: 'btn sm', text: action.label,
+      onclick: function () { t.remove(); clearTimeout(toastT); action.onclick(); }
+    }) : null
+  ]);
   document.body.appendChild(t);
-  clearTimeout(toastT); toastT = setTimeout(() => { t.remove(); }, kind === 'bad' ? 6000 : 3200);
+  clearTimeout(toastT);
+  toastT = setTimeout(() => {
+    t.remove();
+    if (onGone) onGone();
+  }, action ? 11000 : (kind === 'bad' ? 6000 : 3200));
 }
 function modal(title, bodyNode, buttons) {
   const mask = el('div', { class: 'mask', onclick: function (e) { if (e.target === mask) close(); } });

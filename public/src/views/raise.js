@@ -6,6 +6,7 @@ import { MONTHS, S, fmt, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { el, esc, modal, render, toast } from '../ui/dom.js';
+import { withUndo } from '../ui/undo.js';
 import { distinctVals } from '../platform/io.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 
@@ -48,7 +49,7 @@ function viewRaise() {
           el('input', { class: 'nm', value: r.name || '', placeholder: t('fm.ten_dot_tang'), oninput: function (e) { r.name = e.target.value; touch(); } }),
           mc.error ? el('span', { class: 'tag r', text: t('fm.dieu_kien_loi') }) : el('span', { class: 'tag g', text: t('raise.n_rows', { n: fmt(mc.n) }) }),
           el('div', { class: 'sp' }),
-          el('button', { class: 'btn sm del', text: '✕', onclick: function () { S.raises.splice(i, 1); setRESULT(null); touch(); draw(); } })
+          el('button', { class: 'btn sm del', text: '✕', onclick: function () { withUndo(t('raise.da_xoa_dot'), () => { S.raises.splice(i, 1); setRESULT(null); touch(); draw(); }); } })
         ]),
         el('div', { class: 'b', style: 'grid-template-columns:150px 130px 1fr' }, [
           el('div', {}, [el('label', { class: 'f', text: t('fm.ap_dung_tu_thang') }),

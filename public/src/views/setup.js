@@ -8,6 +8,7 @@ import { ENGINE } from '../core/engine.js';
 import { FX } from '../core/expression.js';
 import { distinctVals } from '../platform/io.js';
 import { el, render } from '../ui/dom.js';
+import { withUndo } from '../ui/undo.js';
 import { dragList, foldPanel, moveBeside, panel, readTable, selection } from '../ui/widgets.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 import { guessRole } from './headcount.js';
@@ -125,7 +126,7 @@ function viewSetup() {
         el('td', { class: 'acts', style: 'width:104px' }, [
           el('button', { class: 'btn sm', text: '↑', disabled: i === 0, onclick: function () { if (swap(S.params, i, i - 1)) { pSel.clear(); touch(); fillP(); } } }),
           el('button', { class: 'btn sm', text: '↓', disabled: i === S.params.length - 1, onclick: function () { if (swap(S.params, i, i + 1)) { pSel.clear(); touch(); fillP(); } } }),
-          el('button', { class: 'btn sm del', text: '✕', onclick: function () { S.params.splice(i, 1); pSel.clear(); setRESULT(null); touch(); fillP(); } })
+          el('button', { class: 'btn sm del', text: '✕', onclick: function () { withUndo(t('setup.da_xoa_tham_so'), () => { S.params.splice(i, 1); pSel.clear(); setRESULT(null); touch(); fillP(); }); } })
         ])
       ]);
       pDrag.attach(tr, p, grip);
@@ -186,7 +187,7 @@ function viewSetup() {
           el('button', { class: 'btn sm', text: '↓', disabled: i === all.length - 1, onclick: function () { if (swap(all, i, i + 1)) { shSel.clear(); touch(); drawShared(); } } }),
           el('button', {
             class: 'btn sm del', text: '✕',
-            onclick: function () { S.shared.splice(i, 1); shSel.clear(); setRESULT(null); touch(); drawShared(); }
+            onclick: function () { withUndo(t('setup.da_xoa_cong_thuc_chung'), () => { S.shared.splice(i, 1); shSel.clear(); setRESULT(null); touch(); drawShared(); }); }
           })
         ]),
         el('div', { class: 'b', style: 'grid-template-columns:1fr' }, [
