@@ -21,7 +21,7 @@ const XLTABLE = window.XLTABLE;
    =========================================================== */
 function policyAvailableKeys(beforeIdx) {
   const out = ENGINE.attrCols().map((c) => { return c.alias; })
-    .concat((S.classes || []).map((c) => { return c.name; }).filter(Boolean));
+    .concat(ENGINE.classCols());
   (S.policies || []).forEach((p, i) => {
     if (i < beforeIdx) (p.outs || []).forEach((o) => { if (o && o.name) out.push(o.name); });
   });
@@ -203,7 +203,7 @@ function viewPolicies() {
         el('div', { class: 'chips' }, avail.map((a) => {
           const on = keys.indexOf(a) >= 0;
           return el('span', {
-            class: 'chip', style: on ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '',
+            class: 'chip' + (on ? ' on' : ''),
             text: a, onclick: function () {
               po.keys = on ? keys.filter((x) => { return x !== a; }) : keys.concat([a]);
               po._objs = null; po.rows = []; ENGINE.invalidate(); setRESULT(null); touch(); render();

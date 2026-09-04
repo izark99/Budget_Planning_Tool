@@ -7,7 +7,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { dedupeHeaders, pickFile, readWorkbook, sheetAoa } from '../platform/io.js';
 import { el, modal, render, ribbon, toast } from '../ui/dom.js';
-import { downloadData, downloadTemplate, pager, panel, readTable } from '../ui/widgets.js';
+import { downloadData, downloadTemplate, pager, panel, readTable, tableView } from '../ui/widgets.js';
 
 /* `values` không dùng tới ở đây — vai trò đoán từ TÊN cột; kiểu dữ liệu thì
    guessType() lo. Vẫn nhận tham số để hai hàm đoán có cùng chữ ký. */
@@ -160,13 +160,18 @@ function viewHC() {
   const q = { t: '' };
   const tb = el('tbody');
   const pg = pager(() => { fill(); });
+  /* Sắp xếp / lọc theo cột — cùng công cụ với mọi bảng khác. Bảng này CHỈ ĐỌC
+     nên không có kéo thả để mà tắt; sort ở đây thuần tuý là cách xem. */
+  const vcols = cols.map((c) => { return { k: c.alias, label: c.alias, type: c.type === 'num' ? 'num' : 'text' }; });
+  const tv = tableView(vcols, () => { pg.reset(); fill(); });
   function fill() {
     tb.innerHTML = '';
     const kw = q.t.trim().toLowerCase();
     /* Lọc trước, phân trang sau — số trang tính trên kết quả lọc. */
-    const hit = !kw ? rows : rows.filter((r) => {
+    const kwRows = !kw ? rows : rows.filter((r) => {
       return cols.some((c) => { return String(r[c.alias]).toLowerCase().indexOf(kw) >= 0; });
     });
+    const hit = tv.apply(kwRows);
     pg.apply(hit).forEach((r) => {
       const tr = el('tr', {}, cols.map((c) => { return el('td', { text: String(r[c.alias] == null ? '' : r[c.alias]) }); }));
       tr.appendChild(el('td', {}, [ribbon(r.__m, { factor: true })]));
@@ -184,8 +189,9 @@ function viewHC() {
       el('button', { class: 'btn sm', text: t('table.exportData'), onclick: hcExport }),
       el('button', { class: 'btn sm', text: t('hc.nhap_lai'), onclick: function () { pickFile('.xlsx,.xls,.csv', importHeadcount); } })
     ]),
+    el('div', { class: 'body' }, [tv.bar]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
-      el('table', {}, [el('thead', {}, [el('tr', {}, cols.map((c) => { return el('th', { text: c.alias }); })
+      el('table', {}, [el('thead', {}, [el('tr', {}, vcols.map((c) => { return tv.th(c, () => { return rows; }); })
         .concat([el('th', { text: t('hc.dinh_bien_t01_t12') })]))]), tb])
     ])]),
     /* Thanh phân trang nằm trong .body (đệm 14px) chứ không trong .body.tight

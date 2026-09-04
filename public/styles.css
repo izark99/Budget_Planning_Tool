@@ -8,18 +8,51 @@
   --ink-2: #1B2E37;
   --ink-3: #33474F;
   --soft: #66787F;
+  /* Chữ đã tắt: số 0 trong bảng, tháng không được chọn. */
+  --faint: #B7C0BB;
   --bone: #EAEDE7;
   --bone-2: #F4F6F1;
   --panel: #FFFFFF;
+  /* Nền ô nhập — tách khỏi --panel vì ở chế độ tối ô nhập phải chìm hơn mặt panel. */
+  --field: #FFFFFF;
+  --row-hover: #FAFBF8;
   --rule: #CBD3CD;
   --rule-2: #E1E6DF;
   --mineral: #14664F;
   --mineral-2: #E4EFE9;
+  --mineral-3: #A9CFBC;
   --ochre: #A2571A;
   --ochre-2: #FBEEDF;
   --danger: #8E2B2B;
   --danger-2: #F8E7E7;
   --focus: #2E7D8F;
+  /* Viền của ba loại thẻ và hai hộp cảnh báo. */
+  --tag-g-line: #BFDCCF;
+  --tag-o-line: #EBD3B2;
+  --tag-r-line: #E8C6C6;
+
+  /* ---- Mặt TỐI: cột trái, nút chính, toast, màn đăng nhập ----
+     --ink vừa là màu CHỮ vừa từng là màu của mấy mặt tối này. Chế độ tối lật
+     --ink thành màu sáng, nên mặt tối phải có biến riêng, nếu không cột trái
+     hoá trắng. --on-* là màu chữ ĐẶT TRÊN một mặt màu. */
+  --rail-bg: #0F1D24;
+  --pri-bg: #0F1D24;
+  --pri-bg-2: #1B2E37;
+  --pri-ink: #FFFFFF;
+  --toast-bg: #0F1D24;
+  --toast-ink: #FFFFFF;
+  --on-mineral: #FFFFFF;
+  --on-ochre: #FFFFFF;
+  --mask: rgba(15, 29, 36, .42);
+
+  /* Dải 12 tháng ở trạng thái tắt. */
+  --ribbon-off: #EDF0EB;
+  --ribbon-off-ink: #A8B3AD;
+
+  /* Thanh cuộn — xem khối "Thanh cuộn" bên dưới. */
+  --sb-thumb: #C3CCC6;
+  --sb-thumb-hover: #A3AFA8;
+  --sb-track: transparent;
 
   --disp: "Bahnschrift", "Segoe UI Semibold", "Segoe UI", system-ui, sans-serif;
   --body: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
@@ -28,12 +61,88 @@
   --r: 3px;
   --ctl: 32px;
   --shadow: 0 1px 0 rgba(15, 29, 36, .05), 0 2px 10px rgba(15, 29, 36, .06);
+  --shadow-pop: 0 8px 22px rgba(15, 29, 36, .16);
+  --shadow-modal: 0 18px 50px rgba(0, 0, 0, .3);
+}
+
+/* ============ Chế độ tối ============
+   JS quy `auto` về một trong hai rồi đóng dấu data-theme lên <html> TRƯỚC lần vẽ
+   đầu tiên (đoạn script trong <head> của index.html), nên ở đây chỉ cần MỘT khối
+   — không phải viết lại lần nữa dưới @media (prefers-color-scheme: dark).
+
+   Cột trái vốn đã là một mặt tối ở cả hai chế độ, nên những rgba(255,255,255,…)
+   của nó không phải đổi: chúng tương đối với chính mặt ấy. */
+[data-theme="dark"] {
+  --ink: #E3EAE7;
+  --ink-2: #CDD8D3;
+  --ink-3: #AEBCB7;
+  --soft: #8B9A95;
+  --faint: #55635F;
+  --bone: #0E1518;
+  --bone-2: #1A2429;
+  --panel: #151E22;
+  --field: #1C262B;
+  --row-hover: #1B262A;
+  --rule: #2F3D43;
+  --rule-2: #253238;
+  --mineral: #55B694;
+  --mineral-2: #16302A;
+  --mineral-3: #2F5F4F;
+  --ochre: #DB9550;
+  --ochre-2: #33241A;
+  --danger: #E48585;
+  --danger-2: #3A2222;
+  --focus: #5CB9CC;
+  --tag-g-line: #2B5949;
+  --tag-o-line: #5B4326;
+  --tag-r-line: #5C3333;
+
+  --rail-bg: #080F12;
+  --pri-bg: #E3EAE7;
+  --pri-bg-2: #FFFFFF;
+  --pri-ink: #0F1D24;
+  --toast-bg: #E3EAE7;
+  --toast-ink: #0F1D24;
+  --on-mineral: #071C15;
+  --on-ochre: #241505;
+  --mask: rgba(0, 0, 0, .62);
+
+  --ribbon-off: #1E282C;
+  --ribbon-off-ink: #5A6965;
+
+  --sb-thumb: #37464C;
+  --sb-thumb-hover: #4B5D64;
+
+  --shadow: 0 1px 0 rgba(0, 0, 0, .35), 0 2px 10px rgba(0, 0, 0, .40);
+  --shadow-pop: 0 8px 22px rgba(0, 0, 0, .50);
+  --shadow-modal: 0 18px 50px rgba(0, 0, 0, .60);
 }
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 /* Luôn chừa chỗ cho thanh cuộn dọc, nếu không các tab dài/ngắn sẽ lệch ngang nhau */
 html { overflow-y: scroll; scrollbar-gutter: stable; }
+
+/* ============ Thanh cuộn ============
+   App có chín khung cuộn (html, .nav, .tw, .body.tight của cột trái khu công
+   thức, .chipbody, .fclist, .modal, .fx-ac, và .nav ở bề ngang hẹp). Tất cả
+   đang dùng thanh mặc định của trình duyệt — dày, vuông, và trên nền tối của
+   cột trái thì chọi hẳn ra.
+
+   GIỚI HẠN KHÔNG VƯỢT ĐƯỢC: phần bung ra của <select> gốc do trình duyệt/hệ
+   điều hành vẽ trong một lớp riêng, CSS của trang không với tới — cả
+   ::-webkit-scrollbar lẫn scrollbar-color đều bị bỏ qua ở đó. Mọi danh sách
+   hình-dropdown mà APP TỰ DỰNG (.fx-ac, .chipbody, .fclist, .modal) thì có. */
+* { scrollbar-width: thin; scrollbar-color: var(--sb-thumb) var(--sb-track); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--sb-track); }
+::-webkit-scrollbar-thumb {
+  background: var(--sb-thumb); border-radius: 6px;
+  /* Viền trong suốt + background-clip: con trượt mảnh lại mà vùng bấm vẫn rộng. */
+  border: 2px solid transparent; background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--sb-thumb-hover); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: var(--sb-track); }
 body {
   margin: 0; background: var(--bone); color: var(--ink);
   font: 14px/1.45 var(--body);
@@ -46,7 +155,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .shell { display: flex; min-height: 100vh; }
 
 .rail {
-  width: 236px; flex: 0 0 236px; background: var(--ink); color: #DCE4E3;
+  width: 236px; flex: 0 0 236px; background: var(--rail-bg); color: #DCE4E3;
   display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;
 }
 .brand { padding: 18px 18px 14px; border-bottom: 1px solid rgba(255,255,255,.09); }
@@ -56,6 +165,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .brand p { margin: 5px 0 0; font-size: 11px; color: #8FA3A6; letter-spacing: .04em; }
 
 .nav { padding: 8px 0; overflow-y: auto; flex: 1; }
+/* Dải tab 1–12 cuộn trên một mặt TỐI, nên thanh cuộn sáng mặc định chọi hẳn ra.
+   Trắng mờ giống hệt cách phần còn lại của cột trái tô nền — đúng ở cả hai chế
+   độ vì mặt này tối trong cả hai. */
+.rail, .rail * { scrollbar-color: rgba(255,255,255,.22) transparent; }
+.rail ::-webkit-scrollbar-thumb, .rail::-webkit-scrollbar-thumb { background: rgba(255,255,255,.22); background-clip: padding-box; }
+.rail ::-webkit-scrollbar-thumb:hover, .rail::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.36); background-clip: padding-box; }
+.rail ::-webkit-scrollbar-track, .rail::-webkit-scrollbar-track { background: transparent; }
 .nav button {
   display: flex; align-items: baseline; gap: 10px; width: 100%; text-align: left;
   background: none; border: 0; padding: 9px 18px; cursor: pointer; color: #BFCCCD;
@@ -70,7 +186,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   margin-left: auto; font: 600 10px var(--mono); background: rgba(255,255,255,.12);
   padding: 1px 6px; border-radius: 8px; color: #CFE0DB;
 }
-.nav .badge.warn { background: var(--ochre); color: #fff; }
+.nav .badge.warn { background: var(--ochre); color: var(--on-ochre); }
 
 .railfoot { padding: 12px 14px; border-top: 1px solid rgba(255,255,255,.09); font-size: 11px; color: #7C9195; }
 .railfoot button {
@@ -81,9 +197,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
 /* Trạng thái "đã lưu ra file .json chưa" — nói thẳng ở đây thay vì chỉ chờ lúc
    đóng tab mới nhắc. */
 .savest { font-size: 11px; color: #7C9195; margin: -2px 0 6px; }
-.savest.warn { color: var(--ochre); }
+/* Nằm trên mặt tối của cột trái: --ochre (#A2571A) trên #0F1D24 gần như đọc
+   không ra. Dùng sắc cam sáng riêng cho mặt tối. */
+.savest.warn { color: #E0A15E; }
 .wclose { display: flex; align-items: center; gap: 6px; margin-top: 8px; cursor: pointer; }
 .wclose input { width: auto; margin: 0; }
+/* Ô chọn chế độ màu, cũng nằm trên mặt tối nên mặc áo như các nút ở chân cột. */
+.themepick { display: flex; align-items: center; gap: 6px; margin-top: 8px; }
+.themepick > span { flex: 0 0 auto; }
+.themepick select {
+  flex: 1; min-width: 0; height: 24px; font-size: 12px;
+  background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.13); color: #E2EAE8;
+}
+/* Danh sách bung ra do hệ điều hành vẽ trên nền của chính nó — ép màu chữ tối
+   cho <option> để không thành trắng-trên-trắng ở một số trình duyệt. */
+.themepick select option { color: var(--ink); background: var(--field); }
 
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .topbar {
@@ -129,9 +257,9 @@ h4.sec { margin: 0 0 8px; }
   white-space: nowrap; flex: 0 0 auto;
 }
 .btn:hover { border-color: var(--ink-3); }
-.btn.pri { background: var(--ink); color: #fff; border-color: var(--ink); }
-.btn.pri:hover { background: var(--ink-2); }
-.btn.go { background: var(--mineral); color: #fff; border-color: var(--mineral); }
+.btn.pri { background: var(--pri-bg); color: var(--pri-ink); border-color: var(--pri-bg); }
+.btn.pri:hover { background: var(--pri-bg-2); border-color: var(--pri-bg-2); }
+.btn.go { background: var(--mineral); color: var(--on-mineral); border-color: var(--mineral); }
 .btn.go:hover { filter: brightness(1.1); }
 .btn.sm { padding: 0 9px; font-size: 12px; }
 .btn.dim { color: var(--soft); }
@@ -139,7 +267,7 @@ h4.sec { margin: 0 0 8px; }
 .btn[disabled] { opacity: .45; cursor: not-allowed; }
 
 input[type=text], input[type=number], input[type=password], select, textarea {
-  border: 1px solid var(--rule); border-radius: var(--r); background: #fff; width: 100%;
+  border: 1px solid var(--rule); border-radius: var(--r); background: var(--field); width: 100%;
   font-size: 13px;
 }
 input[type=text], input[type=number], input[type=password], select {
@@ -153,9 +281,9 @@ label.f { display: block; font-size: 11.5px; letter-spacing: .05em; text-transfo
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
 .tag { font: 600 10.5px var(--mono); letter-spacing: .04em; padding: 2px 6px; border-radius: 2px; background: var(--bone-2); border: 1px solid var(--rule-2); }
-.tag.g { background: var(--mineral-2); border-color: #BFDCCF; color: var(--mineral); }
-.tag.o { background: var(--ochre-2); border-color: #EBD3B2; color: var(--ochre); }
-.tag.r { background: var(--danger-2); border-color: #E8C6C6; color: var(--danger); }
+.tag.g { background: var(--mineral-2); border-color: var(--tag-g-line); color: var(--mineral); }
+.tag.o { background: var(--ochre-2); border-color: var(--tag-o-line); color: var(--ochre); }
+.tag.r { background: var(--danger-2); border-color: var(--tag-r-line); color: var(--danger); }
 
 /* ============ Tables ============ */
 .tw { overflow: auto; max-height: 62vh; border-top: 1px solid var(--rule-2); }
@@ -179,7 +307,7 @@ td { max-width: 460px; overflow-wrap: anywhere; }
 td > input[type=text], td > input[type=number] { min-width: 90px; }
 td > input[type=text], td > input[type=number], td > select { height: calc(var(--ctl) - 4px); }
 td > .btn.sm { height: calc(var(--ctl) - 4px); }
-tbody tr:hover { background: #FAFBF8; }
+tbody tr:hover { background: var(--row-hover); }
 td.num { text-align: right; font: 12.5px var(--mono); font-variant-numeric: tabular-nums; }
 /* Tiêu đề cột số chỉ đổi CĂN LỀ, tuyệt đối KHÔNG đổi font. Gộp chung với td.num
    thì th mang class 'num' ăn luôn mono 12,5px và rơi khỏi font hiển thị của mọi
@@ -187,7 +315,7 @@ td.num { text-align: right; font: 12.5px var(--mono); font-variant-numeric: tabu
    công hiện khác hẳn chữ "Status" ngay bên cạnh. */
 th.num { text-align: right; }
 td.mono { font: 12px var(--mono); }
-td.zero { color: #B7C0BB; }
+td.zero { color: var(--faint); }
 tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid var(--ink-3); }
 .empty { padding: 34px 18px; text-align: center; color: var(--soft); }
 .empty strong { display: block; font: 600 15px var(--disp); color: var(--ink); margin-bottom: 5px; letter-spacing: .03em; }
@@ -195,12 +323,12 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 /* ============ SIGNATURE: dải 12 tháng ============ */
 .ribbon { display: inline-flex; gap: 1px; vertical-align: middle; }
 .ribbon i {
-  width: 13px; height: 15px; background: #EDF0EB; border: 1px solid var(--rule-2); border-radius: 1px;
-  display: inline-block; font: 600 8px/14px var(--mono); text-align: center; color: #A8B3AD; font-style: normal;
+  width: 13px; height: 15px; background: var(--ribbon-off); border: 1px solid var(--rule-2); border-radius: 1px;
+  display: inline-block; font: 600 8px/14px var(--mono); text-align: center; color: var(--ribbon-off-ink); font-style: normal;
   cursor: default;
 }
-.ribbon i.on { background: var(--mineral); border-color: var(--mineral); color: #fff; }
-.ribbon i.half { background: var(--mineral-2); border-color: #A9CFBC; color: var(--mineral); }
+.ribbon i.on { background: var(--mineral); border-color: var(--mineral); color: var(--on-mineral); }
+.ribbon i.half { background: var(--mineral-2); border-color: var(--mineral-3); color: var(--mineral); }
 .ribbon.pick i { cursor: pointer; width: 22px; height: 21px; line-height: 20px; font-size: 10px; }
 .ribbon.pick i:hover { border-color: var(--ink-3); }
 .ribbon.lg i { width: 26px; height: 24px; line-height: 23px; font-size: 11px; }
@@ -224,11 +352,11 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .stat.sm .v { font: 600 13.5px/1.25 var(--disp); word-break: break-word; }
 
 /* ============ Rule / group editor ============ */
-.rule { border: 1px solid var(--rule); border-radius: var(--r); margin-bottom: 8px; background: #fff; }
+.rule { border: 1px solid var(--rule); border-radius: var(--r); margin-bottom: 8px; background: var(--panel); }
 .rule > .h { display: flex; gap: 8px; align-items: center; padding: 7px 10px; background: var(--bone-2); border-bottom: 1px solid var(--rule-2); }
 .rule > .h .idx { font: 600 11px var(--mono); color: var(--soft); }
 .rule > .h input.nm { border: 0; background: transparent; font-weight: 600; padding: 0 4px; width: 210px; height: calc(var(--ctl) - 6px); }
-.rule > .h input.nm:focus { background: #fff; border: 1px solid var(--rule); }
+.rule > .h input.nm:focus { background: var(--field); border: 1px solid var(--rule); }
 .rule > .b { padding: 9px 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
 .rule > .b textarea.fx { min-height: 44px; }
 .split > .panel:first-child .body.tight { max-height: 62vh; overflow: auto; }
@@ -241,7 +369,11 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .fxfoot .fxfmt { height: 20px; padding: 0 8px; font-size: 11px; margin-top: 3px; flex: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
 .chip { font: 11px var(--mono); background: var(--bone-2); border: 1px solid var(--rule-2); border-radius: 2px; padding: 1px 5px; cursor: pointer; }
-.chip:hover { border-color: var(--ink-3); background: #fff; }
+.chip:hover { border-color: var(--ink-3); background: var(--field); }
+/* Chip đang chọn. Trước đây sáu nơi trong JS chép tay đúng ba khai báo này kèm
+   color:#fff — chữ trắng đó là chỗ chế độ tối hở ra, nên gom về một lớp. */
+.chip.on { background: var(--mineral); color: var(--on-mineral); border-color: var(--mineral); }
+.chip.ink { background: var(--pri-bg); color: var(--pri-ink); border-color: var(--pri-bg); }
 
 /* Hộp gợi ý cột là .panel thật, giống hệt danh sách Formula Code: thanh tiêu đề
    riêng, thân cuộn bên dưới. Ở đây chỉ còn phần bố cục của riêng nó — dính theo
@@ -264,6 +396,15 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
 .fcrow.on.picked { background: var(--mineral-2); }
 tr.picked > td { background: var(--bone-2); }
 tr.picked > td:first-child { box-shadow: inset 2px 0 0 0 var(--ochre); }
+/* Công thức dùng chung ở màn Thiết lập dựng bằng .rule chứ không bằng <tr>,
+   nên nó cần dấu "đang chọn" của riêng nó — cùng ý nghĩa với .fcrow.picked. */
+.rule.picked { box-shadow: inset 2px 0 0 0 var(--ochre); }
+.rule.picked > .h { background: var(--bone-2); }
+.rule > .h .fcgrip { font-size: 14px; padding: 0; }
+/* Ô chứa cụm nút ↑ ↓ ✕ ở cuối dòng: đừng để chúng rớt xuống dòng dưới. */
+td.acts { white-space: nowrap; }
+td.acts > .btn { margin-right: 3px; }
+td.acts > .btn:last-child { margin-right: 0; }
 .fcrow > .fcmain { flex: 1; min-width: 0; }
 .fcmove { display: flex; flex-direction: column; gap: 3px; }
 .fcmove .btn { height: 20px; padding: 0 7px; font-size: 11px; }
@@ -281,6 +422,36 @@ tr.drop-after > td { box-shadow: inset 0 -2px 0 0 var(--mineral); }
 /* Tay nắm trong bảng dữ liệu sửa tại chỗ. */
 td.grip { color: var(--rule); cursor: grab; text-align: center; user-select: none; }
 tr:hover > td.grip { color: var(--soft); }
+/* ---- Sắp xếp / lọc theo cột (tableView) ---- */
+/* Nhãn cột thành nút bấm được, mũi tên và nút phễu nép sát bên phải. */
+.tvth { cursor: default; }
+.tvth .tvlbl { cursor: pointer; user-select: none; }
+.tvth .tvlbl:hover { text-decoration: underline; }
+.tvth .tvdir { margin-left: 3px; color: var(--mineral); font-size: 9px; letter-spacing: 0; }
+.tvth .tvfx {
+  margin-left: 5px; cursor: pointer; color: var(--rule); font-size: 12px;
+  display: inline-block; line-height: 1; vertical-align: middle;
+}
+.tvth:hover .tvfx { color: var(--soft); }
+.tvth .tvfx.on { color: var(--ochre); }
+/* Hộp lọc gắn vào <body>: <th> có position:sticky và .tw thì overflow:auto,
+   nằm trong đó là bị cắt cụt. Vì vậy toạ độ đặt theo màn hình. */
+.tvbox {
+  position: fixed; z-index: 60; width: 240px; background: var(--panel);
+  border: 1px solid var(--rule); border-radius: var(--r); box-shadow: var(--shadow-pop);
+  padding: 8px; display: flex; flex-direction: column; gap: 6px;
+}
+.tvvals { max-height: 210px; overflow: auto; display: flex; flex-direction: column; gap: 2px; }
+.tvvals label { display: flex; gap: 6px; align-items: center; font-size: 12.5px; cursor: pointer; }
+.tvvals label input { width: auto; height: auto; flex: 0 0 auto; }
+.tvvals label span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tvfoot { display: flex; gap: 6px; align-items: center; }
+/* Dải chip kể ra đang sắp/lọc theo gì, và cho gỡ từng cái. */
+.tvbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.tvbar .muted { color: var(--soft); font-size: 12px; }
+/* Đang sắp xếp thì tay nắm kéo tắt hẳn — vị trí thả không nói được gì về mảng gốc. */
+.nodrag td.grip, .nodrag .fcgrip { opacity: .3; cursor: not-allowed; }
+
 /* Thanh phân trang dưới mỗi bảng dài. */
 .pager { display: flex; align-items: center; gap: 8px; padding: 7px 2px 0; flex-wrap: wrap; }
 .pager .muted { color: var(--soft); font-size: 12px; }
@@ -341,24 +512,24 @@ tr:hover > td.grip { color: var(--soft); }
 
 /* ============ Toast ============ */
 .toast {
-  position: fixed; right: 18px; bottom: 18px; z-index: 100; background: var(--ink); color: #fff;
-  padding: 10px 14px; border-radius: var(--r); font-size: 13px; box-shadow: 0 6px 22px rgba(0,0,0,.25);
+  position: fixed; right: 18px; bottom: 18px; z-index: 100; background: var(--toast-bg); color: var(--toast-ink);
+  padding: 10px 14px; border-radius: var(--r); font-size: 13px; box-shadow: var(--shadow-pop);
   max-width: 380px;
 }
-.toast.bad { background: var(--danger); }
-.toast.good { background: var(--mineral); }
+.toast.bad { background: var(--danger); color: var(--on-ochre); }
+.toast.good { background: var(--mineral); color: var(--on-mineral); }
 
 /* ============ Modal ============ */
-.mask { position: fixed; inset: 0; background: rgba(15,29,36,.42); display: flex; align-items: center; justify-content: center; z-index: 90; padding: 20px; }
-.modal { background: #fff; border-radius: var(--r); max-width: 760px; width: 100%; max-height: 86vh; overflow: auto; box-shadow: 0 18px 50px rgba(0,0,0,.3); }
+.mask { position: fixed; inset: 0; background: var(--mask); display: flex; align-items: center; justify-content: center; z-index: 90; padding: 20px; }
+.modal { background: var(--panel); border-radius: var(--r); max-width: 760px; width: 100%; max-height: 86vh; overflow: auto; box-shadow: var(--shadow-modal); }
 .modal header { padding: 14px 16px; border-bottom: 1px solid var(--rule-2); display: flex; align-items: center; }
 .modal header h3 { margin: 0; font: 600 15px var(--disp); letter-spacing: .04em; }
 .modal .body { padding: 16px; }
 .modal footer { padding: 12px 16px; border-top: 1px solid var(--rule-2); display: flex; gap: 8px; justify-content: flex-end; }
 
-.warnbox { background: var(--ochre-2); border: 1px solid #EBD3B2; border-radius: var(--r); padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px; }
+.warnbox { background: var(--ochre-2); border: 1px solid var(--tag-o-line); border-radius: var(--r); padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px; }
 .warnbox ul { margin: 6px 0 0; padding-left: 18px; }
-.errbox { background: var(--danger-2); border: 1px solid #E8C6C6; border-radius: var(--r); padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px; }
+.errbox { background: var(--danger-2); border: 1px solid var(--tag-r-line); border-radius: var(--r); padding: 10px 12px; margin-bottom: 12px; font-size: 12.5px; }
 
 /* ---- panel thu gọn ---- */
 .panel > header.fold { cursor: pointer; user-select: none; }
@@ -366,8 +537,8 @@ tr:hover > td.grip { color: var(--soft); }
 .caret { font-size: 11px; color: var(--soft); width: 12px; display: inline-block; }
 
 /* ---- màn hình đăng nhập ---- */
-.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--ink); }
-.login .card { background: var(--panel); border-radius: var(--r); width: 100%; max-width: 400px; padding: 28px; box-shadow: 0 20px 60px rgba(0,0,0,.35); }
+.login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--rail-bg); }
+.login .card { background: var(--panel); border-radius: var(--r); width: 100%; max-width: 400px; padding: 28px; box-shadow: var(--shadow-modal); }
 .login h1 { margin: 0 0 4px; font: 600 20px var(--disp); letter-spacing: .05em; text-transform: uppercase; }
 .login p.sub { margin: 0 0 20px; color: var(--soft); font-size: 12.5px; }
 .login .msg { margin-top: 10px; font-size: 12.5px; min-height: 18px; }
@@ -387,8 +558,8 @@ tr:hover > td.grip { color: var(--soft); }
 }
 .fx-ac {
   position: absolute; z-index: 40; left: 0; right: 0; margin-top: 2px;
-  background: #fff; border: 1px solid var(--rule); border-radius: var(--r);
-  box-shadow: 0 8px 22px rgba(15,29,36,.16); max-height: 220px; overflow: auto;
+  background: var(--panel); border: 1px solid var(--rule); border-radius: var(--r);
+  box-shadow: var(--shadow-pop); max-height: 220px; overflow: auto;
 }
 .fx-ac-i { padding: 5px 9px; cursor: pointer; border-bottom: 1px solid var(--rule-2); }
 .fx-ac-i:last-child { border-bottom: 0; }

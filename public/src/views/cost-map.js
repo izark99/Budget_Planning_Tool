@@ -14,8 +14,11 @@ function neededCombos() {
   const unitCol = ENGINE.roleCol('unit');
   const mp = S.maps;
   const cenOf = {}; (mp.costCenter || []).forEach((x) => { if (x.costCenter) cenOf[nkey(x.unit)] = x.costCenter; });
+  const divOf = {}; (mp.division || []).forEach((x) => { if (x.division) divOf[nkey(x.unit)] = x.division; });
   const ccOf = {}; (mp.costCode || []).forEach((x) => { if (x.costCode) ccOf[nkey(x.formulaCode)] = x.costCode; });
-  const budOf = {}; (mp.budgetCode || []).forEach((x) => { if (x.budgetCode) budOf[nkey(x.costCenter) + '|' + nkey(x.costCode) + '|' + nkey(x.unit)] = x.budgetCode; });
+  /* Khoá Budget Code: Cost Code + Đơn vị. Cùng khoá với ENGINE.buildMaps() và
+     với sheet ChiTiet_Dong ở platform/io.js — ba nơi phải khớp nhau. */
+  const budOf = {}; (mp.budgetCode || []).forEach((x) => { if (x.budgetCode) budOf[nkey(x.costCode) + '|' + nkey(x.unit)] = x.budgetCode; });
   const accOf = {}; (mp.accountCode || []).forEach((x) => { if (x.accountCode) accOf[nkey(x.costCode) + '|' + nkey(x.costCenter) + '|' + nkey(x.budgetCode)] = 1; });
 
   const units = unitCol ? distinctVals(rows, unitCol) : [];
@@ -23,6 +26,7 @@ function neededCombos() {
 
   const missFc = fcs.filter((c) => { return !ccOf[nkey(c)]; });
   const missUnit = units.filter((u) => { return !cenOf[nkey(u)]; });
+  const missDiv = units.filter((u) => { return !divOf[nkey(u)]; });
 
   const budSeen = {}, budNeed = []; let budMiss = 0;
   const accSeen = {}, accNeed = []; let accMiss = 0;
@@ -30,16 +34,18 @@ function neededCombos() {
     const cen = cenOf[nkey(u)] || '';
     fcs.forEach((fcCode) => {
       const cc = ccOf[nkey(fcCode)] || '';
-      if (!cc || !cen) return;
-      const bk = nkey(cen) + '|' + nkey(cc) + '|' + nkey(u);
+      /* Budget Code không còn phụ thuộc Cost Center, nên đơn vị chưa map Cost
+         Center vẫn phải sinh được dòng Budget Code. */
+      if (!cc) return;
+      const bk = nkey(cc) + '|' + nkey(u);
       if (!budSeen[bk]) {
         budSeen[bk] = 1;
         const bud = budOf[bk] || '';
-        budNeed.push({ costCenter: cen, costCode: cc, unit: u, budgetCode: '', name: '' });
+        budNeed.push({ costCode: cc, unit: u, budgetCode: '', name: '' });
         if (!bud) budMiss++;
       }
       const bud2 = budOf[bk] || '';
-      if (!bud2) return;
+      if (!bud2 || !cen) return;
       const ak = nkey(cc) + '|' + nkey(cen) + '|' + nkey(bud2);
       if (!accSeen[ak]) {
         accSeen[ak] = 1;
@@ -49,7 +55,7 @@ function neededCombos() {
     });
   });
   return {
-    units, fcs, missFc, missUnit,
+    units, fcs, missFc, missUnit, missDiv,
     budNeed, budMiss, budTotal: budNeed.length,
     accNeed, accMiss, accTotal: accNeed.length,
     unitCol
@@ -60,7 +66,10 @@ function viewMaps() {
   const wrap = el('div');
   const mp = S.maps;
 
-  const badges = { cc: el('span', { class: 'tag' }), cen: el('span', { class: 'tag' }), bud: el('span', { class: 'tag' }), acc: el('span', { class: 'tag' }) };
+  const badges = {
+    cc: el('span', { class: 'tag' }), cen: el('span', { class: 'tag' }), div: el('span', { class: 'tag' }),
+    bud: el('span', { class: 'tag' }), acc: el('span', { class: 'tag' })
+  };
   let nc = neededCombos();
 
   function setBadge(node, miss, total, unitWord) {
@@ -75,6 +84,7 @@ function viewMaps() {
       nc = neededCombos();
       setBadge(badges.cc, nc.missFc.length, nc.fcs.length, 'Formula Code');
       setBadge(badges.cen, nc.missUnit.length, nc.units.length, t('maps.word_unit'));
+      setBadge(badges.div, nc.missDiv.length, nc.units.length, t('maps.word_unit'));
       setBadge(badges.bud, nc.budMiss, nc.budTotal, t('maps.word_combo'));
       setBadge(badges.acc, nc.accMiss, nc.accTotal, t('maps.word_combo'));
     };
@@ -86,11 +96,12 @@ function viewMaps() {
 
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [
-      el('h3', { text: t('fm.bon_tang_phan_loai') }), el('div', { class: 'sp' }),
+      el('h3', { text: t('fm.nam_tang_phan_loai') }), el('div', { class: 'sp' }),
       el('button', {
-        class: 'btn sm del', text: t('fm.xoa_sach_ca_bon_bang'), onclick: function () {
-          confirmBox(t('fm.xoa_sach_du_lieu_cua_ca_bon_bang'), () => {
-            mp.costCode.length = 0; mp.costCenter.length = 0; mp.budgetCode.length = 0; mp.accountCode.length = 0;
+        class: 'btn sm del', text: t('fm.xoa_sach_ca_nam_bang'), onclick: function () {
+          confirmBox(t('fm.xoa_sach_du_lieu_cua_ca_nam_bang'), () => {
+            mp.costCode.length = 0; mp.costCenter.length = 0; mp.division.length = 0;
+            mp.budgetCode.length = 0; mp.accountCode.length = 0;
             setRESULT(null); touch(); render(); toast(t('fm.da_xoa_sach'));
           });
         }
@@ -139,23 +150,40 @@ function viewMaps() {
     guide: [t('maps.cen_guide')]
   }), nc.unitCol ? '' : t('maps.cen_no_unitcol')));
 
+  /* 3. Unit → Division. Cùng khuôn với Cost Center: một cột khoá là Đơn vị. */
+  wrap.appendChild(foldPanel('map_div', t('maps.panel_div') + (nc.unitCol ? ' (' + nc.unitCol + ')' : ''), [badges.div], [], dataTable({
+    columns: [
+      { k: 'unit', label: 'Unit', key: true, type: 'text', required: true, w: 170 },
+      { k: 'division', label: 'Division', type: 'text', required: true, w: 160 },
+      /* CHUỖI GIAO THỨC (như trên) */
+      { k: 'name', label: 'Tên Division', type: 'text' }
+    ],
+    rows: function () { return mp.division; },
+    blank: function () { return { unit: '', division: '', name: '' }; },
+    onChange: chg, onImported: chgNow,
+    tableName: 'tblMapDivision', sheetName: 'Division', title: 'Division',
+    prefill: function () { return neededCombos().units.map((u) => { return { unit: u, division: '', name: '' }; }); },
+    guide: [t('maps.div_guide')]
+  }), nc.unitCol ? '' : t('maps.cen_no_unitcol')));
+
   function ccList() { const s2 = {}; mp.costCode.forEach((x) => { if (x.costCode) s2[x.costCode] = 1; }); return Object.keys(s2).sort(); }
   function cenList() { const s2 = {}; mp.costCenter.forEach((x) => { if (x.costCenter) s2[x.costCenter] = 1; }); return Object.keys(s2).sort(); }
   function unitList() { return neededCombos().units; }
   function budList() { const s2 = {}; mp.budgetCode.forEach((x) => { if (x.budgetCode) s2[x.budgetCode] = 1; }); return Object.keys(s2).sort(); }
 
-  /* 3. (Cost Center, Cost Code, Unit) → Budget Code */
+  /* 4. (Cost Code, Unit) → Budget Code.
+     Cost Center ĐÃ RỜI khỏi khoá này. Dòng khai theo khoá cũ bị xoá lúc nạp
+     (normaliseMaps trong core/state.js) và có báo — không trộn hai loại khoá. */
   wrap.appendChild(foldPanel('map_bud', t('maps.panel_bud'), [badges.bud], [], dataTable({
     columns: [
-      { k: 'costCenter', label: 'Cost Center', key: true, type: 'select', options: cenList, required: true, w: 150 },
-      { k: 'costCode', label: 'Cost Code', key: true, type: 'select', options: ccList, required: true, w: 140 },
-      { k: 'unit', label: 'Unit', key: true, type: 'select', options: unitList, required: true, w: 140 },
+      { k: 'costCode', label: 'Cost Code', key: true, type: 'select', options: ccList, required: true, w: 150 },
+      { k: 'unit', label: 'Unit', key: true, type: 'select', options: unitList, required: true, w: 150 },
       { k: 'budgetCode', label: 'Budget Code', type: 'text', required: true, w: 150 },
       /* CHUỖI GIAO THỨC (như trên) */
       { k: 'name', label: 'Diễn giải', type: 'text' }
     ],
     rows: function () { return mp.budgetCode; },
-    blank: function () { return { costCenter: '', costCode: '', unit: '', budgetCode: '', name: '' }; },
+    blank: function () { return { costCode: '', unit: '', budgetCode: '', name: '' }; },
     onChange: chg, onImported: chgNow,
     tableName: 'tblMapBudgetCode', sheetName: 'BudgetCode', title: 'Budget Code',
     prefill: function () { return neededCombos().budNeed; },
@@ -167,7 +195,7 @@ function viewMaps() {
   })));
 
   /* 4. (Cost Code, Cost Center, Budget Code) → Account Code */
-  wrap.appendChild(foldPanel('map_acc', '4 · Account Code ← Cost Code + Cost Center + Budget Code', [badges.acc], [], dataTable({
+  wrap.appendChild(foldPanel('map_acc', '5 · Account Code ← Cost Code + Cost Center + Budget Code', [badges.acc], [], dataTable({
     columns: [
       { k: 'costCode', label: 'Cost Code', key: true, type: 'select', options: ccList, required: true, w: 150 },
       { k: 'costCenter', label: 'Cost Center', key: true, type: 'select', options: cenList, required: true, w: 150 },

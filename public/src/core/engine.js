@@ -3,12 +3,12 @@
 
    định biên → cột nhóm dẫn xuất → công thức theo nhóm → tăng lương
    → tờ trình → phân bổ tháng → hệ số định biên → % trích
-   → Cost Code / Cost Center / Budget Code / Account Code
+   → Cost Code / Cost Center / Division / Budget Code / Account Code
 
    Tầng NGHIỆP VỤ: biết định biên là gì, Formula Code là gì. Gọi xuống
    expression.js để tính biểu thức; expression.js không biết gì về nơi này.
    =========================================================== */
-import { CAL_FIELDS, fmt, MONTHS, nkey, numOf, S } from './state.js';
+import { CAL_FIELDS, classDef, classOuts, fmt, MONTHS, nkey, numOf, S } from './state.js';
 import { t } from './content.js';
 import { FX } from './expression.js';
 
@@ -51,8 +51,16 @@ const ENGINE = (function () {
   /* Mọi tên cột dùng được trong công thức: cột định biên + cột nhóm dẫn xuất */
   function usableCols() {
     return attrCols().map((c) => { return c.alias; })
-      .concat((S.classes || []).map((c) => { return c.name; }).filter(Boolean))
+      .concat(classCols())
       .concat(policyCols());
+  }
+  /* Mọi cột do bảng phân loại nhóm sinh ra — một bảng có thể sinh nhiều cột. */
+  function classCols() {
+    const out = [];
+    (S.classes || []).forEach((c) => {
+      classOuts(c).forEach((o) => { out.push(o.name); });
+    });
+    return out;
   }
   function policyCols() {
     const out = [];
@@ -185,32 +193,45 @@ const ENGINE = (function () {
     });
   }
 
-  /* ---- Áp bảng phân loại theo thứ tự ---- */
+  /* ---- Áp bảng phân loại theo thứ tự ----
+     Một bảng sinh ra NHIỀU cột giá trị (classOuts đọc được cả bảng khai kiểu cũ
+     chỉ có một cột), nên idx giữ CẢ DÒNG chứ không giữ riêng ô kết quả. */
   function applyClasses(rows, warn) {
     (S.classes || []).forEach((cl) => {
-      if (!cl.name) return;
+      const outs = classOuts(cl);
+      if (!outs.length) return;
       const keys = cl.keys || [];
       const idx = {};
       (cl.rows || []).forEach((r) => {
         const k = keys.map((_, j) => { return nkey(r[j]); }).join('\u0001');
-        if (idx[k] === undefined) idx[k] = r[keys.length];
+        if (idx[k] === undefined) idx[k] = r;
       });
       const hasStar = (cl.rows || []).some((r) => { return keys.some((_, j) => { return String(r[j]).trim() === '*'; }); });
       let miss = 0;
       rows.forEach((row) => {
         const vals = keys.map((kc) => { return nkey(row[kc]); });
-        let v = idx[vals.join('\u0001')];
-        if (v === undefined && hasStar) {
+        let rec = idx[vals.join('\u0001')];
+        if (rec === undefined && hasStar) {
           // thử thay dần từng khoá bằng *
-          for (let b = 1; b < (1 << keys.length) && v === undefined; b++) {
+          for (let b = 1; b < (1 << keys.length) && rec === undefined; b++) {
             const probe = vals.map((x, j) => { return (b >> j) & 1 ? '*' : x; });
-            v = idx[probe.join('\u0001')];
+            rec = idx[probe.join('\u0001')];
           }
         }
-        if (v === undefined) { v = cl.def || ''; miss++; }
-        row[cl.name] = (cl.type === 'num') ? numOf(v) : (v == null ? '' : String(v));
+        if (rec === undefined) miss++;
+        outs.forEach((o, oi) => {
+          /* GIỮ ĐÚNG NẾP CŨ: chỉ khi KHÔNG khớp dòng nào mới rơi về mặc định.
+             Ô để trống trong bảng vẫn ra chuỗi rỗng (số thì ra 0) — bảng chính
+             sách thì rơi về mặc định cả khi ô trống, hai chỗ khác nhau thật.
+             Đổi chỗ này là đổi số liệu của mọi dự án đang chạy. */
+          const v = rec === undefined ? classDef(cl, oi) : rec[keys.length + oi];
+          row[o.name] = (o.type === 'num') ? numOf(v) : (v == null ? '' : String(v));
+        });
       });
-      if (miss && warn) warn.push({ type: 'class', msg: t('engine.warn.class.miss', { name: cl.name, n: miss, def: cl.def || t('engine.value.empty') }) });
+      if (miss && warn) {
+        const d = classDef(cl, 0);
+        warn.push({ type: 'class', msg: t('engine.warn.class.miss', { name: cl.name, n: miss, def: d || t('engine.value.empty') }) });
+      }
     });
     return rows;
   }
@@ -286,18 +307,25 @@ const ENGINE = (function () {
     });
   }
 
-  /* ---- Bốn tầng phân loại chi phí ---- */
+  /* ---- Năm tầng phân loại chi phí ----
+     Division suy từ Đơn vị, y hệt Cost Center. Budget Code KHÔNG còn khoá theo
+     Cost Center: chỉ Cost Code + Đơn vị. Khoá này còn được dựng lại ở hai nơi
+     nữa — views/cost-map.js (đếm tổ hợp còn thiếu) và platform/io.js (sheet
+     ChiTiet_Dong). Lệch một chỗ là bảng pivot và sheet dài nói hai số khác nhau
+     mà không ai báo. */
   function buildMaps() {
     const mp = S.maps || /** @type {ProjectState['maps']} */ ({});
     /** @type {Record<string, any>} */ const cc = {};
     /** @type {Record<string, any>} */ const cen = {};
+    /** @type {Record<string, any>} */ const div = {};
     /** @type {Record<string, any>} */ const bud = {};
     /** @type {Record<string, any>} */ const acc = {};
     (mp.costCode || []).forEach((x) => { cc[nkey(x.formulaCode)] = x; });
     (mp.costCenter || []).forEach((x) => { cen[nkey(x.unit)] = x; });
-    (mp.budgetCode || []).forEach((x) => { bud[nkey(x.costCenter) + '|' + nkey(x.costCode) + '|' + nkey(x.unit)] = x; });
+    (mp.division || []).forEach((x) => { div[nkey(x.unit)] = x; });
+    (mp.budgetCode || []).forEach((x) => { bud[nkey(x.costCode) + '|' + nkey(x.unit)] = x; });
     (mp.accountCode || []).forEach((x) => { acc[nkey(x.costCode) + '|' + nkey(x.costCenter) + '|' + nkey(x.budgetCode)] = x; });
-    return { cc, cen, bud, acc };
+    return { cc, cen, div, bud, acc };
   }
 
   /* ---------- CHẠY ---------- */
@@ -367,15 +395,22 @@ const ENGINE = (function () {
     const ctxRow = rows.map((r) => {
       const unitV = unitCol ? r[unitCol] : '';
       const cen = maps.cen[nkey(unitV)];
+      const div = maps.div[nkey(unitV)];
       return {
         row: r, id: idCol ? nkey(r[idCol]) : '', pos: posCol ? nkey(r[posCol]) : '',
-        unit: unitV, cen: cen ? cen.costCenter : '', cal: cal.pick(r), m: r.__m, rv: rowVars(r.__m)
+        unit: unitV, cen: cen ? cen.costCenter : '', div: div ? div.division : '',
+        cal: cal.pick(r), m: r.__m, rv: rowVars(r.__m)
       };
     });
     if (unitCol) {
-      const missU = {};
-      ctxRow.forEach((c) => { if (!c.cen && nkey(c.unit)) missU[c.unit] = 1; });
+      const missU = {}, missD = {};
+      ctxRow.forEach((c) => {
+        if (!nkey(c.unit)) return;
+        if (!c.cen) missU[c.unit] = 1;
+        if (!c.div) missD[c.unit] = 1;
+      });
       Object.keys(missU).slice(0, 30).forEach((u) => { warnings.push({ type: 'cen', msg: t('engine.warn.cen.unmapped', { u }) }); });
+      Object.keys(missD).slice(0, 30).forEach((u) => { warnings.push({ type: 'div', msg: t('engine.warn.div.unmapped', { u }) }); });
     }
 
     const data = [], groupOf = [], conflicts = [], totalsByFc = new Array(nF).fill(0), monthTotals = new Array(M).fill(0);
@@ -464,18 +499,23 @@ const ENGINE = (function () {
           totalsByFc[c] += amount; monthTotals[m - 1] += amount;
 
           const cen = rc.cen;
-          const bRec = maps.bud[nkey(cen) + '|' + nkey(costCode) + '|' + nkey(rc.unit)];
+          const bRec = maps.bud[nkey(costCode) + '|' + nkey(rc.unit)];
           const budgetCode = bRec ? bRec.budgetCode : '';
-          if (!budgetCode && costCode) missBC[[cen || t('engine.map.none'), costCode, rc.unit].join(' × ')] = 1;
+          if (!budgetCode && costCode) missBC[[costCode, rc.unit].join(' × ')] = 1;
           const aRec = maps.acc[nkey(costCode) + '|' + nkey(cen) + '|' + nkey(budgetCode)];
           const accountCode = aRec ? aRec.accountCode : '';
           if (!accountCode && budgetCode) missAC[[costCode, cen, budgetCode].join(' × ')] = 1;
 
-          const pk = [accountCode, budgetCode, costCode, cen, fc.code].join('|');
+          /* Thứ tự khoá = thứ tự cột trên màn Kết quả và trong file xuất:
+             Division / Budget Code / Cost Center / Cost Code / Account. Đổi ở
+             đây thì phải đổi cả bộ so sánh sắp xếp bên dưới, result.js, io.js
+             và test/helpers/canon.mjs. */
+          const pk = [rc.div, budgetCode, cen, costCode, accountCode, fc.code].join('|');
           let pv = pivot[pk];
           if (!pv) pv = pivot[pk] = {
-            accountCode: accountCode || t('engine.map.undeclared'), budgetCode: budgetCode || t('engine.map.undeclared'),
-            costCode: costCode || t('engine.map.undeclared'), costCenter: cen || t('engine.map.none'),
+            division: rc.div || t('engine.map.undeclared'), budgetCode: budgetCode || t('engine.map.undeclared'),
+            costCenter: cen || t('engine.map.none'), costCode: costCode || t('engine.map.undeclared'),
+            accountCode: accountCode || t('engine.map.undeclared'),
             formulaCode: fc.code, formulaName: fc.name || '',
             m: new Array(M).fill(0), total: 0
           };
@@ -501,7 +541,9 @@ const ENGINE = (function () {
       formulas: fcs, rows, data, groupOf,
       totalsByFc, monthTotals, grand,
       pivot: Object.keys(pivot).map((k) => { return pivot[k]; }).sort((a, b) => {
-        return (a.accountCode + a.budgetCode + a.costCode) < (b.accountCode + b.budgetCode + b.costCode) ? -1 : 1;
+        const ka = a.division + a.budgetCode + a.costCenter + a.costCode;
+        const kb = b.division + b.budgetCode + b.costCenter + b.costCode;
+        return ka < kb ? -1 : 1;
       }),
       conflicts, warnings, formulaErrors,
       dataNoRaise: null, raiseImpact: null, raiseTotal: 0,
@@ -821,7 +863,7 @@ const ENGINE = (function () {
   }
 
   return {
-    run, preview, policyCols, previewRow, countMatch, previewRows, invalidate,
+    run, preview, classCols, policyCols, previewRow, countMatch, previewRows, invalidate,
     runAsync,
     usableCols, attrCols, monthCols, roleCol, M
   };

@@ -4,6 +4,100 @@ Gộp theo đợt việc, mới nhất ở trên. Dự án chưa đánh số phi
 
 ---
 
+## Đợt 8 — Chế độ tối, sắp/lọc mọi bảng, Division · 2026-09-04
+
+Tám việc. Hai việc chạm vào mô hình dữ liệu (phân loại nhóm nhiều cột, khoá Budget Code),
+một việc cắt ngang mọi bảng trong app (sắp xếp / lọc theo cột).
+
+**Đây là lần đầu golden được phép đổi.** Từ trước tới nay `golden-result.json` và
+`golden-export.json` là "không đổi một ký tự". Đợt này hình dạng dòng pivot đổi và thứ tự
+cột trong sheet khai báo đổi, nên golden phải sinh lại — và phải chứng minh được rằng chỉ
+*hình dạng* đổi còn *con số* thì không. Xem mục "Golden" bên dưới.
+
+### Thanh cuộn
+App có chín khung cuộn, tất cả đang dùng thanh mặc định của trình duyệt. Nay có một khối
+dùng chung (`scrollbar-width: thin` + `::-webkit-scrollbar`), và cột trái — vốn là một mặt
+tối — có bản trắng mờ riêng. Phần bung ra của `<select>` gốc thì **không sửa được**: trình
+duyệt vẽ nó trong một lớp riêng, CSS của trang không với tới. Ghi thẳng giới hạn đó vào
+chú thích để lần sau khỏi thử lại.
+
+### Chế độ sáng / tối
+Ba lựa chọn: theo hệ thống (mặc định), sáng, tối. Lưu ở `localStorage` chứ **không** ở
+`S.ui` — `S.ui` đi vào file dự án `.json`, gửi file cho đồng nghiệp là gửi luôn chế độ màu
+của mình. Một đoạn nội tuyến trong `<head>` đóng dấu `data-theme` **trước lần vẽ đầu tiên**
+nên không loé sáng; nhờ vậy CSS chỉ cần **một** khối tối, không phải viết lại lần nữa dưới
+`@media (prefers-color-scheme: dark)`. Màn đăng nhập có CSS riêng (middleware chặn file
+tĩnh khi chưa đăng nhập) nên có bản chép rút gọn.
+
+46 màu viết cứng ngoài `:root` được gom về biến. Sáu nơi trong JS chép tay
+`color:#fff` cho chip đang chọn — đúng chỗ chế độ tối hở ra — gom về lớp `.chip.on`.
+
+### Phân loại nhóm: nhiều cột giá trị
+Một bảng chia được nhiều phân loại cùng lúc, đúng hình dạng của bảng chính sách:
+`cl.outs = [{name, type}]` + `cl.def[]`. **Không có bước chuyển đổi dữ liệu**: `classOuts()`
+đọc được cả hình dạng cũ (`name` + `type` + `def` một giá trị), nên mọi file `.json` đang
+lưu chạy nguyên. Chỉ khi người dùng chạm vào khối khai cột thì bảng mới được ghi sang hình
+dạng mới.
+
+Chỗ dễ lỡ tay nhất: `applyClasses` nay giống `applyPolicies` về arity nhưng **giữ ngữ nghĩa
+cũ** — ô để trống ra rỗng, chỉ khi không khớp dòng nào mới rơi về mặc định. Bảng chính sách
+rơi về mặc định cả khi ô trống; chép sang là lặng lẽ đổi số liệu của mọi dự án đang chạy.
+
+### Sắp xếp / lọc theo cột — mọi bảng
+`tableView()` dùng chung cho cả bảng sửa tại chỗ lẫn bảng dựng tay (Định biên, Tờ trình, ba
+bảng màn Kết quả). Bấm tiêu đề để sắp, Ctrl/Shift+bấm để thêm khoá phụ, nút phễu để lọc
+theo giá trị. Hai giao kèo:
+
+- **Sort chỉ là cách XEM.** `apply()` trả mảng mới, không bao giờ đụng vào mảng nguồn —
+  thứ tự thật là thứ tự cột trong file Excel xuất ra, chỉ đổi khi kéo thả.
+- **Đang sắp thì tắt kéo thả.** Thả vào giữa một danh sách đã sắp lại thì vị trí thả chẳng
+  nói được gì về mảng gốc. Đang *lọc* thì vẫn kéo được — `moveBeside` nhận phần tử.
+
+Ô rỗng luôn xuống cuối, kể cả khi sắp giảm dần: "chưa khai" không phải là "lớn nhất". Phép
+kiểm bắt đúng lỗi này ở bản đầu.
+
+### Sắp thứ tự ở màn Thiết lập
+Công thức dùng chung và tham số dùng chung dùng lại nguyên bộ của Formula Code. Thứ tự
+không ảnh hưởng phép tính — `buildShared()` dựng sổ đăng ký theo mã rồi lan truyền phụ
+thuộc qua đồ thị tham chiếu — nên chỉ `touch()`, không bỏ kết quả đã tính.
+
+### Ngày công: đổi chỗ hai cột
+"Ngày nghỉ ngừng việc" lên trước "Ngày nghỉ có lương khác". Bất biến thật của `CAL_FIELDS`
+chỉ là *`std` ở chỉ số 0* (mọi phép cộng đều `slice(1)`, mà cộng thì giao hoán), không phải
+"cột mới đứng cuối" như chú thích cũ nói. Nhập lại file `.xlsx` tải về từ trước vẫn đúng:
+`importMapped` khớp cột theo **tên tiêu đề**, không theo vị trí.
+
+### Phân loại chi phí: Budget Code đổi khoá, thêm Division
+Budget Code từ `Cost Center + Cost Code + Đơn vị` còn `Cost Code + Đơn vị`. Khoá này được
+dựng ở **ba nơi** — `ENGINE.buildMaps()`, `views/cost-map.js`, và sheet `ChiTiet_Dong` của
+`platform/io.js`. Lệch một chỗ là bảng pivot và sheet dài nói hai số khác nhau mà không có
+gì báo, nên có phép kiểm e2e canh riêng chỗ thứ ba.
+
+Dòng khai theo khoá cũ bị **xoá sạch** lúc nạp (nhận ra bằng khoá `costCenter` còn nằm
+trong object) và có toast chỉ đường khai lại — giữ lại là để hai loại khoá lẫn lộn trong
+một bảng. Cờ `meta.budKeyV` chặn xoá lần hai.
+
+Division suy từ Đơn vị y hệt Cost Center. Bảng pivot đổi thứ tự cột thành
+**Division / Budget Code / Cost Center / Cost Code / Account**.
+
+### Golden: đổi có kiểm soát
+Sinh lại từ **chính `state.json` đang có** (không dựng lại state, để diff không lẫn id ngẫu
+nhiên). Kết quả soi được:
+
+- `golden-result.json`: `grand`, `monthTotals`, `totalsByFc`, `nRows`, `data`,
+  `formulaErrors`, `conflicts` **trùng từng ký tự**. `pivot` vẫn 4 dòng, mỗi dòng thêm một
+  ô Division và năm ô mã đảo chỗ — **13 con số của mỗi dòng không đổi**. `warnings` chỉ
+  thêm 4 dòng "chưa map Division", không mất dòng nào.
+- `golden-export.json`: ba sheet `NganSach_TheoNguoi`, `TongHop_FormulaCode`,
+  `DoiChieu_ToTrinh` **không đổi một ô**. `TongHop_PhanLoai`: 65 ô từ cột G trở đi dịch
+  đúng một cột, 30 ô mã rơi đúng vị trí hoán vị, 5 ô mới là cột Division — cộng lại đúng
+  100 ô. `BanKhaiBao`: đúng 13 ô cột E (nhãn + 12 tháng) do đổi thứ tự cột ngày công.
+
+Vì `state.json` để **rỗng cả năm bảng ánh xạ**, việc đổi khoá Budget Code không thể làm
+dịch một con số nào — đó chính là điều biến golden thành bằng chứng đọc được cho đợt này.
+
+---
+
 ## Đợt 7 — Thao tác nhanh, xuất Excel có định dạng · 2026-09-03
 
 Tám việc nữa. Ba việc chạm vào phần lõi: thanh tiến trình phải cắt được vòng tính, bộ xuất

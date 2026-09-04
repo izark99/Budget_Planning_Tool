@@ -32,6 +32,10 @@ rail.open_project: ⤒  Mở file dự án
 rail.reset: ↺  Xoá hết, làm lại
 rail.save_project: ⤓  Lưu file dự án (.json)
 rail.saved_at: ✓ Đã lưu file lúc {at}
+rail.theme: Giao diện
+rail.theme_auto: Theo hệ thống
+rail.theme_dark: Tối
+rail.theme_light: Sáng
 rail.unsaved: ⚠ Chưa lưu ra file .json
 rail.warn_on_close: Hỏi trước khi tắt tab
 view.cal.sub: Ngày công chuẩn và ngày nghỉ có lương từng tháng
@@ -44,7 +48,7 @@ view.dash.title: Dashboard soát số
 view.exc.sub: Trường hợp duyệt riêng, đối chiếu với công thức
 view.formula.sub: Formula Code — nhóm, công thức và tháng trích
 view.hc.sub: Nguồn dữ liệu gốc — mỗi dòng một nhân sự
-view.maps.sub: Cost Code · Cost Center · Budget Code · Account Code
+view.maps.sub: Cost Code · Cost Center · Division · Budget Code · Account Code
 view.maps.tab: Phân loại chi phí
 view.policy.sub: Mức lương, thưởng, phụ cấp cho từng nhóm
 view.raise.sub: Từ tháng nào, mức bao nhiêu, áp cho công thức nào
@@ -108,12 +112,18 @@ table.clear: Xoá sạch
 table.comboLimit: Trần sinh
 table.comboLimit.hint: Số dòng tối đa mỗi lần bấm "Sinh sẵn từ định biên". Để trống nghĩa là không giới hạn — sinh đủ mọi tổ hợp có trong định biên.
 table.comboLimit.none: không giới hạn
-table.dragHint: Kéo để đổi thứ tự
 table.downloadTemplate: ⤓ Tải mẫu Excel
+table.dragHint: Kéo để đổi thứ tự
 table.dragMulti: Ctrl+bấm chọn thêm · Shift+bấm chọn cả dải · kéo tay nắm để đổi thứ tự
-table.exportData: ⤒ Xuất dữ liệu
 table.empty: Chưa có dòng nào
+table.exportData: ⤒ Xuất dữ liệu
+table.filter.blank: (để trống)
+table.filter.clearCol: Bỏ lọc cột này
+table.filter.contains: Chứa chữ…
+table.filter.hint: Lọc theo cột này
+table.filter.nVals: {n} giá trị
 table.filter.placeholder: Lọc…
+table.filter.remove: Bấm để bỏ lọc cột này
 table.importExcel: Nhập từ Excel
 table.info.matched: · khớp {n}
 table.info.picked: đang chọn {n}
@@ -128,6 +138,11 @@ table.page.prev: ‹ Trước
 table.page.size: Mỗi trang
 table.prefill: Sinh sẵn từ định biên
 table.showMore: Hiện thêm
+table.sort.hint: Bấm để sắp xếp · bấm nữa để đảo chiều · Ctrl/Shift+bấm để thêm khoá phụ
+table.sort.remove: Bấm để bỏ khoá sắp xếp này
+table.sorted.noDrag: Đang sắp xếp nên không kéo thả được — gỡ sắp xếp thì kéo lại được
+table.view.active: Đang xem theo:
+table.view.clear: Bỏ hết
 
 # Nhập / xuất file
 export.audit.all: TẤT CẢ
@@ -150,7 +165,7 @@ export.audit.month: Tháng
 export.audit.monthsPicked: Tháng trích
 export.audit.name: Tên
 export.audit.note: Ghi chú
-export.audit.otherDays: Thực tế / Lễ / Phép / Khác / Ngừng việc
+export.audit.otherDays: Thực tế / Lễ / Phép / Ngừng việc / Khác
 export.audit.params: THAM SỐ
 export.audit.pct: Mức %
 export.audit.period: Kỳ ngân sách
@@ -316,6 +331,7 @@ engine.warn.cal: Ngày công {scope} · {m}: tổng các cột {w} {n} ngày so 
 engine.warn.cc.unmapped: Formula Code "{k}" chưa map Cost Code
 engine.warn.cen.unmapped: Đơn vị "{u}" chưa map Cost Center
 engine.warn.class.miss: Phân loại "{name}": {n} dòng không khớp bảng, dùng giá trị mặc định "{def}"
+engine.warn.div.unmapped: Đơn vị "{u}" chưa map Division
 engine.warn.keycol: Chưa chọn cột Khoá nhân sự — tờ trình chỉ ghép được theo chức danh
 engine.warn.month: Chưa gán đủ 12 cột tháng — mọi dòng đang tính là có mặt cả 12 tháng
 engine.warn.nogroup: {code}: {n} dòng không khớp nhóm nào (tính = 0)
@@ -394,17 +410,19 @@ cal.cac_bang_phan_loai: Các bảng phân loại
 cal.chon_it_nhat_mot_cot_khoa: Chọn ít nhất một cột khoá
 cal.chua_co_bang_phan_loai_nao: Chưa có bảng phân loại nào
 cal.chua_co_dong_nao_bam_sinh_san_tu: Chưa có dòng nào — bấm “Sinh sẵn từ định biên” để lấy các tổ hợp đang có
-cal.class_guide_1: Cột cuối là nhóm kết quả — tự đặt mã tuỳ ý.
+cal.class_guide_1: Các cột cuối là cột giá trị bảng này sinh ra — tự đặt mã tuỳ ý.
 cal.class_guide_2: Các cột trước là khoá, phải khớp đúng giá trị trong bảng định biên.
 cal.class_guide_3: Ghi * ở ô khoá để khớp mọi giá trị.
 cal.class_guide_4: Dòng nào định biên không khớp sẽ nhận giá trị mặc định khai ở màn hình.
 cal.class_table_title: Bảng phân loại {name}
-cal.classes_help: Mỗi bảng lấy một hoặc nhiều cột làm khoá rồi sinh ra <strong>một cột nhóm mới</strong>. Cột đó dùng được ngay trong công thức: <code>[Nhóm lương]="NL1"</code>, và làm khoá cho bảng phía dưới. Chạy theo đúng thứ tự từ trên xuống. Ô khoá ghi <code>*</code> nghĩa là khớp mọi giá trị. Bấm vào tiêu đề để thu gọn bảng.
+cal.classes_help: Mỗi bảng lấy một hoặc nhiều cột làm khoá rồi sinh ra <strong>một hay nhiều cột nhóm mới</strong> — một bảng chia được nhiều phân loại cùng lúc, khỏi phải khai lại cùng bộ khoá. Các cột đó dùng được ngay trong công thức: <code>[Nhóm lương]="NL1"</code>, và làm khoá cho bảng phía dưới. Chạy theo đúng thứ tự từ trên xuống. Ô khoá ghi <code>*</code> nghĩa là khớp mọi giá trị. Bấm vào tiêu đề để thu gọn bảng.
 cal.confirm_delete_class: Xoá bảng phân loại "{name}"?
+cal.cot_gia_tri_sinh_ra: Cột giá trị sinh ra (tên · kiểu · mặc định khi không khớp)
 cal.cot_khoa_bam_de_chon: Cột khoá — bấm để chọn
 cal.da_xoa_sach_du_lieu: Đã xoá sạch dữ liệu
 cal.dien_deu_12_thang: Điền đều 12 tháng
 cal.doi_chieu: Đối chiếu
+cal.export_guide: Giữ nguyên hai cột Nhom và Thang. Nạp lại file này sẽ thay thế toàn bộ lịch ngày công đang có.
 cal.gap_over: thừa {n} ngày
 cal.gap_short: thiếu {n} ngày
 cal.gap_word_over: thừa
@@ -412,7 +430,6 @@ cal.gap_word_short: thiếu
 cal.guide_1: Cột Nhom: giá trị của cột đã chọn để phân lịch. Ghi * cho lịch dùng chung.
 cal.guide_2: Cột Thang: số từ 1 đến 12.
 cal.guide_3: Ngày công chuẩn nên bằng tổng của các cột còn lại.
-cal.export_guide: Giữ nguyên hai cột Nhom và Thang. Nạp lại file này sẽ thay thế toàn bộ lịch ngày công đang có.
 cal.import_title: Nhập lịch ngày công
 cal.imported: Đã nhập {n} lịch
 cal.khong_doc_duoc_dong_hop_le_nao: Không đọc được dòng hợp lệ nào
@@ -432,7 +449,7 @@ cal.rows_all_matched: khớp hết {n} dòng
 cal.rows_unmatched: {n} dòng định biên chưa khớp
 cal.scope_title: Giá trị của {col}, hoặc * cho mặc định
 cal.shared_help: Mọi nhân sự dùng chung một lịch. Chọn một cột ở trên nếu khối sản xuất và khối văn phòng khác ngày công.
-cal.ten_cot_nhom_sinh_ra: Tên cột nhóm sinh ra
+cal.ten_bang_phan_loai: Tên bảng phân loại
 cal.them_bang_phan_loai: + Thêm bảng phân loại
 cal.them_lich_cho_mot_nhom: + Thêm lịch cho một nhóm
 cal.unnamed: Chưa đặt tên
@@ -469,7 +486,6 @@ fm.ap_cho_cong_thuc_nao: Áp cho công thức nào
 fm.ap_dung_tu_thang: Áp dụng từ tháng
 fm.autogroup_info: Cột <strong>{col}</strong> có <strong>{n}</strong> giá trị: {vals}
 fm.bo_het: Bỏ hết
-fm.bon_tang_phan_loai: Bốn tầng phân loại
 fm.ca_ky: cả kỳ
 fm.ca_nam_dong_nay: Cả năm dòng này
 fm.chon_cot: Chọn cột
@@ -491,8 +507,8 @@ fm.created_groups: Đã tạo {n} nhóm
 fm.da_xoa_sach: Đã xoá sạch
 fm.dieu_kien_loi: điều kiện lỗi
 fm.dieu_kien_nhom: Điều kiện nhóm
-fm.drag_hint: Kéo để đổi thứ tự
 fm.dinh_nghia_phan_bo: Định nghĩa & phân bổ
+fm.drag_hint: Kéo để đổi thứ tự
 fm.du_kien_tang_luong: Dự kiến tăng lương
 fm.full_year: Cả năm
 fm.ghi_de: Ghi đè
@@ -501,7 +517,13 @@ fm.giu_lai_cac_nhom_hien_co: Giữ lại các nhóm hiện có
 fm.he_so_dinh_bien: Hệ số định biên
 fm.ket_qua_cong_thuc_la: Kết quả công thức là
 fm.khong_tim_thay: Không tìm thấy
+fm.kind.field: Cột định biên
+fm.kind.monthvar: Biến theo tháng
+fm.kind.param: Tham số
+fm.kind.shared: Công thức dùng chung
+fm.kind.unknown: Không nhận ra
 fm.lay_cao_nhat: Lấy cao nhất
+fm.line_accrual: % trích
 fm.line_afterExc: Sau tờ trình
 fm.line_amount: Vào ngân sách
 fm.line_raised: Sau tăng lương
@@ -516,11 +538,19 @@ fm.muc_tang: Mức tăng (%)
 fm.n_groups: {n} nhóm
 fm.n_months: {n}/12 tháng
 fm.n_rows_match: {n} dòng khớp
+fm.nam_tang_phan_loai: Năm tầng phân loại
 fm.nhom_cong_thuc: Nhóm & công thức
 fm.nhom_khop: Nhóm khớp
+fm.nhom_thu: Nhóm
 fm.no_match: — không khớp —
 fm.preview_error: <strong>Lỗi:</strong> {e}
 fm.preview_error_group: (nhóm "{g}")
+fm.refs.empty: Công thức này không tham chiếu cột hay biến nào
+fm.refs.kind: Loại
+fm.refs.name: Tên
+fm.refs.title: Thông tin dùng trong công thức
+fm.refs.value: Giá trị
+fm.refs.varying: Đổi theo tháng
 fm.rules_help: Xét từ trên xuống, <strong>nhóm đầu tiên khớp sẽ được dùng</strong> — như IFS. Nhóm cuối nên để trống điều kiện làm mặc định.
 fm.search: Tìm…
 fm.search_by: Tìm theo {col} hoặc tên…
@@ -539,21 +569,8 @@ fm.tong_ca_nam_chia_deu: Tổng cả năm, chia đều
 fm.too_many_values: Cột này có quá nhiều giá trị ({n})
 fm.tu_thang_da_chon_tro_di_ket_qua: Từ tháng đã chọn trở đi, kết quả của các công thức được chọn nhân với (1 + %). Nhiều đợt cùng khớp thì nhân dồn.
 fm.xoa: Xoá
-fm.xoa_sach_ca_bon_bang: Xoá sạch cả bốn bảng
-fm.xoa_sach_du_lieu_cua_ca_bon_bang: Xoá sạch dữ liệu của cả bốn bảng phân loại chi phí?
-fm.nhom_thu: Nhóm
-fm.refs.title: Thông tin dùng trong công thức
-fm.refs.name: Tên
-fm.refs.kind: Loại
-fm.refs.value: Giá trị
-fm.refs.varying: Đổi theo tháng
-fm.refs.empty: Công thức này không tham chiếu cột hay biến nào
-fm.kind.field: Cột định biên
-fm.kind.param: Tham số
-fm.kind.monthvar: Biến theo tháng
-fm.kind.shared: Công thức dùng chung
-fm.kind.unknown: Không nhận ra
-fm.line_accrual: % trích
+fm.xoa_sach_ca_nam_bang: Xoá sạch cả năm bảng
+fm.xoa_sach_du_lieu_cua_ca_nam_bang: Xoá sạch dữ liệu của cả năm bảng phân loại chi phí?
 
 # Màn 7 · Tờ trình ngoại lệ
 exc.guide_1: Có ID thì ghép theo ID; bỏ trống ID và điền Chuc Danh thì áp cho mọi người giữ chức danh đó.
@@ -578,16 +595,19 @@ maps.acc_note: Không còn ràng buộc theo đơn vị — đơn vị đã nằ
 maps.badge_missing: {miss}/{total} {w} chưa khai
 maps.badge_none: chưa có {w} nào để khai
 maps.badge_ok: đủ {total} {w}
-maps.bud_guide_1: Ba cột đầu là khoá: Cost Center, Cost Code và Đơn vị.
+maps.bud_guide_1: Hai cột đầu là khoá: Cost Code và Đơn vị. Cost Center KHÔNG còn nằm trong khoá này.
 maps.bud_guide_2: Ví dụ: F1 × 0304 → HR0203; HR × 0304 → HR0204.
 maps.bud_guide_3: Nút Sinh sẵn chỉ đổ ra tổ hợp thật sự phát sinh từ bảng định biên.
+maps.bud_key_changed: Khoá Budget Code đã đổi thành Cost Code + Đơn vị. Bảng khai theo khoá cũ đã được xoá — bấm “Sinh sẵn từ định biên” ở bảng Budget Code để khai lại.
 maps.cc_guide: Nhiều Formula Code có thể trỏ về cùng một Cost Code.
 maps.cc_note: Một Cost Code gom nhiều công thức.
 maps.cen_guide: Unit phải trùng đúng giá trị trong cột đơn vị của bảng định biên.
 maps.cen_no_unitcol: <strong>Chưa chọn cột Đơn vị</strong> ở màn hình Thiết lập — không sinh sẵn được danh sách.
-maps.help: Chuỗi suy ra: <strong>Formula Code → Cost Code</strong>, <strong>Đơn vị → Cost Center</strong>, <strong>Cost Center + Cost Code + Đơn vị → Budget Code</strong>, <strong>Cost Code + Cost Center + Budget Code → Account Code</strong>. Con số bên cạnh mỗi bảng đếm theo tổ hợp thật sự phát sinh từ định biên, cập nhật ngay khi sửa hoặc nhập file. Bấm tiêu đề để thu gọn.
-maps.panel_bud: 3 · Budget Code ← Cost Center + Cost Code + Đơn vị
+maps.div_guide: Division suy từ Đơn vị, y hệt Cost Center. Unit phải trùng đúng giá trị trong cột đơn vị của bảng định biên.
+maps.help: Chuỗi suy ra: <strong>Formula Code → Cost Code</strong>, <strong>Đơn vị → Cost Center</strong>, <strong>Đơn vị → Division</strong>, <strong>Cost Code + Đơn vị → Budget Code</strong>, <strong>Cost Code + Cost Center + Budget Code → Account Code</strong>. Con số bên cạnh mỗi bảng đếm theo tổ hợp thật sự phát sinh từ định biên, cập nhật ngay khi sửa hoặc nhập file. Bấm tiêu đề để thu gọn.
+maps.panel_bud: 4 · Budget Code ← Cost Code + Đơn vị
 maps.panel_cen: 2 · Cost Center ← Đơn vị
+maps.panel_div: 3 · Division ← Đơn vị
 maps.word_combo: tổ hợp
 maps.word_unit: đơn vị
 
@@ -645,7 +665,7 @@ res.luot_to_trinh_ap_dung: Lượt tờ trình áp dụng
 res.more_warnings: … và {n} cảnh báo khác
 res.n_diffs: {n} lượt lệch
 res.not_run_hint: Số liệu chỉ được tính khi bạn bấm nút bên dưới, để tránh chạy lại mỗi lần mở màn hình.
-res.pivot_title: Theo Account / Budget / Cost Code / Cost Center
+res.pivot_title: Theo Division / Budget Code / Cost Center / Cost Code / Account
 res.raise_before: Ngân sách nếu không tăng lương
 res.raise_by: Tách theo
 res.raise_hint: So với chính bộ khai báo này nhưng <strong>bỏ hết mọi đợt tăng</strong>. Các đợt nhân chồng lên nhau nên phần của từng đợt tính theo thứ tự khai báo — nhờ vậy cộng lại đúng bằng tổng.
@@ -666,7 +686,7 @@ res.sheet_long: Chi tiết dạng dọc
 res.sheet_long_note: Rất nặng: tới {n} dòng
 res.sheet_person: Ngân sách theo người × tháng
 res.sheet_person_note: Mỗi dòng định biên tách thành 12 dòng T01→T12 — {n} dòng
-res.sheet_pivot: Tổng hợp 4 tầng phân loại
+res.sheet_pivot: Tổng hợp 5 tầng phân loại
 res.th_applied: Áp dụng
 res.th_winner: Bên thắng
 res.tong_cong: TỔNG CỘNG

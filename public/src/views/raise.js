@@ -25,7 +25,7 @@ function viewRaise() {
           const c = code(f);
           const on = (r.formulas || []).indexOf(c) >= 0;
           line.appendChild(el('span', {
-            class: 'chip', style: on ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '',
+            class: 'chip' + (on ? ' on' : ''),
             text: c, title: f.name || '', onclick: function () {
               r.formulas = on ? r.formulas.filter((x) => { return x !== c; }) : (r.formulas || []).concat([c]);
               setRESULT(null); touch(); draw();
@@ -110,7 +110,7 @@ function scopeByCol(r, redraw) {
     vals.forEach((v) => {
       const chip = el('span', { class: 'chip', text: v, onclick: function () {
         picked[v] = !picked[v];
-        chip.style.cssText = picked[v] ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '';
+        chip.classList.toggle('on', !!picked[v]);
       } });
       list.appendChild(chip);
     });

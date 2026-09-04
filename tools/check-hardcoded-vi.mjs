@@ -44,7 +44,6 @@ export const ALLOWED = new Map([
   ['Công thức mới', 'giá trị mồi khi thêm Formula Code'],
   ['Chính sách mới', 'giá trị mồi khi thêm chính sách'],
   ['Nhóm ', 'tiền tố sinh tên nhóm mới (Nhóm 1, Nhóm 2…) — ghi vào state'],
-  ['Nhóm', 'tiền tố sinh tên nhóm mới — ghi vào state'],
   ['Đợt tăng ', 'tiền tố sinh tên đợt tăng lương — ghi vào state'],
   ['Cột ', 'tiền tố sinh tên cột phân loại — ghi vào state'],
   ['Còn lại', 'tên quy tắc mặc định cuối danh sách — ghi vào state'],
@@ -52,6 +51,7 @@ export const ALLOWED = new Map([
   /* --- Tên cột của file .xlsx mẫu, đồng thời là khoá khớp khi nhập lại --- */
   ['Tên Cost Code', 'tên cột file Excel bảng ánh xạ'],
   ['Tên Cost Center', 'tên cột file Excel bảng ánh xạ'],
+  ['Tên Division', 'tên cột file Excel bảng ánh xạ'],
   ['Diễn giải', 'tên cột file Excel bảng ánh xạ'],
   ['Mức tiền', 'tên cột file Excel bảng chính sách'],
 

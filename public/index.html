@@ -5,6 +5,19 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Lập ngân sách từ bảng định biên</title>
 <link rel="stylesheet" href="/styles.css">
+<!-- Chế độ sáng/tối phải được đóng dấu TRƯỚC lần vẽ đầu tiên, nếu không
+     trang loé sáng rồi mới chuyển tối. Chạy nội tuyến ở đây là cách duy
+     nhất chắc chắn sớm hơn cả CSS lẫn module. Bản đầy đủ (có nghe hệ thống
+     đổi chế độ và ô chọn) nằm ở src/ui/theme.js — sửa thì sửa cả hai. -->
+<script>
+(function () {
+  var m = "auto";
+  try { m = localStorage.getItem("bp_theme") || "auto"; } catch (e) { /* chặn đọc thì thôi */ }
+  var dark = m === "dark" || (m !== "light" && window.matchMedia
+    && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  document.documentElement.setAttribute("data-theme", dark ? "dark" : "light");
+})();
+</script>
 <!-- Thư viện gốc, giữ nguyên không sửa. Script cổ điển có defer chạy TRƯỚC
      script type=module, theo đúng thứ tự tài liệu — nên window.XLSX và
      window.XLTABLE chắc chắn đã có khi app.js bắt đầu. -->

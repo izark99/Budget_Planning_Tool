@@ -400,7 +400,7 @@ function previewPanel(fc) {
     ].filter((l) => { return l.always || l.when; });
 
     const head = [el('th', { text: '' })].concat(MONTHS.map((m, i) => {
-      return el('th', { class: 'num', style: res.months[i] && res.months[i].on ? '' : 'color:#B7C0BB', text: m });
+      return el('th', { class: 'num', style: res.months[i] && res.months[i].on ? '' : 'color:var(--faint)', text: m });
     })).concat([el('th', { class: 'num', text: t('fm.full_year') })]);
 
     const body = lines.map((l) => {

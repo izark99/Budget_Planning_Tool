@@ -45,15 +45,55 @@ const CAL_FIELDS = [
   { k: 'act', label: 'Ngày công làm việc thực tế', varName: 'NGAY_CONG_THUC_TE', def: 22 },
   { k: 'hol', label: 'Ngày nghỉ lễ', varName: 'NGAY_NGHI_LE', def: 1 },
   { k: 'leave', label: 'Ngày nghỉ phép có lương', varName: 'NGAY_NGHI_PHEP', def: 1 },
-  { k: 'other', label: 'Ngày nghỉ có lương khác', varName: 'NGAY_NGHI_KHAC', def: 2 },
-  /* Tách khỏi "ngày nghỉ có lương khác" để nhìn ra ngay. Mồi 0 chứ không bớt của
-     cột cũ — không đoán được trong đống "khác" cũ có bao nhiêu ngày ngừng việc.
-     ĐẶT CUỐI: ô đối chiếu cộng CAL_FIELDS.slice(1), std phải ở đầu. */
-  { k: 'stop', label: 'Ngày nghỉ ngừng việc', varName: 'NGAY_NGHI_NGUNG_VIEC', def: 0 }
+  /* Tách khỏi "ngày nghỉ có lương khác" để nhìn ra ngay, và đứng NGAY TRƯỚC nó:
+     hai loại nghỉ này hay bị khai lẫn nhau, để cạnh nhau thì thấy ngay. Mồi 0 chứ
+     không bớt của cột cũ — không đoán được trong đống "khác" cũ có bao nhiêu ngày
+     ngừng việc.
+     BẤT BIẾN DUY NHẤT của mảng này: `std` phải ở chỉ số 0. Ô đối chiếu và cảnh báo
+     của máy tính đều cộng CAL_FIELDS.slice(1) rồi so với std; phép cộng thì giao
+     hoán nên thứ tự của năm cột còn lại chỉ là thứ tự HIỂN THỊ. Đổi thứ tự ở đây
+     là đổi thứ tự cột trên lưới Ngày công, trong file mẫu, trong bản xuất, và
+     trong cột ghép chuỗi của sheet BanKhaiBao (nhãn export.audit.otherDays phải
+     đổi theo). Nhập lại file cũ vẫn đúng: importMapped khớp cột theo TÊN tiêu đề
+     chứ không theo vị trí. */
+  { k: 'stop', label: 'Ngày nghỉ ngừng việc', varName: 'NGAY_NGHI_NGUNG_VIEC', def: 0 },
+  { k: 'other', label: 'Ngày nghỉ có lương khác', varName: 'NGAY_NGHI_KHAC', def: 2 }
 ];
 
 function uid() { return Math.random().toString(36).slice(2, 9); }
 function allMonths() { return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]; }
+
+/* ---------- Cột giá trị của một bảng phân loại nhóm ----------
+   Bảng phân loại nhóm nay sinh ra NHIỀU cột giá trị, đúng hình dạng của bảng
+   chính sách: cl.outs = [{name, type}] và cl.def là mảng khớp chỉ số.
+
+   Bảng khai từ trước chỉ có một cột, mô tả bằng cl.name + cl.type + cl.def (một
+   giá trị). Hai hàm dưới đây đọc cả hai hình dạng ra cùng một thứ, nên KHÔNG
+   phải chuyển đổi dữ liệu: mọi file dự án .json cũ, mọi state trong
+   localStorage, và mọi bộ kiểm dựng state bằng tay đều chạy nguyên.
+
+   Đặt ở đây chứ không ở views/classes.js vì máy tính (core/engine.js) cũng cần,
+   mà core không được import từ views — đồ thị import phải không có chu trình. */
+function classOuts(cl) {
+  const outs = (cl.outs || []).filter((o) => { return o && o.name; });
+  if (outs.length) return outs;
+  return cl.name ? [{ name: cl.name, type: cl.type === 'num' ? 'num' : 'text' }] : [];
+}
+
+/** Mặc định của cột giá trị thứ i, đọc được cả hình dạng cũ (một giá trị). */
+function classDef(cl, i) {
+  return Array.isArray(cl.def) ? cl.def[i] : (i === 0 ? cl.def : '');
+}
+
+/** Ghi hẳn hình dạng mới vào bảng cũ — gọi ngay TRƯỚC khi người dùng sửa cột
+    giá trị, để từ đó cl.name chỉ còn là tên bảng. Không gọi lúc nạp: dự án chưa
+    đụng tới thì giữ nguyên như cũ. */
+function ensureClassOuts(cl) {
+  if ((cl.outs || []).filter((o) => { return o && o.name; }).length) return cl;
+  cl.outs = classOuts(cl).map((o) => { return { name: o.name, type: o.type }; });
+  cl.def = [cl.def === undefined || cl.def === null ? '' : cl.def];
+  return cl;
+}
 
 /* Lịch từ localStorage hay .json cũ thiếu hẳn khoá của cột mới thêm: load() và
    openProject() đều Object.assign NÔNG nên S.calendar bị thay nguyên khối. Đọc
@@ -120,7 +160,7 @@ function defaultState() {
         rules: [{ id: uid(), name: 'Tất cả', cond: '', formula: '6000000' }]
       }
     ],
-    maps: { costCode: [], costCenter: [], budgetCode: [], accountCode: [] },
+    maps: { costCode: [], costCenter: [], division: [], budgetCode: [], accountCode: [] },
     exceptions: [],
     raises: [{ id: uid(), name: 'Tăng lương định kỳ', fromMonth: 4, pct: 8, cond: '', formulas: ['FC_LUONG_HESO', 'FC_BHXH'], active: true }],
     ui: { view: 'hc', fSel: null, collapsed: {} }
@@ -141,7 +181,29 @@ let dirty = false;
    localStorage, đặt state trong bộ kiểm. Chuẩn hoá lịch ở đúng một chỗ này thay
    vì rải ra từng nơi gọi, nếu không thì state cũ và mới lệch nhau đúng cái khoá
    vừa thêm. */
-function setS(next) { S = next; normaliseCalendar(S.calendar); }
+/* Năm bảng ánh xạ chi phí. Dự án lưu từ trước thiếu hẳn bảng mới thêm, mà
+   Object.assign của load()/openProject() chỉ chép NÔNG nên khoá thiếu vẫn thiếu
+   — nút "xoá sạch mọi bảng" gặp undefined là nổ ngay.
+
+   Đồng thời chuyển đổi Budget Code: khoá cũ là Cost Center + Cost Code + Đơn vị,
+   khoá mới bỏ Cost Center. Dòng cũ nhận ra bằng chính khoá costCenter còn nằm
+   trong object. Giữ lại là để hai loại khoá lẫn lộn trong một bảng, nên xoá sạch
+   và để người dùng bấm "Sinh sẵn" khai lại — có báo, không xoá lặng lẽ. */
+const MAP_TABLES = ['costCode', 'costCenter', 'division', 'budgetCode', 'accountCode'];
+
+function normaliseMaps(s) {
+  const mp = s.maps || (s.maps = {});
+  MAP_TABLES.forEach((k) => { if (!Array.isArray(mp[k])) mp[k] = []; });
+  s.meta = s.meta || {};
+  if (s.meta.budKeyV !== 2) {
+    const legacy = mp.budgetCode.some((r) => { return r && Object.prototype.hasOwnProperty.call(r, 'costCenter'); });
+    if (legacy) { mp.budgetCode.length = 0; s.meta.budKeyReset = true; }
+    s.meta.budKeyV = 2;
+  }
+  return s;
+}
+
+function setS(next) { S = next; normaliseCalendar(S.calendar); normaliseMaps(S); }
 /** @param {BudgetResult|null} next */
 function setRESULT(next) { RESULT = next; }
 
@@ -150,12 +212,11 @@ function load() {
   try {
     const raw = localStorage.getItem(LS_KEY); if (!raw) return false;
     const o = JSON.parse(raw); if (!o || o.v !== 2) return false;
-    S = Object.assign(defaultState(), o);
+    /* Đi qua setS(): lịch thiếu khoá và bảng ánh xạ thiếu bảng đều được điền ở
+       ĐÚNG MỘT chỗ, thay vì mỗi đường nạp state lại chép lại một lần. */
+    setS(Object.assign(defaultState(), o));
     S.ui = S.ui || { view: 'hc' };
     S.ui.collapsed = S.ui.collapsed || {};
-    /* Lịch lưu từ trước khi thêm cột mới thiếu khoá — điền lại trước khi dùng. */
-    normaliseCalendar(S.calendar);
-    S.maps = Object.assign({ costCode: [], costCenter: [], budgetCode: [], accountCode: [] }, S.maps || {});
     S.shared = S.shared || [];
     S.accruals = S.accruals || [];
     return true;
@@ -219,8 +280,9 @@ function fmtNum(v) {
 
 export {
   setNotifier,
-  LS_KEY, M, MONTHS, ROLES, CAL_FIELDS, SYS_VARS,
+  LS_KEY, M, MONTHS, ROLES, CAL_FIELDS, SYS_VARS, MAP_TABLES,
   uid, allMonths, blankCalTable, normaliseCalendar, defaultState,
+  classOuts, classDef, ensureClassOuts,
   S, RESULT, dirty, setS, setRESULT,
   save, load, touch, installAutosave, markExported, needsExport,
   NF, fmt, fmtShort, nkey, numOf, NF_NUM, fmtNum

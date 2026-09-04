@@ -1036,6 +1036,7 @@
   "maps": {
     "costCode": [],
     "costCenter": [],
+    "division": [],
     "budgetCode": [],
     "accountCode": []
   },

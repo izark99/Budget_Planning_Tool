@@ -343,6 +343,108 @@ describe('bảng Cost Code: chọn nhiều dòng rồi kéo', () => {
   });
 });
 
+/* Màn Thiết lập dùng lại đúng bộ máy đó cho hai danh sách nữa. Chỗ khác biệt
+   đáng canh: cả hai vẽ lại TẠI CHỖ (drawShared/fillP) chứ không gọi render(),
+   nên tập đang chọn phải sống qua lần vẽ lại mà không cần render().
+
+   Ngữ cảnh riêng, khung nhìn CAO: mỗi khối .rule cao hơn 150px, bốn khối cộng
+   với các panel khác là vượt 900px. Kéo thả gốc của HTML5 không sống nổi qua
+   một cú cuộn giữa chừng — Playwright cuộn để với tới đích thì chuỗi sự kiện
+   đứt, không có drop nào cả. Cho cả danh sách nằm gọn trong khung là hết. */
+describe('sắp thứ tự ở màn Thiết lập', () => {
+  let sctx, spage, serrs;
+
+  const SEED = `
+    st.S.shared = ['A', 'B', 'C', 'D'].map((c, i) => {
+      return { id: 's' + c, code: 'CT_' + c, name: '', formula: String(i + 1) };
+    });
+    st.S.params = ['P', 'Q', 'R', 'S'].map((c, i) => {
+      return { name: 'TS_' + c, value: i + 1, note: '' };
+    });
+    st.S.ui.collapsed = { setup_cols: true, setup_sysvars: true };
+    st.setRESULT(null);
+  `;
+  const shCodes = () => spage.evaluate(() =>
+    [...document.querySelectorAll('.rule .h input.nm')].filter((_, i) => i % 2 === 0).map((x) => x.value));
+  const shOrder = () => inPage(spage, 'return st.S.shared.map((x) => x.code);');
+  const pNames = () => inPage(spage, 'return st.S.params.map((p) => p.name);');
+
+  /** Nạp lại hạt giống rồi dựng lại màn — tập đang chọn cũng được xoá theo. */
+  async function reseed(collapseParams) {
+    await inPage(spage, SEED + 'st.S.ui.collapsed.setup_params = ' + (collapseParams ? 'true' : 'false') + '; return true;');
+    await goToView(spage, 'Kết quả');
+    await goToView(spage, 'Thiết lập');
+  }
+
+  beforeAll(async () => {
+    sctx = await browser.newContext({ viewport: { width: 1400, height: 1300 } });
+    spage = await loginToApp(sctx, server.base);
+    serrs = collectErrors(spage);
+    await importHeadcount(spage);
+    await reseed(true);
+  });
+  afterAll(async () => { await sctx?.close(); });
+
+  it('công thức dùng chung: kéo dòng 3 lên đầu', async () => {
+    expect(await shCodes()).toEqual(['CT_A', 'CT_B', 'CT_C', 'CT_D']);
+    const rules = spage.locator('.rule');
+    await rules.nth(2).locator('.fcgrip').dragTo(rules.nth(0), { targetPosition: { x: 20, y: 2 } });
+    await spage.waitForTimeout(400);
+    expect(await shCodes()).toEqual(['CT_C', 'CT_A', 'CT_B', 'CT_D']);
+    expect(await shOrder()).toEqual(['CT_C', 'CT_A', 'CT_B', 'CT_D']);
+  });
+
+  it('công thức dùng chung: Ctrl+bấm hai dòng rời nhau rồi kéo một lượt', async () => {
+    await reseed(true);
+    const rules = spage.locator('.rule');
+    for (const i of [0, 2]) {
+      await rules.nth(i).locator('.fcgrip').click({ modifiers: ['Control'] });
+      await spage.waitForTimeout(150);
+    }
+    expect(await spage.locator('.rule.picked').count()).toBe(2);
+
+    /* Thả xuống NỬA DƯỚI của dòng cuối. Khối .rule cao hơn hẳn một hàng bảng
+       nên phải đo thật, đoán một con số là trúng vào ô nhập ở thanh tiêu đề. */
+    const last = rules.nth(3);
+    const bb = await last.boundingBox();
+    await rules.nth(0).locator('.fcgrip').dragTo(last, { targetPosition: { x: 20, y: bb.height - 6 } });
+    await spage.waitForTimeout(400);
+    /* Khối giữ nguyên thứ tự tương đối A rồi C, không phải theo thứ tự bấm. */
+    expect(await shOrder()).toEqual(['CT_B', 'CT_D', 'CT_A', 'CT_C']);
+    /* Kéo xong thì bỏ chọn — nếu không, cú kéo sau lại lôi theo cả khối cũ. */
+    expect(await spage.locator('.rule.picked').count()).toBe(0);
+  });
+
+  it('công thức dùng chung: nút ↑ ↓ vẫn là đường chắc', async () => {
+    await reseed(true);
+    await spage.locator('.rule').nth(0).locator('.h button', { hasText: '↓' }).click();
+    await spage.waitForTimeout(300);
+    expect(await shOrder()).toEqual(['CT_B', 'CT_A', 'CT_C', 'CT_D']);
+  });
+
+  it('tham số dùng chung: kéo và bấm ↑ ↓ đều đổi đúng thứ tự', async () => {
+    /* Mở bảng tham số, gập danh sách công thức để cả bảng nằm trong khung. */
+    await inPage(spage, SEED + 'st.S.ui.collapsed.setup_shared = true; return true;');
+    await goToView(spage, 'Kết quả');
+    await goToView(spage, 'Thiết lập');
+    expect(await pNames()).toEqual(['TS_P', 'TS_Q', 'TS_R', 'TS_S']);
+
+    /* Bảng tham số là bảng duy nhất ở màn này có ô tay nắm. */
+    const rows = spage.locator('table tbody tr').filter({ has: spage.locator('td.grip') });
+    await rows.nth(3).locator('td.grip').dragTo(rows.nth(0), { targetPosition: { x: 10, y: 2 } });
+    await spage.waitForTimeout(400);
+    expect(await pNames()).toEqual(['TS_S', 'TS_P', 'TS_Q', 'TS_R']);
+
+    await rows.nth(0).locator('button', { hasText: '↓' }).click();
+    await spage.waitForTimeout(300);
+    expect(await pNames()).toEqual(['TS_P', 'TS_S', 'TS_Q', 'TS_R']);
+  });
+
+  it('không một lỗi JavaScript nào ở màn Thiết lập', () => {
+    expect(serrs, JSON.stringify(serrs, null, 1)).toEqual([]);
+  });
+});
+
 describe('toàn bộ luồng', () => {
   it('không một lỗi JavaScript nào', () => {
     expect(errs, JSON.stringify(errs, null, 1)).toEqual([]);

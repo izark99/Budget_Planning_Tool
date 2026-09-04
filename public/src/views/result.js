@@ -7,7 +7,7 @@ import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { exportBudget } from '../platform/io.js';
 import { el, modal, progressBox, render, ribbon, toast } from '../ui/dom.js';
-import { pager } from '../ui/widgets.js';
+import { pager, tableView } from '../ui/widgets.js';
 
 /* ==== 08-view-result-boot.js ==== */
 /* ===========================================================
@@ -78,14 +78,30 @@ function viewResult() {
     for (let i = 0; i < R.rows.length; i++) for (let m = 0; m < M; m++) mt[m] += arr[i * M + m];
     return { fc, mt, total: R.totalsByFc[c] };
   });
-  const rowsEl = byFc.map((x) => {
-    return el('tr', {}, [el('td', { class: 'mono', text: x.fc.code }), el('td', { text: x.fc.name || '' }), el('td', {}, [ribbon(x.fc.months)])]
-      .concat(x.mt.map((v) => { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
-      .concat([el('td', { class: 'num', text: fmt(x.total) })]));
-  });
-  rowsEl.push(el('tr', { class: 'tot' }, [el('td', { colspan: 3, text: t('res.tong_cong') })]
-    .concat(R.monthTotals.map((v) => { return el('td', { class: 'num', text: fmt(v) }); }))
-    .concat([el('td', { class: 'num', text: fmt(R.grand) })])));
+  /* Sắp xếp / lọc theo cột. Bảng chỉ đọc nên không có kéo thả để mà tắt: ở đây
+     sort thuần tuý là cách xem, mảng R.* không bao giờ bị viết lại. */
+  const fcCols = [
+    { k: 'code', label: 'Formula Code', type: 'text', get: (x) => { return x.fc.code; } },
+    { k: 'name', label: t('export.audit.name'), type: 'text', get: (x) => { return x.fc.name || ''; } },
+    { k: 'total', label: t('fm.full_year'), type: 'num', get: (x) => { return x.total; } }
+  ].concat(MONTHS.map((m, i) => {
+    return { k: 'm' + i, label: m, type: 'num', get: (x) => { return x.mt[i]; } };
+  }));
+  const tvFc = tableView(fcCols, () => { drawFc(); });
+  const fcTb = el('tbody');
+  function drawFc() {
+    fcTb.innerHTML = '';
+    tvFc.apply(byFc).forEach((x) => {
+      fcTb.appendChild(el('tr', {}, [el('td', { class: 'mono', text: x.fc.code }), el('td', { text: x.fc.name || '' }), el('td', {}, [ribbon(x.fc.months)])]
+        .concat(x.mt.map((v) => { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
+        .concat([el('td', { class: 'num', text: fmt(x.total) })])));
+    });
+    /* Hàng tổng luôn ở cuối, không tham gia sắp xếp — nó không phải một dòng dữ liệu. */
+    fcTb.appendChild(el('tr', { class: 'tot' }, [el('td', { colspan: 3, text: t('res.tong_cong') })]
+      .concat(R.monthTotals.map((v) => { return el('td', { class: 'num', text: fmt(v) }); }))
+      .concat([el('td', { class: 'num', text: fmt(R.grand) })])));
+  }
+  drawFc();
 
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [
@@ -93,10 +109,14 @@ function viewResult() {
       el('button', { class: 'btn sm go', text: t('dash.chay_lai'), onclick: function () { runBudget().then(render); } }),
       el('button', { class: 'btn sm pri', text: t('res.xuat_excel'), onclick: exportDialog })
     ]),
+    el('div', { class: 'body' }, [tvFc.bar]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
-      el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: 'Formula Code' }), el('th', { text: t('export.audit.name') }), el('th', { text: t('export.audit.monthsPicked') })]
-        .concat(MONTHS.map((m) => { return el('th', { class: 'num', text: m }); }))
-        .concat([el('th', { class: 'num', text: t('fm.full_year') })]))]), el('tbody', {}, rowsEl)])
+      el('table', {}, [el('thead', {}, [el('tr', {}, [
+        tvFc.th(fcCols[0], () => { return byFc; }),
+        tvFc.th(fcCols[1], () => { return byFc; }),
+        el('th', { text: t('export.audit.monthsPicked') })]
+        .concat(MONTHS.map((m, i) => { return tvFc.th(fcCols[3 + i], () => { return byFc; }); }))
+        .concat([tvFc.th(fcCols[2], () => { return byFc; })]))]), fcTb])
     ])])
   ]));
 
@@ -132,7 +152,7 @@ function viewResult() {
     (S.maps.costCode || []).forEach((x) => { ccOf[nkey(x.formulaCode)] = x.costCode || t('engine.map.none'); });
     const GRP_FC = 'Formula Code', GRP_CC = 'Cost Code';
     const grpCols = [GRP_FC, GRP_CC]
-      .concat((S.classes || []).map((c) => { return c.name; }).filter(Boolean))
+      .concat(ENGINE.classCols())
       .concat(ENGINE.attrCols().map((c) => { return c.alias; }));
     if (grpCols.indexOf(S.ui.raiseBy) < 0) S.ui.raiseBy = GRP_FC;
 
@@ -220,40 +240,66 @@ function viewResult() {
     ]));
   }
 
-  /* pivot 4 tầng — bảng này dài theo số tổ hợp mã, trước đây dựng hết một lúc. */
+  /* pivot 5 tầng — bảng này dài theo số tổ hợp mã, trước đây dựng hết một lúc.
+     Thứ tự cột: Division / Budget Code / Cost Center / Cost Code / Account. */
   const pivotTb = el('tbody');
   const pgPivot = pager(() => { drawPivot(); });
+  /* Sắp xếp / lọc theo cột. Mặc định đã sắp sẵn theo Division → Budget Code →
+     Cost Center → Cost Code ở máy tính; ở đây người dùng xem lại theo ý mình mà
+     R.pivot không bị viết lại. */
+  const pvCols = [
+    { k: 'division', label: 'Division', type: 'text' },
+    { k: 'budgetCode', label: 'Budget Code', type: 'text' },
+    { k: 'costCenter', label: 'Cost Center', type: 'text' },
+    { k: 'costCode', label: 'Cost Code', type: 'text' },
+    { k: 'accountCode', label: 'Account Code', type: 'text' },
+    { k: 'formulaCode', label: 'Formula Code', type: 'text' }
+  ].concat(MONTHS.map((m, i) => {
+    return { k: 'pm' + i, label: m, type: 'num', get: (p) => { return p.m[i]; } };
+  })).concat([{ k: 'total', label: t('fm.full_year'), type: 'num' }]);
+  const tvPivot = tableView(pvCols, () => { pgPivot.reset(); drawPivot(); });
   function drawPivot() {
     pivotTb.innerHTML = '';
-    pgPivot.apply(R.pivot).forEach((p) => {
+    pgPivot.apply(tvPivot.apply(R.pivot)).forEach((p) => {
       pivotTb.appendChild(el('tr', {}, [
-        el('td', { class: 'mono', text: p.accountCode }), el('td', { class: 'mono', text: p.budgetCode }),
-        el('td', { class: 'mono', text: p.costCode }), el('td', { class: 'mono', text: p.costCenter }),
-        el('td', { class: 'mono', text: p.formulaCode })
+        el('td', { class: 'mono', text: p.division }), el('td', { class: 'mono', text: p.budgetCode }),
+        el('td', { class: 'mono', text: p.costCenter }), el('td', { class: 'mono', text: p.costCode }),
+        el('td', { class: 'mono', text: p.accountCode }), el('td', { class: 'mono', text: p.formulaCode })
       ].concat(p.m.map((v) => { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
         .concat([el('td', { class: 'num', text: fmt(p.total) })])));
     });
-    if (!R.pivot.length) pivotTb.appendChild(el('tr', {}, [el('td', { colspan: 18, class: 'empty', text: t('res.chua_co_so_lieu') })]));
+    if (!R.pivot.length) pivotTb.appendChild(el('tr', {}, [el('td', { colspan: 19, class: 'empty', text: t('res.chua_co_so_lieu') })]));
   }
   drawPivot();
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('res.pivot_title') }), el('span', { class: 'tag', text: t('table.info.rows', { n: R.pivot.length }) })]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
-      el('table', {}, [el('thead', {}, [el('tr', {}, ['Account Code', 'Budget Code', 'Cost Code', 'Cost Center', 'Formula Code']
-        .map((h) => { return el('th', { text: h }); })
-        .concat(MONTHS.map((m) => { return el('th', { class: 'num', text: m }); }))
-        .concat([el('th', { class: 'num', text: t('fm.full_year') })]))]),
+      el('table', {}, [el('thead', {}, [el('tr', {},
+        pvCols.map((c) => { return tvPivot.th(c, () => { return R.pivot; }); }))]),
       pivotTb])
     ])]),
-    el('div', { class: 'body' }, [pgPivot.node])
+    el('div', { class: 'body' }, [tvPivot.bar, pgPivot.node])
   ]));
 
   /* đối chiếu — trước đây cắt cụt ở 500 dòng mà không báo gì. */
   const diffTb = el('tbody');
   const pgDiff = pager(() => { drawDiffs(); });
+  const dfCols = [
+    { k: 'no', label: t('exc.th_no'), type: 'text' },
+    { k: 'id', label: 'ID', type: 'text' },
+    { k: 'position', label: t('exc.th_position'), type: 'text' },
+    { k: 'formulaCode', label: 'Formula Code', type: 'text' },
+    { k: 'month', label: t('export.audit.month'), type: 'num' },
+    { k: 'formula', label: t('export.audit.formula'), type: 'num' },
+    { k: 'exception', label: t('dash.kind_exc'), type: 'num' },
+    { k: 'rule', label: t('exc.th_rule'), type: 'text' },
+    { k: 'final', label: t('res.th_applied'), type: 'num' },
+    { k: 'won', label: t('res.th_winner'), type: 'text', get: (c) => { return c.won ? t('dash.kind_exc') : t('export.audit.formula'); } }
+  ];
+  const tvDiff = tableView(dfCols, () => { pgDiff.reset(); drawDiffs(); });
   function drawDiffs() {
     diffTb.innerHTML = '';
-    pgDiff.apply(diffs).forEach((c) => {
+    pgDiff.apply(tvDiff.apply(diffs)).forEach((c) => {
       diffTb.appendChild(el('tr', {}, [
         el('td', { class: 'mono', text: c.no }), el('td', { class: 'mono', text: String(c.id == null ? '' : c.id) }),
         el('td', { text: String(c.position == null ? '' : c.position) }), el('td', { class: 'mono', text: c.formulaCode }),
@@ -271,12 +317,12 @@ function viewResult() {
     el('div', { class: 'body tight' }, [
       diffs.length ? el('div', { class: 'tw' }, [
         el('table', {}, [
-          el('thead', {}, [el('tr', {}, [t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('export.audit.month'), t('export.audit.formula'), t('dash.kind_exc'), t('exc.th_rule'), t('res.th_applied'), t('res.th_winner')]
-            .map((h, i) => { return el('th', { class: (i >= 5 && i <= 8) ? 'num' : '', text: h }); }))]),
+          el('thead', {}, [el('tr', {},
+            dfCols.map((c) => { return tvDiff.th(c, () => { return diffs; }); }))]),
           diffTb])
       ]) : el('div', { class: 'empty', text: t('res.khong_co_chenh_lech_nao') })
     ]),
-    diffs.length ? el('div', { class: 'body' }, [pgDiff.node]) : null
+    diffs.length ? el('div', { class: 'body' }, [tvDiff.bar, pgDiff.node]) : null
   ]));
 
   return wrap;

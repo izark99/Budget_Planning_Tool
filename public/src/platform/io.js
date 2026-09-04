@@ -3,7 +3,7 @@
    Nguyên thủy vào/ra thuần: không dựng DOM, không gọi toast.
    Lỗi được ném lên cho tầng UI bắt và hiển thị.
    =========================================================== */
-import { CAL_FIELDS, M, MONTHS, S, RESULT, nkey, numOf } from '../core/state.js';
+import { CAL_FIELDS, M, MONTHS, S, RESULT, classDef, classOuts, nkey, numOf } from '../core/state.js';
 import { buildWorkbook } from './xlsx-write.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
@@ -73,7 +73,7 @@ function exportBudget(opt) {
     const money = (n) => { return new Array(n).fill('money'); };
     const text = (n) => { return new Array(n).fill('text'); };
     const acols = ENGINE.attrCols().map((c) => { return c.alias; })
-      .concat((S.classes || []).map((c) => { return c.name; }).filter(Boolean));
+      .concat(ENGINE.classCols());
     const fcs = R.formulas;
 
     if (opt.person) {
@@ -94,11 +94,13 @@ function exportBudget(opt) {
     }
 
     if (opt.pivot) {
-      const a2 = [['AccountCode', 'BudgetCode', 'CostCode', 'CostCenter', 'FormulaCode', 'TenCongThuc'].concat(MONTHS).concat(['CaNam'])];
+      /* Thứ tự cột khớp đúng bảng trên màn Kết quả: Division / Budget Code /
+         Cost Center / Cost Code / Account. text(7) = sáu cột mã + tên công thức. */
+      const a2 = [['Division', 'BudgetCode', 'CostCenter', 'CostCode', 'AccountCode', 'FormulaCode', 'TenCongThuc'].concat(MONTHS).concat(['CaNam'])];
       R.pivot.forEach((p) => {
-        a2.push(/** @type {any[]} */ ([p.accountCode, p.budgetCode, p.costCode, p.costCenter, p.formulaCode, p.formulaName]).concat(p.m).concat([p.total]));
+        a2.push(/** @type {any[]} */ ([p.division, p.budgetCode, p.costCenter, p.costCode, p.accountCode, p.formulaCode, p.formulaName]).concat(p.m).concat([p.total]));
       });
-      sheets.push({ name: 'TongHop_PhanLoai', aoa: a2, fmt: text(6).concat(money(M + 1)) });
+      sheets.push({ name: 'TongHop_PhanLoai', aoa: a2, fmt: text(7).concat(money(M + 1)) });
     }
 
     if (opt.fc) {
@@ -136,7 +138,13 @@ function exportBudget(opt) {
       a5.push([]); a5.push([t('export.audit.params'), t('export.audit.name'), t('export.audit.value'), t('export.audit.note'), '']);
       S.params.forEach((p) => { a5.push(['', p.name, p.value, p.note || '', '']); });
       a5.push([]); a5.push([t('export.audit.classes'), t('export.audit.colGenerated'), t('export.audit.key'), t('export.audit.rowCount'), t('export.audit.default')]);
-      S.classes.forEach((c) => { a5.push(['', c.name, (c.keys || []).join(' + '), (c.rows || []).length, c.def || '']); });
+      /* Một bảng sinh nhiều cột: mỗi cột một dòng khai báo, để bản kiểm tra kể
+         đủ chứ không chỉ kể cột đầu. */
+      S.classes.forEach((c) => {
+        classOuts(c).forEach((o, j) => {
+          a5.push(['', o.name, (c.keys || []).join(' + '), (c.rows || []).length, classDef(c, j) || '']);
+        });
+      });
       a5.push([]); a5.push([t('export.audit.calendar'), t('export.audit.scope'), t('export.audit.month'), t('export.audit.stdDays'), t('export.audit.otherDays')]);
       (S.calendar.tables || []).forEach((t) => {
         t.m.forEach((rec, k) => {
@@ -167,27 +175,32 @@ function exportBudget(opt) {
 
     if (opt.long) {
       const idC = R.idCol, posC = R.posCol, unC = R.unitCol;
+      /* BẢN SAO THỨ HAI của các khoá ánh xạ (bản gốc ở ENGINE.buildMaps). Đổi
+         khoá Budget Code ở một bên mà quên bên kia thì sheet dài và bảng pivot
+         nói hai số khác nhau, mà không có gì báo. */
       const cenOf = {}; (S.maps.costCenter || []).forEach((x) => { cenOf[nkey(x.unit)] = x.costCenter; });
+      const divOf = {}; (S.maps.division || []).forEach((x) => { divOf[nkey(x.unit)] = x.division; });
       const ccOf = {}; (S.maps.costCode || []).forEach((x) => { ccOf[nkey(x.formulaCode)] = x.costCode; });
-      const budOf = {}; (S.maps.budgetCode || []).forEach((x) => { budOf[nkey(x.costCenter) + '|' + nkey(x.costCode) + '|' + nkey(x.unit)] = x.budgetCode; });
+      const budOf = {}; (S.maps.budgetCode || []).forEach((x) => { budOf[nkey(x.costCode) + '|' + nkey(x.unit)] = x.budgetCode; });
       const accOf = {}; (S.maps.accountCode || []).forEach((x) => { accOf[nkey(x.costCode) + '|' + nkey(x.costCenter) + '|' + nkey(x.budgetCode)] = x.accountCode; });
-      const a6 = [['ID', 'ChucDanh', 'DonVi', 'CostCenter', 'FormulaCode', 'CostCode', 'BudgetCode', 'AccountCode', 'Thang', 'SoTien']];
+      const a6 = [['ID', 'ChucDanh', 'DonVi', 'Division', 'CostCenter', 'FormulaCode', 'CostCode', 'BudgetCode', 'AccountCode', 'Thang', 'SoTien']];
       for (let i3 = 0; i3 < R.rows.length; i3++) {
         const rr = R.rows[i3];
         const un = unC ? rr[unC] : '';
         const cen = cenOf[nkey(un)] || '';
+        const dv = divOf[nkey(un)] || '';
         for (let c3 = 0; c3 < fcs.length; c3++) {
           const cc = ccOf[nkey(fcs[c3].code)] || '';
-          const bud = budOf[nkey(cen) + '|' + nkey(cc) + '|' + nkey(un)] || '';
+          const bud = budOf[nkey(cc) + '|' + nkey(un)] || '';
           const acc = accOf[nkey(cc) + '|' + nkey(cen) + '|' + nkey(bud)] || '';
           for (let m3 = 0; m3 < M; m3++) {
             const v3 = R.data[c3][i3 * M + m3];
             if (!v3) continue;
-            a6.push([idC ? rr[idC] : '', posC ? rr[posC] : '', un, cen, fcs[c3].code, cc, bud, acc, m3 + 1, v3]);
+            a6.push([idC ? rr[idC] : '', posC ? rr[posC] : '', un, dv, cen, fcs[c3].code, cc, bud, acc, m3 + 1, v3]);
           }
         }
       }
-      sheets.push({ name: 'ChiTiet_Dong', aoa: a6, fmt: text(8).concat(['int', 'money']) });
+      sheets.push({ name: 'ChiTiet_Dong', aoa: a6, fmt: text(9).concat(['int', 'money']) });
     }
 
     const fn = 'NganSach_' + (S.meta.year || '') + '_' + new Date().toISOString().slice(0, 10) + '.xlsx';

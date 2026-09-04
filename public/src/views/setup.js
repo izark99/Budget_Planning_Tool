@@ -8,9 +8,23 @@ import { ENGINE } from '../core/engine.js';
 import { FX } from '../core/expression.js';
 import { distinctVals } from '../platform/io.js';
 import { el, render } from '../ui/dom.js';
-import { foldPanel, panel, readTable } from '../ui/widgets.js';
+import { dragList, foldPanel, moveBeside, panel, readTable, selection } from '../ui/widgets.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 import { guessRole } from './headcount.js';
+
+/* Tập đang chọn để kéo một lượt — cùng bộ máy với danh sách Formula Code. Phải
+   ở MỨC MODULE: render() xoá sạch document.body nên biến trong hàm dựng không
+   sống nổi qua một lần vẽ lại. */
+const shSel = selection();
+const pSel = selection();
+
+/* Đổi chỗ hai phần tử của một mảng. Cặp ↑ ↓ giữ lại bên cạnh kéo thả: kéo là
+   đường nhanh, nút là đường chắc khi danh sách đang cuộn hoặc dùng bàn phím. */
+function swap(arr, a, b) {
+  if (b < 0 || b >= arr.length) return false;
+  const x = arr[a]; arr[a] = arr[b]; arr[b] = x;
+  return true;
+}
 
 function viewSetup() {
   const wrap = el('div');
@@ -86,11 +100,19 @@ function viewSetup() {
   }
 
   /* --- tham số --- */
+  /* Sắp thứ tự: cùng bộ máy với danh sách Formula Code. Thứ tự tham số CHỈ là
+     thứ tự hiển thị — máy tính tra theo tên, không theo vị trí — nên đổi xong
+     chỉ cần touch(), không phải bỏ kết quả đã tính. */
   const pb = el('tbody');
+  const pDrag = dragList((items, to, before) => {
+    if (moveBeside(S.params, items, to, before)) { pSel.clear(); touch(); fillP(); }
+  }, pSel);
   function fillP() {
     pb.innerHTML = '';
     S.params.forEach((p, i) => {
-      pb.appendChild(el('tr', {}, [
+      const grip = el('td', { class: 'grip', style: 'width:24px', title: t('table.dragMulti'), text: '⠿' });
+      const tr = el('tr', { class: pSel.has(p) ? 'picked' : '' }, [
+        grip,
         el('td', {}, [el('input', {
           type: 'text', class: 'fx', value: p.name || '',
           oninput: function (e) { p.name = e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_'); e.target.value = p.name; setRESULT(null); touch(); }
@@ -100,10 +122,19 @@ function viewSetup() {
           oninput: function (e) { const n = parseFloat(e.target.value.replace(/[,\s]/g, '')); p.value = isNaN(n) ? e.target.value : n; setRESULT(null); touch(); }
         })]),
         el('td', {}, [el('input', { type: 'text', value: p.note || '', oninput: function (e) { p.note = e.target.value; touch(); } })]),
-        el('td', { style: 'width:32px' }, [el('button', { class: 'btn sm del', text: '✕', onclick: function () { S.params.splice(i, 1); setRESULT(null); touch(); fillP(); } })])
-      ]));
+        el('td', { class: 'acts', style: 'width:104px' }, [
+          el('button', { class: 'btn sm', text: '↑', disabled: i === 0, onclick: function () { if (swap(S.params, i, i - 1)) { pSel.clear(); touch(); fillP(); } } }),
+          el('button', { class: 'btn sm', text: '↓', disabled: i === S.params.length - 1, onclick: function () { if (swap(S.params, i, i + 1)) { pSel.clear(); touch(); fillP(); } } }),
+          el('button', { class: 'btn sm del', text: '✕', onclick: function () { S.params.splice(i, 1); pSel.clear(); setRESULT(null); touch(); fillP(); } })
+        ])
+      ]);
+      pDrag.attach(tr, p, grip);
+      /* Bảng này gần như toàn ô nhập nên CHÍNH Ô TAY NẮM là chỗ chọn — y hệt
+         dataTable. Bấm vào ô nhập thì thôi: người ta đang sửa dữ liệu. */
+      grip.addEventListener('click', (e) => { if (pSel.click(e, p, S.params)) { e.preventDefault(); fillP(); } });
+      pb.appendChild(tr);
     });
-    if (!S.params.length) pb.appendChild(el('tr', {}, [el('td', { colspan: 4, class: 'empty', text: t('hc.chua_co_hang_so_nao') })]));
+    if (!S.params.length) pb.appendChild(el('tr', {}, [el('td', { colspan: 5, class: 'empty', text: t('hc.chua_co_hang_so_nao') })]));
   }
   fillP();
 
@@ -112,18 +143,28 @@ function viewSetup() {
      gọi được bằng tên gọi (LUONG_CO_BAN) hoặc bằng diễn giải ([Lương cơ bản]).
      Khác tham số ở chỗ tham số là một con số cố định, còn cái này là biểu thức. */
   const shBox = el('div');
+  /* Sắp thứ tự: cùng bộ máy với danh sách Formula Code. Thứ tự KHÔNG ảnh hưởng
+     phép tính — buildShared() dựng sổ đăng ký theo mã rồi lan truyền phụ thuộc
+     qua đồ thị tham chiếu, không đọc theo thứ tự khai báo — nên chỉ touch(),
+     không bỏ kết quả đã tính. */
+  const shDrag = dragList((items, to, before) => {
+    if (moveBeside(S.shared || [], items, to, before)) { shSel.clear(); touch(); drawShared(); }
+  }, shSel);
   function drawShared() {
     shBox.innerHTML = '';
     const seen = {};
-    (S.shared || []).forEach((sh, i) => {
+    const all = S.shared || [];
+    all.forEach((sh, i) => {
       const code = nkey(sh.code);
       const dup = code && seen[code];
       seen[code] = 1;
       const fx = fxField(sh.formula, (v) => { sh.formula = v; setRESULT(null); touch(); }, '0', drawShared);
       fx._label = sh.code || t('setup.shared.untitled');
       const chk = FX.tryCompile(String(sh.formula || '').trim() || '0');
-      shBox.appendChild(el('div', { class: 'rule' }, [
+      const grip = el('span', { class: 'fcgrip', title: t('table.dragMulti'), text: '⠿' });
+      const box = el('div', { class: 'rule' + (shSel.has(sh) ? ' picked' : '') }, [
         el('div', { class: 'h' }, [
+          grip,
           el('span', { class: 'idx', text: String(i + 1).padStart(2, '0') }),
           el('input', {
             class: 'nm', value: sh.code || '', placeholder: 'TEN_GOI', style: 'width:180px;font-family:var(--mono)',
@@ -141,17 +182,24 @@ function viewSetup() {
               : (chk.ok ? el('span', { class: 'tag g', text: t('fx.valid') })
                         : el('span', { class: 'tag r', text: t('setup.shared.bad') })),
           el('div', { class: 'sp' }),
+          el('button', { class: 'btn sm', text: '↑', disabled: i === 0, onclick: function () { if (swap(all, i, i - 1)) { shSel.clear(); touch(); drawShared(); } } }),
+          el('button', { class: 'btn sm', text: '↓', disabled: i === all.length - 1, onclick: function () { if (swap(all, i, i + 1)) { shSel.clear(); touch(); drawShared(); } } }),
           el('button', {
             class: 'btn sm del', text: '✕',
-            onclick: function () { S.shared.splice(i, 1); setRESULT(null); touch(); drawShared(); }
+            onclick: function () { S.shared.splice(i, 1); shSel.clear(); setRESULT(null); touch(); drawShared(); }
           })
         ]),
         el('div', { class: 'b', style: 'grid-template-columns:1fr' }, [
           el('div', {}, [el('label', { class: 'f', text: t('setup.shared.formula') }), fx])
         ])
-      ]));
+      ]);
+      shDrag.attach(box, sh, grip);
+      /* Bấm vào tay nắm với Ctrl/Shift là CHỌN để kéo một lượt; bấm vào ô nhập
+         hay nút thì thôi — người ta đang soạn công thức. */
+      grip.addEventListener('click', (e) => { if (shSel.click(e, sh, all)) { e.preventDefault(); drawShared(); } });
+      shBox.appendChild(box);
     });
-    if (!(S.shared || []).length) shBox.appendChild(el('div', { class: 'empty', text: t('setup.shared.empty') }));
+    if (!all.length) shBox.appendChild(el('div', { class: 'empty', text: t('setup.shared.empty') }));
   }
   drawShared();
 
@@ -172,7 +220,7 @@ function viewSetup() {
   wrap.appendChild(foldPanel('setup_params', t('hc.tham_so_dung_chung'), [],
     [el('button', { class: 'btn sm', text: t('hc.them'), onclick: function () { S.params.push({ name: 'THAM_SO_MOI', value: 0, note: '' }); touch(); fillP(); } })],
     el('div', { class: 'tw', style: 'max-height:none' }, [
-      el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: t('export.audit.name') }), el('th', { text: t('export.audit.value') }), el('th', { text: t('export.audit.note') }), el('th', { text: '' })])]), pb])
+      el('table', {}, [el('thead', {}, [el('tr', {}, [el('th', { text: '' }), el('th', { text: t('export.audit.name') }), el('th', { text: t('export.audit.value') }), el('th', { text: t('export.audit.note') }), el('th', { text: '' })])]), pb])
     ]),
     t('setup.params_help')));
 

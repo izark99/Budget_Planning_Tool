@@ -6,7 +6,7 @@ import { S, allMonths, numOf, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { pickFile } from '../platform/io.js';
 import { el, render, ribbon, toast } from '../ui/dom.js';
-import { downloadData, downloadTemplate, importMapped, pager } from '../ui/widgets.js';
+import { downloadData, downloadTemplate, importMapped, pager, tableView } from '../ui/widgets.js';
 
 function viewExc() {
   const wrap = el('div');
@@ -14,11 +14,23 @@ function viewExc() {
 
   const tb = el('tbody');
   const pg = pager(() => { draw(); });
+  /* Sắp xếp / lọc theo cột. Cột "Tháng" là dải 12 ô nên không sắp được theo nó
+     — chỉ khai những cột có một giá trị đọc ra được. */
+  const vcols = [
+    { k: 'no', label: t('exc.th_no'), type: 'text' },
+    { k: 'id', label: 'ID', type: 'text' },
+    { k: 'position', label: t('exc.th_position'), type: 'text' },
+    { k: 'formulaCode', label: 'Formula Code', type: 'text' },
+    { k: 'amount', label: t('exc.th_amount'), type: 'num' },
+    { k: 'rule', label: t('exc.th_rule'), type: 'text' },
+    { k: 'note', label: t('export.audit.note'), type: 'text' }
+  ];
+  const tv = tableView(vcols, () => { pg.reset(); draw(); });
   function draw() {
     tb.innerHTML = '';
     /* Nút xoá phải tìm lại vị trí thật trong S.exceptions bằng indexOf — chỉ số
        của trang hiện tại KHÔNG phải chỉ số trong mảng gốc. */
-    pg.apply(S.exceptions).forEach((e) => {
+    pg.apply(tv.apply(S.exceptions)).forEach((e) => {
       const mCell = el('td');
       mCell.appendChild(ribbon(e.months && e.months.length ? e.months : allMonths(), {
         pick: function (m, on) {
@@ -62,8 +74,15 @@ function viewExc() {
       class: 'hint',
       html: t('exc.help')
     })]),
+    el('div', { class: 'body' }, [tv.bar]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
-      el('table', {}, [el('thead', {}, [el('tr', {}, ['', t('exc.th_no'), 'ID', t('exc.th_position'), 'Formula Code', t('exc.th_amount'), t('exc.th_months'), t('exc.th_rule'), t('export.audit.note'), ''].map((h) => { return el('th', { text: h }); }))]), tb])
+      el('table', {}, [el('thead', {}, [el('tr', {},
+        /* Ô tích bật/tắt và dải 12 tháng không sắp/lọc được — để nguyên <th>. */
+        [el('th', { text: '' })]
+          .concat(vcols.slice(0, 5).map((c) => { return tv.th(c, () => { return S.exceptions; }); }))
+          .concat([el('th', { text: t('exc.th_months') })])
+          .concat(vcols.slice(5).map((c) => { return tv.th(c, () => { return S.exceptions; }); }))
+          .concat([el('th', { text: '' })]))]), tb])
     ])]),
     el('div', { class: 'body' }, [pg.node])
   ]));

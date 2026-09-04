@@ -100,7 +100,7 @@ function fxLibrary(target) {
     tabs.innerHTML = '';
     [['fn', 'fx.tab.fn'], ['op', 'fx.tab.op'], ['var', 'fx.tab.var'], ['own', 'fx.tab.own']].forEach((tabDef) => {
       tabs.appendChild(el('span', {
-        class: 'chip', style: tab === tabDef[0] ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '',
+        class: 'chip' + (tab === tabDef[0] ? ' on' : ''),
         text: t(tabDef[1]), onclick: function () { tab = tabDef[0]; draw(); }
       }));
     });

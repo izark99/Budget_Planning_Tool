@@ -192,7 +192,7 @@ function viewDashboard() {
   }
 
   const f = dashState();
-  const groupCols = (S.classes || []).map((c) => { return c.name; }).filter(Boolean)
+  const groupCols = ENGINE.classCols()
     .concat((S.policies || []).reduce((acc, p) => {
       (p.outs || []).forEach((o) => { if (o && o.name && o.type === 'text') acc.push(o.name); });
       return acc;
@@ -370,7 +370,7 @@ function viewDashboard() {
       el('div', { class: 'chips' }, STAT_DEFS.map((s) => {
         const on = f.stats.indexOf(s.k) >= 0;
         return el('span', {
-          class: 'chip', style: on ? 'background:var(--mineral);color:#fff;border-color:var(--mineral)' : '',
+          class: 'chip' + (on ? ' on' : ''),
           text: s.t, onclick: function () {
             f.stats = on ? f.stats.filter((x) => { return x !== s.k; }) : f.stats.concat([s.k]);
             touch(); render();

@@ -103,7 +103,9 @@ Thêm một chỗ "dưới cần gọi lên" nữa thì dùng lại đúng khuô
                       nửa tháng)
 9. % trích            nhân tiếp hệ số của tab % trích, theo phân loại × tháng
 10. Làm tròn          Math.round MỘT LẦN, ở bước cuối cùng
-11. Bốn tầng mã       Cost Code → Cost Center → Budget Code → Account Code
+11. Năm tầng mã       Formula Code → Cost Code · Đơn vị → Cost Center · Đơn vị → Division
+                      · (Cost Code + Đơn vị) → Budget Code
+                      · (Cost Code + Cost Center + Budget Code) → Account Code
 ```
 
 Hai điểm dễ sai:

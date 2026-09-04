@@ -133,7 +133,7 @@ function chipsPanel(fallback) {
     el('h3', { text: t('fx.chips.title') }), el('div', { class: 'sp' }), where
   ]));
   chips.appendChild(el('span', {
-    class: 'chip', style: 'background:var(--ink);color:#fff;border-color:var(--ink)',
+    class: 'chip ink',
     text: t('fx.library.chip'), title: t('fx.library.chip.title'), onmousedown: keepFocus,
     onclick: function () { fxLibrary(pick()); }
   }));
@@ -155,7 +155,7 @@ function chipsPanel(fallback) {
 function colChips(target) {
   const c = el('div', { class: 'chips' });
   c.appendChild(el('span', {
-    class: 'chip', style: 'background:var(--ink);color:#fff;border-color:var(--ink)',
+    class: 'chip ink',
     text: t('fx.library.chip'), title: t('fx.library.chip.title'), onmousedown: keepFocus,
     onclick: function () { fxLibrary(target); }
   }));

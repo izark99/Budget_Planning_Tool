@@ -1,6 +1,6 @@
 /* Chuỗi canonical của một lần ENGINE.run(). Đây là thứ chốt lại "số liệu không
    đổi": tổng năm, 12 tổng tháng, tổng theo Formula Code, TOÀN BỘ mảng
-   người×tháng, bảng pivot 4 tầng, cảnh báo và lỗi công thức.
+   người×tháng, bảng pivot 5 tầng, cảnh báo và lỗi công thức.
    Chính hàm này đã dùng để chứng minh bản tách module cho ra kết quả trùng
    TỪNG KÝ TỰ với bản một-file gốc. Đổi hình dạng ở đây là làm mất giá trị so
    sánh với mọi golden đã ghi — muốn đổi thì phải sinh lại golden và soi diff. */
@@ -12,7 +12,7 @@ export function canon(R) {
     nRows: R.rows.length,
     data: (R.data || []).map((a) => Array.from(a)),
     pivot: (R.pivot || []).map((p) => [
-      p.accountCode, p.budgetCode, p.costCode, p.costCenter,
+      p.division, p.budgetCode, p.costCenter, p.costCode, p.accountCode,
       p.formulaCode, p.formulaName, ...Array.from(p.m), p.total,
     ]),
     warnings: (R.warnings || []).map((w) => w.type + '|' + w.msg).sort(),

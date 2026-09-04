@@ -16,15 +16,26 @@ beforeAll(async () => { ({ state, formula } = await loadEngine()); });
 const field = () => state.CAL_FIELDS.filter((f) => f.k === 'stop')[0];
 
 describe('khai báo cột mới', () => {
-  it('có mặt trong CAL_FIELDS, ĐẶT CUỐI', () => {
+  it('có mặt trong CAL_FIELDS, đứng NGAY TRƯỚC "nghỉ có lương khác"', () => {
     const f = field();
     expect(f).toBeTruthy();
     expect(f.label).toBe('Ngày nghỉ ngừng việc');
     expect(f.varName).toBe('NGAY_NGHI_NGUNG_VIEC');
-    /* Ô đối chiếu cộng CAL_FIELDS.slice(1) nên std BẮT BUỘC ở đầu và cột mới
-       phải nằm sau nó — chèn trước std là hỏng phép cộng. */
-    expect(state.CAL_FIELDS[0].k).toBe('std');
-    expect(state.CAL_FIELDS[state.CAL_FIELDS.length - 1].k).toBe('stop');
+    const ks = state.CAL_FIELDS.map((x) => x.k);
+    /* Bất biến DUY NHẤT: std ở chỉ số 0 — ô đối chiếu cộng CAL_FIELDS.slice(1)
+       rồi so với std, chèn std vào giữa là hỏng phép cộng. Thứ tự năm cột còn
+       lại chỉ là thứ tự HIỂN THỊ (phép cộng giao hoán), và người dùng muốn hai
+       loại nghỉ hay bị khai lẫn nhau nằm cạnh nhau. */
+    expect(ks[0]).toBe('std');
+    expect(ks.indexOf('stop')).toBe(ks.indexOf('other') - 1);
+  });
+
+  it('đổi thứ tự KHÔNG đổi tổng: slice(1) vẫn cộng đủ năm cột', () => {
+    const rec = state.blankCalTable('*').m[0];
+    const used = state.CAL_FIELDS.slice(1).reduce((a, f) => a + state.numOf(rec[f.k]), 0);
+    expect(state.CAL_FIELDS).toHaveLength(6);
+    expect(used).toBe(22 + 1 + 1 + 0 + 2);
+    expect(state.numOf(rec.std)).toBe(used);
   });
 
   it('mặc định 0 — không tự bớt của cột cũ, vì không đoán được bớt bao nhiêu', () => {

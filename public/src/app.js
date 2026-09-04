@@ -9,6 +9,7 @@ import { loadContent, t } from './core/content.js';
 import { ENGINE } from './core/engine.js';
 import { pickFile, downloadBlob, apiSession, apiLogout } from './platform/io.js';
 import { confirmBox, el, modal, setRenderer, toast } from './ui/dom.js';
+import { initTheme, themeSelect } from './ui/theme.js';
 import { viewHC } from './views/headcount.js';
 import { viewSetup } from './views/setup.js';
 import { viewClasses } from './views/classes.js';
@@ -93,6 +94,9 @@ function shellRender() {
         }),
         el('span', { text: t('rail.warn_on_close') })
       ]),
+      /* Không đi qua touch(): chế độ màu nằm ở localStorage riêng, không thuộc
+         dự án — xem src/ui/theme.js. */
+      themeSelect(),
       el('div', { style: 'margin-top:8px', text: t('rail.local_note') })
     ])
   ]);
@@ -136,7 +140,7 @@ function openProject() {
         /* ESM không cho gán lại binding đã import: dựng object mới rồi setS().
            Các bước gán bên trong giữ nguyên thứ tự như bản gốc. */
         const next = Object.assign(defaultState(), o);
-        next.maps = Object.assign({ costCode: [], costCenter: [], budgetCode: [], accountCode: [] }, next.maps || {});
+        /* Bảng ánh xạ thiếu bảng và lịch thiếu khoá do setS() điền — một chỗ duy nhất. */
         next.policies = next.policies || [];
         next.shared = next.shared || [];
         next.accruals = next.accruals || [];
@@ -144,11 +148,20 @@ function openProject() {
         setS(next);
         ENGINE.invalidate(); setRESULT(null); save(); shellRender();
         toast(t('toast.open_project'), 'good');
+        noticeBudKeyReset();
       } catch (err) { toast(t('toast.error', { e: err.message }), 'bad'); }
     };
     fr.readAsText(f);
   });
 }
+/* Khoá Budget Code đã đổi (bỏ Cost Center): normaliseMaps() xoá bảng cũ và cắm
+   cờ. Nói thẳng ra đây, đừng để người dùng tự phát hiện qua một bảng trống. */
+function noticeBudKeyReset() {
+  if (!S.meta.budKeyReset) return;
+  S.meta.budKeyReset = false; save();
+  toast(t('maps.bud_key_changed'), 'bad');
+}
+
 function resetAll() {
   confirmBox(t('confirm.reset_all'), () => {
     setS(defaultState()); ENGINE.invalidate(); setRESULT(null); save(); shellRender(); toast(t('toast.reset_done'));
@@ -197,6 +210,9 @@ function fatal(html) {
 }
 
 async function boot() {
+  /* Dấu data-theme đã do đoạn nội tuyến trong <head> đặt trước lần vẽ đầu; ở đây
+     chỉ đăng ký lắng nghe để chế độ "theo hệ thống" đổi ngay, khỏi tải lại trang. */
+  initTheme();
   if (!window.XLSX || !window.XLTABLE) { fatal(t('boot.no_xlsx')); return; }
 
   try {
@@ -214,6 +230,7 @@ async function boot() {
 
   load();
   shellRender();
+  noticeBudKeyReset();
 
   /* Dò xem trình duyệt có cho ghi localStorage không — giữ nguyên cảnh báo bản gốc */
   try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); }

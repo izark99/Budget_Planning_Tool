@@ -123,6 +123,10 @@ interface ProjectState {
     exportedSeq?: number;
     /** Mốc lần lưu ra file gần nhất — chỉ để hiện "Đã lưu lúc …". */
     exportedAt?: number;
+    /** Phiên bản khoá bảng Budget Code. 2 = Cost Code + Đơn vị (bỏ Cost Center). */
+    budKeyV?: number;
+    /** Vừa xoá bảng Budget Code khai theo khoá cũ — báo cho người dùng rồi tắt. */
+    budKeyReset?: boolean;
   };
   hc: { headers: string[]; rows: HcRow[]; file: string; at: string };
   cols: ColDef[];
@@ -136,6 +140,7 @@ interface ProjectState {
   maps: {
     costCode: any[];
     costCenter: any[];
+    division: any[];
     budgetCode: any[];
     accountCode: any[];
   };
@@ -159,12 +164,15 @@ interface ProjectState {
   };
 }
 
-/** Một dòng của bảng pivot 4 tầng. */
+/** Một dòng của bảng pivot 5 tầng. Thứ tự trường ở đây LÀ thứ tự cột trên màn
+    Kết quả và trong file Excel xuất ra — đổi là phải đổi đồng loạt engine.js,
+    result.js, io.js và test/helpers/canon.mjs. */
 interface PivotRow {
-  accountCode: string;
+  division: string;
   budgetCode: string;
-  costCode: string;
   costCenter: string;
+  costCode: string;
+  accountCode: string;
   formulaCode: string;
   formulaName: string;
   /** 12 tháng. */

@@ -141,6 +141,244 @@ function sortByKeys(arr, keys, keyOf) {
   return arr;
 }
 
+/* ---------- Sắp xếp và lọc theo cột, dùng chung cho MỌI bảng ----------
+   App có hai giống bảng: loại dựng bằng dataTable() (sửa tại chỗ) và loại dựng
+   tay (Định biên, Tờ trình, ba bảng màn Kết quả). Viết riêng cho từng chỗ là
+   năm bản sao của cùng một thứ, nên gom về đây.
+
+   HAI GIAO KÈO quan trọng:
+
+   1. SORT CHỈ LÀ CÁCH XEM. apply() trả về MẢNG MỚI và không bao giờ đụng vào
+      mảng nguồn. Thứ tự thật của dữ liệu — thứ tự cột trong file Excel xuất ra,
+      thứ tự áp bảng phân loại — chỉ đổi khi người dùng kéo thả.
+   2. ĐANG SORT thì TẮT KÉO THẢ. Thả vào giữa một danh sách đã sắp lại thì vị
+      trí thả chẳng nói được gì về mảng gốc. sorted() để nơi dùng biết mà tắt.
+
+   Lọc thì vẫn kéo được: moveBeside() nhận PHẦN TỬ chứ không nhận chỉ số. */
+
+/** @typedef {{k: string, label: string, type?: string, get?: (row:any)=>any}} ViewCol */
+
+/* Ba hàm THUẦN TÍNH TOÁN dưới đây tách hẳn khỏi phần dựng DOM, để bộ kiểm cắt
+   ra chạy được trong Node — đúng cách test/unit/move-block.test.js đang làm với
+   moveBeside. Chúng KHÔNG bao giờ sửa mảng nguồn. */
+
+/** Giá trị của một ô theo mô tả cột. Rỗng và null quy về chuỗi rỗng. */
+function viewValue(col, row) {
+  const v = col.get ? col.get(row) : row[col.k];
+  return v == null ? '' : v;
+}
+
+/** Lọc theo nhiều cột: các cột giao nhau, trong một cột thì "chứa chữ" và
+    "thuộc danh sách giá trị" cũng phải cùng đúng. */
+function viewFilter(list, cols, filters) {
+  const active = Object.keys(filters || {}).filter((k) => {
+    const f = filters[k];
+    return f && ((f.q || '').trim() || (f.vals || []).length);
+  });
+  if (!active.length) return list.slice();
+  const byK = {};
+  cols.forEach((c) => { byK[c.k] = c; });
+  return list.filter((row) => {
+    return active.every((k) => {
+      const col = byK[k]; if (!col) return true;
+      const raw = String(viewValue(col, row));
+      const f = filters[k];
+      if ((f.q || '').trim() && raw.toLowerCase().indexOf(f.q.trim().toLowerCase()) < 0) return false;
+      if ((f.vals || []).length && f.vals.indexOf(raw) < 0) return false;
+      return true;
+    });
+  });
+}
+
+/** Sắp theo nhiều khoá, ỔN ĐỊNH. Số so theo giá trị, chữ theo tiếng Việt, ô
+    RỖNG luôn xuống cuối kể cả khi sắp giảm dần — "chưa khai" không phải là
+    "lớn nhất". Trả về MẢNG MỚI. */
+function viewSort(list, cols, sort) {
+  if (!sort || !sort.length) return list.slice();
+  const byK = {};
+  cols.forEach((c) => { byK[c.k] = c; });
+  const cmpVal = (col, x, y) => {
+    if (col.type === 'num') {
+      const nx = numOf(x), ny = numOf(y);
+      return nx === ny ? 0 : (nx < ny ? -1 : 1);
+    }
+    return String(x).localeCompare(String(y), 'vi');
+  };
+  const at = list.map((r, i) => { return { r, i }; });
+  at.sort((A, B) => {
+    for (let s = 0; s < sort.length; s++) {
+      const col = byK[sort[s].k]; if (!col) continue;
+      const x = viewValue(col, A.r), y = viewValue(col, B.r);
+      const ex = x === '', ey = y === '';
+      /* Ô rỗng xuống cuối, và phép này KHÔNG bị đảo theo chiều sắp: "chưa khai"
+         không phải là "lớn nhất". Vì vậy nó nằm NGOÀI chỗ nhân -1 bên dưới. */
+      if (ex || ey) {
+        if (ex && ey) continue;               /* cùng rỗng: để khoá phụ quyết định */
+        return ex ? 1 : -1;
+      }
+      const c = cmpVal(col, x, y);
+      if (c) return sort[s].dir === 'desc' ? -c : c;
+    }
+    return A.i - B.i;      /* hai dòng bằng nhau thì giữ nguyên thứ tự gốc */
+  });
+  return at.map((x) => { return x.r; });
+}
+
+function tableView(cols, onChange) {
+  /** [{k, dir}] — nhiều khoá, khoá đầu là khoá chính. */
+  let sort = [];
+  /** { [k]: { q: string, vals: string[] } } — rỗng nghĩa là không lọc cột đó. */
+  const filters = {};
+  const colOf = (k) => { return cols.filter((c) => { return c.k === k; })[0]; };
+  const valOf = viewValue;
+  const bar = el('div', { class: 'tvbar', style: 'display:none' });
+
+  function fired() { onChange && onChange(); }
+
+  function activeFilters() {
+    return Object.keys(filters).filter((k) => {
+      const f = filters[k];
+      return f && ((f.q || '').trim() || (f.vals || []).length);
+    });
+  }
+
+  /* --- hộp lọc nổi trên tiêu đề cột --- */
+  let openBox = null;
+  function closeBox() { if (openBox) { openBox.remove(); openBox = null; } }
+  document.addEventListener('mousedown', (e) => {
+    const tgt = /** @type {HTMLElement} */ (e.target);
+    if (openBox && !openBox.contains(tgt) && !tgt.closest('.tvfx')) closeBox();
+  });
+
+  function filterBox(col, anchorEl, allRows) {
+    closeBox();
+    const f = filters[col.k] || (filters[col.k] = { q: '', vals: [] });
+    const seen = {};
+    allRows.forEach((r) => { seen[String(valOf(col, r))] = 1; });
+    const vals = Object.keys(seen).sort((a, b) => { return a.localeCompare(b, 'vi'); }).slice(0, 300);
+
+    const list = el('div', { class: 'tvvals' });
+    function drawVals(kw) {
+      list.innerHTML = '';
+      vals.filter((v) => { return !kw || v.toLowerCase().indexOf(kw) >= 0; }).forEach((v) => {
+        list.appendChild(el('label', {}, [
+          el('input', {
+            type: 'checkbox', checked: f.vals.indexOf(v) >= 0,
+            onchange: function (e) {
+              f.vals = e.target.checked ? f.vals.concat([v]) : f.vals.filter((x) => { return x !== v; });
+              refreshBar(); fired();
+            }
+          }),
+          el('span', { text: v === '' ? t('table.filter.blank') : v })
+        ]));
+      });
+    }
+    drawVals('');
+
+    const q = el('input', {
+      type: 'text', placeholder: t('table.filter.contains'), value: f.q || '',
+      oninput: function (e) { f.q = e.target.value; drawVals(e.target.value.toLowerCase()); refreshBar(); fired(); }
+    });
+    const box = el('div', { class: 'tvbox' }, [
+      q, list,
+      el('div', { class: 'tvfoot' }, [
+        el('button', {
+          class: 'btn sm', text: t('table.filter.clearCol'),
+          onclick: function () { filters[col.k] = { q: '', vals: [] }; closeBox(); refreshBar(); fired(); }
+        }),
+        el('div', { class: 'sp', style: 'flex:1' }),
+        el('button', { class: 'btn sm', text: t('btn.close'), onclick: closeBox })
+      ])
+    ]);
+    /* Gắn vào body chứ không vào <th>: <th> có position:sticky và overflow của
+       .tw sẽ cắt cụt hộp. Đặt theo toạ độ màn hình. */
+    const b = anchorEl.getBoundingClientRect();
+    box.style.left = Math.min(b.left, window.innerWidth - 260) + 'px';
+    box.style.top = (b.bottom + 2) + 'px';
+    document.body.appendChild(box);
+    openBox = box;
+    q.focus();
+  }
+
+  /* --- dải chip "đang sắp / đang lọc" --- */
+  function refreshBar() {
+    bar.innerHTML = '';
+    const chips = [];
+    sort.forEach((s2, i) => {
+      const col = colOf(s2.k); if (!col) return;
+      chips.push(el('span', {
+        class: 'chip', title: t('table.sort.remove'),
+        text: (sort.length > 1 ? (i + 1) + '. ' : '') + col.label + ' ' + (s2.dir === 'desc' ? '▼' : '▲') + ' ✕',
+        onclick: function () { sort = sort.filter((x) => { return x.k !== s2.k; }); refreshBar(); fired(); }
+      }));
+    });
+    activeFilters().forEach((k) => {
+      const col = colOf(k); if (!col) return;
+      const f = filters[k];
+      const what = (f.vals || []).length ? t('table.filter.nVals', { n: f.vals.length }) : '“' + f.q.trim() + '”';
+      chips.push(el('span', {
+        class: 'chip', title: t('table.filter.remove'),
+        text: col.label + ': ' + what + ' ✕',
+        onclick: function () { filters[k] = { q: '', vals: [] }; refreshBar(); fired(); }
+      }));
+    });
+    if (!chips.length) { bar.style.display = 'none'; return; }
+    bar.style.display = '';
+    bar.appendChild(el('span', { class: 'muted', text: t('table.view.active') }));
+    chips.forEach((c) => { bar.appendChild(c); });
+    bar.appendChild(el('button', {
+      class: 'btn sm', text: t('table.view.clear'),
+      onclick: function () { clear(); fired(); }
+    }));
+  }
+
+  function clear() {
+    sort = [];
+    Object.keys(filters).forEach((k) => { delete filters[k]; });
+    refreshBar();
+  }
+
+  return {
+    bar,
+    sorted() { return sort.length > 0; },
+    clear,
+    /** <th> đã gắn sắp xếp (bấm) và lọc (nút phễu). `rowsFor` cấp danh sách giá
+        trị phân biệt cho hộp lọc — truyền hàm để nó luôn đọc dữ liệu mới nhất. */
+    th(col, rowsFor, attrs) {
+      const s2 = sort.filter((x) => { return x.k === col.k; })[0];
+      const rank = s2 && sort.length > 1 ? String(sort.indexOf(s2) + 1) : '';
+      const on = activeFilters().indexOf(col.k) >= 0;
+      const node = el('th', Object.assign({ class: 'tvth' + (col.type === 'num' ? ' num' : '') }, attrs || {}), [
+        el('span', {
+          class: 'tvlbl', title: t('table.sort.hint'), text: col.label,
+          onclick: function (e) {
+            /* Bấm: tăng → giảm → thôi. Ctrl/Shift+bấm THÊM khoá phụ. */
+            const cur = sort.filter((x) => { return x.k === col.k; })[0];
+            const keep = (e.ctrlKey || e.metaKey || e.shiftKey) ? sort.filter((x) => { return x.k !== col.k; }) : [];
+            if (!cur) sort = keep.concat([{ k: col.k, dir: 'asc' }]);
+            else if (cur.dir === 'asc') sort = keep.concat([{ k: col.k, dir: 'desc' }]);
+            else sort = keep;
+            refreshBar(); fired();
+          }
+        }),
+        s2 ? el('span', { class: 'tvdir', text: (s2.dir === 'desc' ? '▼' : '▲') + rank }) : null,
+        /* Dấu phễu là TRANG TRÍ: trình đọc màn hình bỏ qua, còn phép kiểm thì
+           đọc .tvlbl chứ không đọc textContent của cả <th>. */
+        el('span', {
+          class: 'tvfx' + (on ? ' on' : ''), title: t('table.filter.hint'), text: '⌄',
+          'aria-hidden': 'true',
+          onclick: function (e) { e.stopPropagation(); filterBox(col, node, rowsFor()); }
+        })
+      ]);
+      return node;
+    },
+    /** Lọc rồi sắp — LUÔN trả mảng mới, không đụng vào mảng nguồn. */
+    apply(list) {
+      return viewSort(viewFilter(list, cols, filters), cols, sort);
+    }
+  };
+}
+
 /* ---------- Thanh phân trang dùng chung ----------
    Mọi bảng dài trong app đi qua đây, nên cỡ trang chọn một lần là áp cho tất cả
    và sống qua lần mở sau (lưu ở S.ui.pageSize).
@@ -436,6 +674,9 @@ function dataTable(cfg) {
   const drag = cfg.reorder ? dragList((items, to, before) => {
     if (moveBeside(cfg.rows(), items, to, before)) { sel.clear(); cfg.onChange && cfg.onChange(); draw(); }
   }, sel) : null;
+  /* Sắp xếp / lọc theo cột. Đổi cách xem thì phải về trang 1, nếu không người
+     dùng đứng ở trang 5 của một danh sách vừa co lại còn hai trang. */
+  const tv = tableView(cfg.columns, () => { pg.reset(); draw(); });
   function draw() {
     optCache = {}; buildDatalists();
     tb.innerHTML = '';
@@ -443,21 +684,30 @@ function dataTable(cfg) {
     const kw = filter.trim().toLowerCase();
     const keys = cfg.columns.map((c) => { return c.k; });
     const frag = document.createDocumentFragment();
-    /* Lọc TRƯỚC, phân trang SAU — số trang phải tính trên kết quả lọc. */
-    const matchedRows = !kw ? rows : rows.filter((row) => {
+    /* Thứ tự đường ống: ô tìm chung → lọc/sắp theo cột → phân trang → dựng.
+       Số trang phải tính trên kết quả đã lọc, không phải trên mảng gốc. */
+    const kwRows = !kw ? rows : rows.filter((row) => {
       for (let q = 0; q < keys.length; q++) {
         if (String(row[keys[q]] == null ? '' : row[keys[q]]).toLowerCase().indexOf(kw) >= 0) return true;
       }
       return false;
     });
+    const matchedRows = tv.apply(kwRows);
     const matched = matchedRows.length;
     const shownRows = pg.apply(matchedRows);
+    /* Đang sắp xếp thì tắt kéo thả: vị trí thả trong một danh sách đã sắp lại
+       không nói được gì về vị trí trong mảng gốc. */
+    const noDrag = tv.sorted();
+    wrap.classList.toggle('nodrag', !!(drag && noDrag));
     /* Shift+bấm lấy dải trong danh sách ĐANG HIỆN (đã lọc, đúng trang). */
     shownNow = shownRows;
     for (let i = 0; i < shownRows.length; i++) {
       const row = shownRows[i];
       (function (row) {
-        const grip = drag ? el('td', { class: 'grip', style: 'width:24px', title: t('table.dragMulti'), text: '⠿' }) : null;
+        const grip = drag ? el('td', {
+          class: 'grip', style: 'width:24px',
+          title: noDrag ? t('table.sorted.noDrag') : t('table.dragMulti'), text: '⠿'
+        }) : null;
         const tds = (grip ? [grip] : []).concat(cfg.columns.map((col) => {
           return el('td', { style: col.w ? 'width:' + col.w + 'px' : '' }, [cell(row, col)]);
         }));
@@ -470,7 +720,7 @@ function dataTable(cfg) {
           }
         })]));
         const tr = el('tr', { class: sel && sel.has(row) ? 'picked' : '' }, tds);
-        if (drag) {
+        if (drag && !noDrag) {
           drag.attach(tr, row, grip);
           /* Ctrl/Shift+bấm để chọn nhiều dòng rồi kéo một lượt.
              Bảng này gần như toàn ô nhập, bấm chỗ nào cũng rơi vào một ô — nên
@@ -583,10 +833,12 @@ function dataTable(cfg) {
     el('button', { class: 'btn sm', text: t('table.exportData'), onclick: exportRows }),
     el('button', { class: 'btn sm pri', text: t('table.importExcel'), onclick: function () { pickFile('.xlsx,.xls,.csv', doImport); } })
   ]));
+  wrap.appendChild(tv.bar);
   wrap.appendChild(el('div', { class: 'tw' }, [
     el('table', {}, [
       el('thead', {}, [el('tr', {}, (drag ? [el('th', { text: '' })] : [])
-        .concat(cfg.columns.map((c) => { return el('th', { text: c.label }); }))
+        /* Danh sách giá trị của hộp lọc đọc từ mảng gốc, không từ trang đang xem. */
+        .concat(cfg.columns.map((c) => { return tv.th(c, cfg.rows); }))
         .concat([el('th', { text: '' })]))]),
       tb
     ])
@@ -641,4 +893,4 @@ function foldPanel(key, title, badges, actions, bodyNode, note) {
   return el('div', { class: 'panel' }, [head, body]);
 }
 
-export { comboLimit, dragList, moveBeside, selection, pager, downloadTemplate, downloadData, importMapped, dataTable, readTable, panel, foldPanel };
+export { comboLimit, dragList, moveBeside, selection, tableView, pager, downloadTemplate, downloadData, importMapped, dataTable, readTable, panel, foldPanel };
