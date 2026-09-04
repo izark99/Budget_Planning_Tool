@@ -106,6 +106,11 @@ interface DashFilters {
   groupCol: string;
   groupVal: string;
   sort: string;
+  /** Bảng pivot: các cột làm DÒNG. null = chưa cấu hình (điền mặc định lúc dựng);
+      [] = người dùng đã cố ý bỏ hết. */
+  pivotRows?: string[] | null;
+  /** Bảng pivot: chiều ngang. '__cc' | '__fc' | '__month' | tên một cột phân loại. */
+  pivotCol?: string;
   [k: string]: any;
 }
 

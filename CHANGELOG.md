@@ -4,6 +4,59 @@ Gộp theo đợt việc, mới nhất ở trên. Dự án chưa đánh số phi
 
 ---
 
+## Đợt 9 — Dashboard: tách phần do tăng lương, và bảng pivot tuỳ chỉnh · 2026-09-04
+
+Ba việc, cùng một sợi chỉ: **phần do tăng lương phải nhìn thấy được ở mọi chiều**, chứ
+không chỉ là một con số tổng trên thẻ tóm tắt.
+
+Số liệu vốn đã có sẵn: `RESULT.dataNoRaise` là bản tính lại với mọi đợt tăng bị bỏ, cùng
+hình dạng với `RESULT.data`, nên phần tăng của **bất kỳ lát cắt nào** chỉ là
+`data − dataNoRaise` cộng trên đúng lát đó. `dashAggregate()` đã đi sẵn một vòng ba lớp
+dòng × công thức × tháng, nên cả ba việc là **thêm các bản cộng song song trong chính vòng
+đó**, không phải thêm vòng mới.
+
+### Diễn biến 12 tháng → cột chồng
+Phần gốc ở dưới, phần do tăng lương chồng lên trên, kèm chú giải. Chiều cao `.bar` vẫn là
+tổng nên đường tham chiếu và nhãn giá trị không phải đổi gì; đoạn tăng là một `<i class="up">`
+làm con đầu của `.bar`, tỉ lệ tính **trên chính cột** chứ không trên cột cao nhất. Chưa khai
+đợt tăng nào thì không dựng đoạn tăng lẫn chú giải.
+
+### Hai bảng cơ cấu → thêm cột "Do tăng lương"
+"Cơ cấu theo Cost Code" và "Chi tiết theo Formula Code" có thêm cột phần tăng, và thanh
+`hbar` thành thanh chồng. Cột chỉ dựng khi có khai đợt tăng — không thì là một cột toàn
+dấu gạch.
+
+### Ma trận Dept × Cost Code → bảng pivot tuỳ chỉnh
+Thay hẳn ma trận cứng. Dòng chọn được **nhiều cột** một lúc (dải chip bấm-để-chọn, đúng
+khuôn "Cột khoá" ở màn Phân loại nhóm); cột chọn được **Cost Code · Formula Code · Tháng ·
+mọi cột phân loại**. Cột "Do tăng lương" tính riêng cho **từng dòng**, kể cả dòng nhiều cấp.
+
+Ba điều đáng ghi:
+
+- **Trần 40 cột.** Chọn một cột như Position/ID thì ra hàng trăm cột. Phần vượt trần được
+  **gộp** vào một cột "Khác" chứ không cắt bỏ, để cột Tổng luôn cộng đúng — có thẻ báo khi
+  chạm trần.
+- **Không lẫn hai chiều.** Cột đang làm chiều ngang bị loại khỏi dải chip dòng: cùng một
+  cột ở cả hai chiều chỉ cho ra một đường chéo.
+- **Bấm dòng để lọc** chỉ còn khi dòng là *một* cột. Nhiều cột thì một dòng là một bộ giá
+  trị, không phải một giá trị của `groupVal` — bấm sẽ lọc sai, nên bỏ hẳn hành vi đó thay
+  vì để nó lọc nhầm.
+
+Dự án cũ chưa có `pivotRows`/`pivotCol` mở lên vẫn ra đúng bảng như trước (dòng = cột phân
+loại đang chọn, cột = Cost Code). Dùng `null` làm mốc "chưa cấu hình" và `[]` làm mốc
+"người dùng đã cố ý bỏ hết" — nếu không thì bỏ hết chip xong lần vẽ sau lại tự điền lại.
+
+### Thước đo: phép cộng phải khớp
+Gộp theo chiều nào, cắt theo lát nào, tổng cũng phải quay về đúng một con số. Phép kiểm
+chốt: tổng ô = tổng dòng = tổng cột = tổng chung, **trên cả bốn chiều cột**; và
+`Σ monthsRaise = Σ byCcRaise = Σ byFcRaise = Σ (cột Do tăng lương của từng dòng) = A.raise`.
+Đổi chiều cột thì cách gộp khoá đổi hẳn mà tổng không được đổi — đó là phép kiểm bắt được
+lỗi gộp sai khoá.
+
+Bỏ `matrix` và `costCodes` khỏi `dashAggregate` — chúng chỉ phục vụ ma trận cũ.
+
+---
+
 ## Đợt 8c — Ba lỗi giao diện · 2026-09-04
 
 ### Click hai lần mới chuyển được con trỏ sang ô khác

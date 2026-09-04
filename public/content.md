@@ -748,8 +748,7 @@ dash.kind_group: Theo nhóm
 dash.kind_month: Theo tháng
 dash.kind_row: Định biên
 dash.kind_warn: Khai báo
-dash.matrix_help: Bấm một dòng để lọc theo nhóm đó. Mặt bằng chung đang là <strong>{base} đ</strong> mỗi người-tháng. Ô <span class="tag o">cam</span> là nhóm tốn từ 1,5 lần mặt bằng trở lên, ô <span class="tag g">xanh</span> là nhóm chỉ bằng 0,6 lần trở xuống.
-dash.matrix_title: Ma trận {col} × Cost Code
+dash.legend_base: Phần gốc
 dash.n_codes: {n} mã
 dash.n_conditions: {n} điều kiện
 dash.n_formulas: {n} công thức
@@ -760,8 +759,14 @@ dash.no_anomaly: không thấy bất thường
 dash.no_hc_hint: Nhập bảng định biên trước đã.
 dash.not_run: Chưa chạy tính
 dash.not_run_hint: Dashboard đọc từ kết quả đã tính. Bấm nút bên dưới để chạy.
+dash.other_cols: Khác ({n} cột)
 dash.person_months: {n} người-tháng
 dash.phan_loai_theo: Phân loại theo
+dash.pivot_capped: gộp từ cột thứ {n}
+dash.pivot_col: Cột — chiều ngang
+dash.pivot_help: Chọn cột nào làm <strong>dòng</strong> (bấm chip, chọn được nhiều) và cột nào làm <strong>chiều ngang</strong> (đang là {col}). Cột “Do tăng lương” tính riêng cho <strong>từng dòng</strong>. Mặt bằng chung đang là <strong>{base} đ</strong> mỗi người-tháng: ô <span class="tag o">cam</span> là nhóm tốn từ 1,5 lần mặt bằng trở lên, ô <span class="tag g">xanh</span> là nhóm chỉ bằng 0,6 lần trở xuống.
+dash.pivot_rows: Dòng — bấm để chọn, chọn được nhiều cột
+dash.pivot_title: Bảng pivot
 dash.raise_share: {n} đ · {p}% ngân sách trong bộ lọc
 dash.series_fc: Tổng cả năm theo Formula Code
 dash.series_group: Chi phí mỗi người-tháng theo nhóm {col}

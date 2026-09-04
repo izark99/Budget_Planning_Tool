@@ -15,6 +15,20 @@ import { runBudget } from './result.js';
    Chiều chính: Cost Code / Formula Code × một cột phân loại
    Thêm ba bộ lọc đi sâu và các chỉ số thống kê trên dãy số
    =========================================================== */
+/* Ba chiều cột "ngang" của bảng pivot, không phải cột của bảng định biên. Tiền
+   tố __ để không bao giờ đụng một cột thật tên "Tháng". */
+const PV_CC = '__cc', PV_FC = '__fc', PV_MONTH = '__month';
+/* Khoá của cột gộp phần vượt trần. */
+const PV_OTHER = '__other';
+
+/** Trần số cột của bảng pivot. Chọn một cột như Position/ID thì có thể ra hàng
+    trăm cột; phần vượt trần được GỘP vào một cột "Khác" chứ không cắt bỏ, để
+    cột Tổng luôn cộng đúng. */
+const PV_MAX_COLS = 40;
+
+/* Ký tự nối khoá dòng nhiều cấp — cùng ký tự applyClasses dùng. */
+const SEP = '\u0001';
+
 const STAT_DEFS = [
   { k: 'min', t: 'Min' },
   { k: 'p25', t: 'P25' },
@@ -36,6 +50,15 @@ function dashState() {
   if (f.groupCol === undefined) f.groupCol = '';
   if (f.groupVal === undefined) f.groupVal = '';
   if (!f.sort) f.sort = 'total';
+  /* Bảng pivot: dòng chọn được NHIỀU cột, cột chọn đúng một chiều. Dự án cũ
+     chưa có hai trường này — điền mặc định để mở lên vẫn ra đúng bảng như
+     trước (dòng = cột phân loại đang chọn, cột = Cost Code). */
+  /* null = CHƯA cấu hình (điền mặc định ở nơi dựng, khi đã biết cột phân loại);
+     [] = người dùng đã cố ý bỏ hết. Phân biệt hai thứ đó, nếu không thì bỏ hết
+     chip xong lần vẽ sau lại tự điền lại. */
+  if (f.pivotRows === undefined) f.pivotRows = null;
+  if (f.pivotRows !== null && !Array.isArray(f.pivotRows)) f.pivotRows = null;
+  if (!f.pivotCol) f.pivotCol = PV_CC;
   return f;
 }
 
@@ -99,13 +122,23 @@ function dashAggregate(R, f) {
 
   const filters = dashFilters(f);
   const months = new Array(M).fill(0); let total = 0;
-  const byFc = {}, byCc = {}, byGroup = {}, matrix = {}, ccSet = {};
-  let personMonths = 0, zeroRows = 0, nRow = 0;
-  /* Ảnh hưởng tăng lương gộp trong CHÍNH vòng lặp này, nên nó tôn trọng đủ mọi
+  /* Bản cộng SONG SONG cho phần do tăng lương, ở mọi chiều mà màn hình vẽ ra.
+     Tất cả nằm trong CHÍNH vòng lặp đã lọc bên dưới, nên chúng tôn trọng đủ mọi
      bộ lọc đang bật — không phải con số toàn cục dán vào. */
+  const monthsRaise = new Array(M).fill(0);
+  const byFc = {}, byCc = {}, byGroup = {};
+  const byFcRaise = {}, byCcRaise = {};
+  let personMonths = 0, zeroRows = 0, nRow = 0;
   const noR = R.dataNoRaise;
   let totalNoRaise = 0;
   const rowTotals = [];
+
+  /* --- bảng pivot do người dùng cấu hình --- */
+  const pvRows = (f.pivotRows || []).filter(Boolean);
+  const pvCol = f.pivotCol || PV_CC;
+  /* pivot[khoá dòng] = { vals, total, raise, pm, n, cells: { khoá cột: {v, up} } } */
+  const pivot = {};
+  const pvColTot = {};
 
   for (let r = 0; r < nR; r++) {
     const row = R.rows[r];
@@ -119,38 +152,80 @@ function dashAggregate(R, f) {
     if (!byGroup[gv]) byGroup[gv] = { total: 0, pm: 0, n: 0, noRaise: 0 };
     byGroup[gv].pm += hcSum; byGroup[gv].n++;
 
+    /* Khoá dòng pivot: bộ giá trị của các cột đã chọn, nối bằng U+0001 — cùng
+       ký tự nối mà applyClasses dùng, không bao giờ xuất hiện trong dữ liệu. */
+    const pvVals = pvRows.map((c) => { return String(row[c] == null ? '' : row[c]).trim(); });
+    const pvKey = pvVals.join(SEP);
+    let pv = pivot[pvKey];
+    if (!pv) pv = pivot[pvKey] = { vals: pvVals, total: 0, raise: 0, pm: 0, n: 0, cells: {} };
+    pv.pm += hcSum; pv.n++;
+    /* Chiều cột lấy theo DÒNG thì cả dòng rơi vào đúng một cột — tính sẵn ở đây. */
+    const colOfRow = (pvCol === PV_CC || pvCol === PV_FC || pvCol === PV_MONTH)
+      ? null : String(row[pvCol] == null ? '' : row[pvCol]).trim();
+
     let rowTotal = 0, rowNoRaise = 0;
     for (let k = 0; k < fcIdx.length; k++) {
-      const it = fcIdx[k], arr = R.data[it.i], base = r * M; let sub = 0;
-      for (let m2 = 0; m2 < M; m2++) { const v2 = arr[base + m2]; if (v2) { months[m2] += v2; sub += v2; } }
-      if (noR) { const a0 = noR[it.i]; for (let m3 = 0; m3 < M; m3++) rowNoRaise += a0[base + m3]; }
+      const it = fcIdx[k], arr = R.data[it.i], a0 = noR ? noR[it.i] : null, base = r * M;
+      let sub = 0, sub0 = 0;
+      for (let m2 = 0; m2 < M; m2++) {
+        const v2 = arr[base + m2];
+        const u2 = a0 ? v2 - a0[base + m2] : 0;
+        if (a0) { sub0 += a0[base + m2]; if (u2) monthsRaise[m2] += u2; }
+        if (v2) { months[m2] += v2; sub += v2; }
+        /* Cột theo THÁNG là chiều duy nhất phải cộng ở mức tháng. */
+        if (pvCol === PV_MONTH && (v2 || u2)) addCell(pv, pvColTot, String(m2), v2, u2);
+      }
+      rowNoRaise += sub0;
+      const up = a0 ? sub - sub0 : 0;
+      if (pvCol !== PV_MONTH && (sub || up)) {
+        addCell(pv, pvColTot, colOfRow === null ? (pvCol === PV_CC ? it.cc : it.fc.code) : colOfRow, sub, up);
+      }
       if (!sub) continue;
       rowTotal += sub;
       byFc[it.fc.code] = (byFc[it.fc.code] || 0) + sub;
       byCc[it.cc] = (byCc[it.cc] || 0) + sub;
-      ccSet[it.cc] = 1;
-      const key = gv + '\u0001' + it.cc;
-      matrix[key] = (matrix[key] || 0) + sub;
+      if (a0) {
+        byFcRaise[it.fc.code] = (byFcRaise[it.fc.code] || 0) + up;
+        byCcRaise[it.cc] = (byCcRaise[it.cc] || 0) + up;
+      }
     }
     byGroup[gv].total += rowTotal;
     byGroup[gv].noRaise += rowNoRaise;
+    pv.total += rowTotal;
+    if (noR) pv.raise += rowTotal - rowNoRaise;
     total += rowTotal; totalNoRaise += rowNoRaise;
     if (hcSum > 0) rowTotals.push(rowTotal / hcSum);
     if (!rowTotal && hcSum > 0) zeroRows++;
   }
 
   return {
-    months, total, nRow, personMonths,
+    months, monthsRaise, total, nRow, personMonths,
     /* raise = phần do tăng lương, trong đúng bộ lọc đang bật. */
     raise: noR ? total - totalNoRaise : null,
-    byFc, byCc, byGroup, matrix, rowTotals,
-    costCodes: Object.keys(ccSet).sort(), fcIdx, zeroRows, ccOf, filters
+    byFc, byCc, byFcRaise, byCcRaise, byGroup, rowTotals,
+    pivot, pvColTot, pvRows, pvCol,
+    fcIdx, zeroRows, ccOf, filters
   };
 }
 
-/* ---------- biểu đồ 12 tháng có đường tham chiếu ---------- */
-function barsMonthly(months, stats, picked) {
+/** Cộng một lượng vào đúng ô (dòng, cột) của pivot và vào tổng của cột đó. */
+function addCell(pv, colTot, colKey, v, up) {
+  let c = pv.cells[colKey];
+  if (!c) c = pv.cells[colKey] = { v: 0, up: 0 };
+  c.v += v; c.up += up;
+  let ct = colTot[colKey];
+  if (!ct) ct = colTot[colKey] = { v: 0, up: 0 };
+  ct.v += v; ct.up += up;
+}
+
+/* ---------- biểu đồ 12 tháng có đường tham chiếu ----------
+   Cột CHỒNG: phần gốc ở dưới, phần do tăng lương chồng lên trên. Chiều cao của
+   .bar vẫn là TỔNG nên đường tham chiếu và nhãn .bval không phải đổi gì; phần
+   tăng là một <i class="up"> nằm ở đầu .bar (flex-direction: column nên con đầu
+   ở trên). `raise` rỗng = chưa khai đợt tăng nào → không dựng đoạn nào cả. */
+function barsMonthly(months, stats, picked, raise) {
   const mx = Math.max.apply(null, months.concat([1]));
+  const up = raise || null;
   const plot = el('div', { class: 'plot' });
   (picked || []).forEach((k) => {
     const v = stats[k];
@@ -161,19 +236,35 @@ function barsMonthly(months, stats, picked) {
   });
   plot.appendChild(el('div', { class: 'bars' }, months.map((v, i) => {
     const h = v / mx * 100;
-    return el('div', { class: 'col', title: MONTHS[i] + ': ' + fmt(v) }, [
+    const u = up ? (up[i] || 0) : 0;
+    return el('div', {
+      class: 'col',
+      title: MONTHS[i] + ': ' + fmt(v) + (u ? '\n' + t('dash.do_tang_luong') + ': ' + fmt(u) : '')
+    }, [
       el('div', { class: 'bval', style: 'bottom:' + h + '%', text: v ? fmtShort(v) : '' }),
-      el('div', { class: 'bar', style: 'height:' + h + '%' })
+      el('div', { class: 'bar', style: 'height:' + h + '%' },
+        /* Tỉ lệ tính TRÊN CHÍNH CỘT, không trên mx: .up là con của .bar. */
+        [u > 0 && v > 0 ? el('i', { class: 'up', style: 'height:' + Math.min(100, u / v * 100) + '%' }) : null])
     ]);
   })));
-  return el('div', { class: 'chart' }, [
-    plot,
-    el('div', { class: 'xaxis' }, MONTHS.map((m) => { return el('div', { text: m }); }))
-  ]);
+  const out = [plot, el('div', { class: 'xaxis' }, MONTHS.map((m) => { return el('div', { text: m }); }))];
+  /* Chú giải chỉ có nghĩa khi thật sự có hai phần để phân biệt. */
+  if (up && up.some((x) => { return x > 0; })) {
+    out.push(el('div', { class: 'legend' }, [
+      el('span', {}, [el('i', { class: 'sw base' }), document.createTextNode(t('dash.legend_base'))]),
+      el('span', {}, [el('i', { class: 'sw up' }), document.createTextNode(t('dash.do_tang_luong'))])
+    ]));
+  }
+  return el('div', { class: 'chart' }, out);
 }
 
-function hbar(v, mx) {
-  return el('div', { class: 'hbar' }, [el('i', { style: 'width:' + (mx ? Math.round(v / mx * 100) : 0) + '%' })]);
+/** Thanh ngang, có thể chồng phần do tăng lương lên phần gốc. */
+function hbar(v, mx, up) {
+  const w = mx ? Math.round(v / mx * 100) : 0;
+  const uw = (up && v) ? Math.min(100, up / v * 100) : 0;
+  return el('div', { class: 'hbar' }, [
+    el('i', { style: 'width:' + w + '%' }, [uw > 0 ? el('b', { style: 'width:' + uw + '%' }) : null])
+  ]);
 }
 
 function viewDashboard() {
@@ -201,6 +292,12 @@ function viewDashboard() {
   if (f.groupCol && groupCols.indexOf(f.groupCol) < 0) f.groupCol = '';
   if (!f.groupCol) f.groupCol = groupCols[0] || '';
   (f.extra || []).forEach((x) => { if (x.col && groupCols.indexOf(x.col) < 0) { x.col = ''; x.val = ''; } });
+  /* Bảng pivot: chưa cấu hình thì mở ra đúng như bản ma trận cũ — dòng là cột
+     phân loại đang chọn, cột là Cost Code. Cột đã biến mất khỏi dự án thì bỏ. */
+  if (f.pivotRows === null) f.pivotRows = f.groupCol ? [f.groupCol] : [];
+  f.pivotRows = f.pivotRows.filter((c) => { return groupCols.indexOf(c) >= 0 && c !== f.pivotCol; });
+  if (f.pivotCol !== PV_CC && f.pivotCol !== PV_FC && f.pivotCol !== PV_MONTH
+      && groupCols.indexOf(f.pivotCol) < 0) f.pivotCol = PV_CC;
 
   const A = dashAggregate(R, f);
   const nActive = A.filters.length + (f.costCode ? 1 : 0) + (f.formulaCode ? 1 : 0);
@@ -400,137 +497,217 @@ function viewDashboard() {
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('dash.dien_bien_12_thang') }), el('div', { class: 'sp' }),
     el('span', { class: 'tag', text: t('dash.spread', { n: fmtShort(monthStats.max - monthStats.min) }) })]),
-    el('div', { class: 'body' }, [barsMonthly(A.months, monthStats, f.stats)])
+    el('div', { class: 'body' }, [barsMonthly(A.months, monthStats, f.stats, A.monthsRaise)])
   ]));
 
   /* ---------- cơ cấu theo Cost Code ---------- */
-  const ccRows = Object.keys(A.byCc).map((c) => { return { c, v: A.byCc[c] }; })
+  /* Cột "Do tăng lương" chỉ dựng khi có khai đợt tăng — không thì là một cột
+     toàn dấu gạch, vô nghĩa với người không dùng tăng lương. */
+  const showRaise = A.raise !== null;
+  const ccRows = Object.keys(A.byCc).map((c) => { return { c, v: A.byCc[c], up: A.byCcRaise[c] || 0 }; })
     .sort((p, q) => { return q.v - p.v; });
   const ccMax = ccRows.length ? ccRows[0].v : 0;
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('dash.co_cau_theo_cost_code') }), el('span', { class: 'tag', text: t('dash.n_codes', { n: ccRows.length }) })]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
       el('table', {}, [
-        el('thead', {}, [el('tr', {}, [el('th', { text: 'Cost Code' }), el('th', { style: 'width:36%', text: t('dash.ty_trong') }), el('th', { class: 'num', text: t('fm.full_year') }), el('th', { class: 'num', text: '%' })])]),
+        el('thead', {}, [el('tr', {}, [el('th', { text: 'Cost Code' }), el('th', { style: 'width:36%', text: t('dash.ty_trong') }), el('th', { class: 'num', text: t('fm.full_year') })]
+          .concat(showRaise ? [el('th', { class: 'num', text: t('dash.do_tang_luong') })] : [])
+          .concat([el('th', { class: 'num', text: '%' })]))]),
         el('tbody', {}, ccRows.map((x) => {
           return el('tr', {
             style: 'cursor:pointer', title: t('dash.bam_de_loc_theo_ma_nay'),
             onclick: function () { f.costCode = f.costCode === x.c ? '' : x.c; f.formulaCode = ''; touch(); render(); }
           }, [
             el('td', { class: 'mono', text: x.c }),
-            el('td', {}, [hbar(x.v, ccMax)]),
-            el('td', { class: 'num', text: fmt(x.v) }),
-            el('td', { class: 'num', text: A.total ? (x.v / A.total * 100).toFixed(1) + '%' : '' })
-          ]);
+            el('td', {}, [hbar(x.v, ccMax, x.up)]),
+            el('td', { class: 'num', text: fmt(x.v) })
+          ].concat(showRaise ? [el('td', { class: 'num' + (x.up ? '' : ' zero'), text: x.up ? fmt(x.up) : '–' })] : [])
+            .concat([el('td', { class: 'num', text: A.total ? (x.v / A.total * 100).toFixed(1) + '%' : '' })]));
         }))
       ])
     ])])
   ]));
 
   /* ---------- chi tiết Formula Code ---------- */
-  const fcRows = Object.keys(A.byFc).map((c) => { return { c, v: A.byFc[c] }; })
+  const fcRows = Object.keys(A.byFc).map((c) => { return { c, v: A.byFc[c], up: A.byFcRaise[c] || 0 }; })
     .sort((p, q) => { return q.v - p.v; });
   const fcMax = fcRows.length ? fcRows[0].v : 0;
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('dash.chi_tiet_theo_formula_code') }), el('span', { class: 'tag', text: t('dash.n_formulas', { n: fcRows.length }) })]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
       el('table', {}, [
-        el('thead', {}, [el('tr', {}, [el('th', { text: 'Formula Code' }), el('th', { text: 'Cost Code' }), el('th', { style: 'width:28%', text: t('dash.ty_trong') }), el('th', { class: 'num', text: t('fm.full_year') }), el('th', { class: 'num', text: '%' })])]),
+        el('thead', {}, [el('tr', {}, [el('th', { text: 'Formula Code' }), el('th', { text: 'Cost Code' }), el('th', { style: 'width:28%', text: t('dash.ty_trong') }), el('th', { class: 'num', text: t('fm.full_year') })]
+          .concat(showRaise ? [el('th', { class: 'num', text: t('dash.do_tang_luong') })] : [])
+          .concat([el('th', { class: 'num', text: '%' })]))]),
         el('tbody', {}, fcRows.map((x) => {
           return el('tr', {
             style: 'cursor:pointer', onclick: function () { f.formulaCode = f.formulaCode === x.c ? '' : x.c; touch(); render(); }
           }, [
             el('td', { class: 'mono', text: x.c }),
             el('td', { class: 'mono', text: A.ccOf[nkey(x.c)] || t('engine.map.none') }),
-            el('td', {}, [hbar(x.v, fcMax)]),
-            el('td', { class: 'num', text: fmt(x.v) }),
-            el('td', { class: 'num', text: A.total ? (x.v / A.total * 100).toFixed(1) + '%' : '' })
-          ]);
+            el('td', {}, [hbar(x.v, fcMax, x.up)]),
+            el('td', { class: 'num', text: fmt(x.v) })
+          ].concat(showRaise ? [el('td', { class: 'num' + (x.up ? '' : ' zero'), text: x.up ? fmt(x.up) : '–' })] : [])
+            .concat([el('td', { class: 'num', text: A.total ? (x.v / A.total * 100).toFixed(1) + '%' : '' })]));
         }))
       ])
     ])])
   ]));
 
-  /* ---------- ma trận nhóm × Cost Code ---------- */
-  if (f.groupCol) {
-    const gs = gEntries.slice().sort((p, q) => {
-      return f.sort === 'per' ? q.per - p.per : q.total - p.total;
-    });
-    const ccs = A.costCodes;
-    const showRaise = A.raise !== null;
-    const head = [el('th', { text: f.groupCol }), el('th', { class: 'num', text: t('dash.nguoi_thang') })]
-      .concat(ccs.map((c) => { return el('th', { class: 'num', text: c }); }))
-      .concat([el('th', { class: 'num', text: t('fm.full_year') })])
-      .concat(showRaise ? [el('th', { class: 'num', text: t('dash.do_tang_luong') })] : [])
-      .concat([el('th', { class: 'num', text: t('dash.bq_dau_nguoi_thang') })]);
+  /* ---------- bảng pivot do người dùng cấu hình ----------
+     Thay hẳn ma trận "nhóm × Cost Code" cứng của bản trước: dòng chọn được
+     NHIỀU cột một lúc, cột chọn được cả chiều công thức (Cost Code / Formula
+     Code), chiều thời gian (12 tháng) lẫn bất kỳ cột phân loại nào. */
+  const pvRowOpts = groupCols.filter((c) => { return c !== f.pivotCol; });
+  const pvColOpts = [
+    { v: PV_CC, t: 'Cost Code' },
+    { v: PV_FC, t: 'Formula Code' },
+    { v: PV_MONTH, t: t('export.audit.month') }
+  ].concat(groupCols.map((c) => { return { v: c, t: c }; }));
+  const pvColLabel = (pvColOpts.filter((o) => { return o.v === f.pivotCol; })[0] || pvColOpts[0]).t;
 
-    /* Chỉ PHÂN TRANG các dòng nhóm; hàng thống kê và hàng tổng luôn nằm cuối
-       bảng, không bao giờ bị đẩy sang trang khác. */
-    const pgDash = pager(() => { drawGroups(); });
-    const groupTb = el('tbody');
-    const mkRow = (x) => {
-      const rt = ratioOf(x);
-      const cls = (baseline && x.pm >= 3 && rt >= 1.5) ? 'o' : ((baseline && x.pm >= 3 && rt <= 0.6) ? 'g' : '');
-      return el('tr', {
-        style: 'cursor:pointer', onclick: function () { f.groupVal = f.groupVal === x.g ? '' : x.g; touch(); render(); }
-      }, [
-        el('td', { text: x.g }),
-        el('td', { class: 'num', text: fmt(x.pm) })
-      ].concat(ccs.map((c) => {
-        const v = A.matrix[x.g + '\u0001' + c] || 0;
-        return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' });
-      })).concat([
-        el('td', { class: 'num', text: fmt(x.total) })
-      ]).concat(showRaise ? [(function () {
-        const up = x.total - x.noRaise;
-        return el('td', { class: 'num' + (up ? '' : ' zero'), text: up ? fmt(up) : '–' });
-      })()] : []).concat([
-        el('td', { class: 'num' }, [cls ? el('span', { class: 'tag ' + cls, text: fmtShort(x.per) }) : el('span', { text: fmtShort(x.per) })])
-      ]));
-    };
-
-    /* dòng chỉ số thống kê trên cột bình quân đầu người */
-    const perStats = seriesStats(gEntries.map((x) => { return x.per; }));
-    function drawGroups() {
-      groupTb.innerHTML = '';
-      pgDash.apply(gs).forEach((x) => { groupTb.appendChild(mkRow(x)); });
-      picked.forEach((sd) => {
-        groupTb.appendChild(el('tr', { class: 'statrow' },
-          [el('td', {}, [el('span', { class: 'tag', text: sd.t })]), el('td', {})]
-            .concat(ccs.map(() => { return el('td', {}); }))
-            .concat([el('td', {})])
-            .concat(showRaise ? [el('td', {})] : [])
-            .concat([el('td', { class: 'num', text: fmt(perStats[sd.k]) })])));
-      });
-      groupTb.appendChild(el('tr', { class: 'tot' },
-        [el('td', { text: t('export.total') }), el('td', { class: 'num', text: fmt(A.personMonths) })]
-          .concat(ccs.map((c) => { return el('td', { class: 'num', text: fmt(A.byCc[c] || 0) }); }))
-          .concat([el('td', { class: 'num', text: fmt(A.total) })])
-          .concat(showRaise ? [el('td', { class: 'num', text: fmt(A.raise) })] : [])
-          .concat([el('td', { class: 'num', text: fmtShort(perHead) })])));
-    }
-    drawGroups();
-
-    wrap.appendChild(el('div', { class: 'panel' }, [
-      el('header', {}, [
-        el('h3', { text: t('dash.matrix_title', { col: f.groupCol }) }),
-        el('span', { class: 'tag', text: t('fm.n_groups', { n: gs.length }) }),
-        el('div', { class: 'sp' }),
-        el('button', {
-          class: 'btn sm', text: f.sort === 'per' ? t('dash.sort_per') : t('dash.sort_total'),
-          onclick: function () { f.sort = f.sort === 'per' ? 'total' : 'per'; touch(); render(); }
-        })
-      ]),
-      el('div', { class: 'body' }, [el('p', {
-        class: 'hint',
-        html: t('dash.matrix_help', { base: fmt(Math.round(baseline)) })
-      })]),
-      el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
-        el('table', {}, [el('thead', {}, [el('tr', {}, head)]), groupTb])
-      ])]),
-      el('div', { class: 'body' }, [pgDash.node])
-    ]));
+  /* Cột theo tháng có sẵn thứ tự tự nhiên; các chiều khác sắp theo tổng giảm
+     dần rồi cắt trần, phần dư GỘP vào một cột "Khác" — gộp chứ không bỏ, để cột
+     Tổng luôn cộng đúng. */
+  const colKeys = Object.keys(A.pvColTot);
+  /** @type {Array<{k: string, t: string, over?: string[]}>} */
+  let pvCols;
+  let pvOver = 0;
+  if (f.pivotCol === PV_MONTH) {
+    pvCols = colKeys.slice().sort((a, b) => { return +a - +b; }).map((k) => { return { k, t: MONTHS[+k] }; });
+  } else {
+    const sorted = colKeys.slice().sort((a, b) => { return A.pvColTot[b].v - A.pvColTot[a].v; });
+    pvOver = Math.max(0, sorted.length - PV_MAX_COLS);
+    pvCols = sorted.slice(0, PV_MAX_COLS).map((k) => { return { k, t: k === '' ? t('table.filter.blank') : k }; });
+    if (pvOver) pvCols.push({ k: PV_OTHER, t: t('dash.other_cols', { n: pvOver }), over: sorted.slice(PV_MAX_COLS) });
   }
+  /* Ô của cột "Khác" = tổng mọi cột bị gộp vào nó. */
+  const cellOf = (pr, col) => {
+    if (!col.over) return pr.cells[col.k] || null;
+    let v = 0, up = 0;
+    col.over.forEach((k) => { const c = pr.cells[k]; if (c) { v += c.v; up += c.up; } });
+    return v || up ? { v, up } : null;
+  };
+  const colTotOf = (col) => {
+    if (!col.over) return A.pvColTot[col.k] || { v: 0, up: 0 };
+    let v = 0, up = 0;
+    col.over.forEach((k) => { const c = A.pvColTot[k]; if (c) { v += c.v; up += c.up; } });
+    return { v, up };
+  };
+
+  const pvKeys = Object.keys(A.pivot);
+  const pvList = pvKeys.map((k) => {
+    const x = A.pivot[k];
+    return { key: k, vals: x.vals, cells: x.cells, total: x.total, up: x.raise, pm: x.pm, per: x.pm ? x.total / x.pm : 0 };
+  }).filter((x) => { return x.total > 0 || x.up; })
+    .sort((p, q) => { return f.sort === 'per' ? q.per - p.per : q.total - p.total; });
+
+  /* Bấm dòng để lọc chỉ có nghĩa khi dòng là MỘT cột: nhiều cột thì một dòng là
+     một bộ giá trị, không phải một giá trị của groupVal — bấm sẽ lọc sai. */
+  const canFilter = A.pvRows.length === 1 && A.pvRows[0] === f.groupCol;
+
+  const pgDash = pager(() => { drawPivot(); });
+  const pivotTb = el('tbody');
+  const perStats = seriesStats(gEntries.map((x) => { return x.per; }));
+  /* Số ô đứng trước khối cột giá trị: các cột dòng (ít nhất một) + cột người-tháng. */
+  const nLead = Math.max(1, A.pvRows.length) + 1;
+
+  function drawPivot() {
+    pivotTb.innerHTML = '';
+    pgDash.apply(pvList).forEach((x) => {
+      const rt = baseline ? x.per / baseline : 1;
+      const cls = (baseline && x.pm >= 3 && rt >= 1.5) ? 'o' : ((baseline && x.pm >= 3 && rt <= 0.6) ? 'g' : '');
+      const tr = el('tr', canFilter ? {
+        style: 'cursor:pointer',
+        onclick: function () { f.groupVal = f.groupVal === x.vals[0] ? '' : x.vals[0]; touch(); render(); }
+      } : {}, (x.vals.length ? x.vals : [t('dash.all_groups')]).map((v) => {
+        return el('td', { text: v === '' ? t('table.filter.blank') : v });
+      }).concat([el('td', { class: 'num', text: fmt(x.pm) })])
+        .concat(pvCols.map((c) => {
+          const cell = cellOf(x, c);
+          return el('td', { class: 'num' + (cell && cell.v ? '' : ' zero'), text: cell && cell.v ? fmt(cell.v) : '–' });
+        }))
+        .concat([el('td', { class: 'num', text: fmt(x.total) })])
+        .concat(showRaise ? [el('td', { class: 'num' + (x.up ? '' : ' zero'), text: x.up ? fmt(x.up) : '–' })] : [])
+        .concat([el('td', { class: 'num' }, [cls
+          ? el('span', { class: 'tag ' + cls, text: fmtShort(x.per) })
+          : el('span', { text: fmtShort(x.per) })])]));
+      pivotTb.appendChild(tr);
+    });
+    picked.forEach((sd) => {
+      pivotTb.appendChild(el('tr', { class: 'statrow' },
+        [el('td', {}, [el('span', { class: 'tag', text: sd.t })])]
+          .concat(new Array(nLead - 1).fill(0).map(() => { return el('td', {}); }))
+          .concat(pvCols.map(() => { return el('td', {}); }))
+          .concat([el('td', {})])
+          .concat(showRaise ? [el('td', {})] : [])
+          .concat([el('td', { class: 'num', text: fmt(perStats[sd.k]) })])));
+    });
+    pivotTb.appendChild(el('tr', { class: 'tot' },
+      [el('td', { text: t('export.total') })]
+        .concat(new Array(Math.max(0, A.pvRows.length - 1)).fill(0).map(() => { return el('td', {}); }))
+        .concat([el('td', { class: 'num', text: fmt(A.personMonths) })])
+        .concat(pvCols.map((c) => { return el('td', { class: 'num', text: fmt(colTotOf(c).v) }); }))
+        .concat([el('td', { class: 'num', text: fmt(A.total) })])
+        .concat(showRaise ? [el('td', { class: 'num', text: fmt(A.raise) })] : [])
+        .concat([el('td', { class: 'num', text: fmtShort(perHead) })])));
+  }
+  drawPivot();
+
+  const head = (A.pvRows.length ? A.pvRows : [t('dash.all_groups')]).map((c) => { return el('th', { text: c }); })
+    .concat([el('th', { class: 'num', text: t('dash.nguoi_thang') })])
+    .concat(pvCols.map((c) => { return el('th', { class: 'num', text: c.t }); }))
+    .concat([el('th', { class: 'num', text: t('fm.full_year') })])
+    .concat(showRaise ? [el('th', { class: 'num', text: t('dash.do_tang_luong') })] : [])
+    .concat([el('th', { class: 'num', text: t('dash.bq_dau_nguoi_thang') })]);
+
+  wrap.appendChild(el('div', { class: 'panel' }, [
+    el('header', {}, [
+      el('h3', { text: t('dash.pivot_title') }),
+      el('span', { class: 'tag', text: t('fm.n_groups', { n: pvList.length }) }),
+      pvOver ? el('span', { class: 'tag o', text: t('dash.pivot_capped', { n: PV_MAX_COLS }) }) : null,
+      el('div', { class: 'sp' }),
+      el('button', {
+        class: 'btn sm', text: f.sort === 'per' ? t('dash.sort_per') : t('dash.sort_total'),
+        onclick: function () { f.sort = f.sort === 'per' ? 'total' : 'per'; touch(); render(); }
+      })
+    ]),
+    el('div', { class: 'body' }, [
+      el('div', { class: 'row', style: 'margin-bottom:10px' }, [
+        el('div', { style: 'width:200px' }, [
+          el('label', { class: 'f', text: t('dash.pivot_col') }),
+          el('select', {
+            class: 'pvcol',
+            onchange: function (e) {
+              f.pivotCol = e.target.value;
+              /* Cùng một cột ở cả hai chiều chỉ cho ra một đường chéo — gỡ nó khỏi dòng. */
+              f.pivotRows = (f.pivotRows || []).filter((c) => { return c !== f.pivotCol; });
+              touch(); renderSoon();
+            }
+          }, pvColOpts.map((o) => { return el('option', { value: o.v, selected: f.pivotCol === o.v, text: o.t }); }))
+        ])
+      ]),
+      el('div', {}, [
+        el('label', { class: 'f', text: t('dash.pivot_rows') }),
+        el('div', { class: 'chips' }, pvRowOpts.map((c) => {
+          const on = (f.pivotRows || []).indexOf(c) >= 0;
+          return el('span', {
+            class: 'chip' + (on ? ' on' : ''),
+            text: c, onclick: function () {
+              f.pivotRows = on ? f.pivotRows.filter((x) => { return x !== c; }) : (f.pivotRows || []).concat([c]);
+              touch(); render();
+            }
+          });
+        }))
+      ]),
+      el('p', { class: 'hint', style: 'margin:10px 0 0', html: t('dash.pivot_help', { base: fmt(Math.round(baseline)), col: pvColLabel }) })
+    ]),
+    el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
+      el('table', {}, [el('thead', {}, [el('tr', {}, head)]), pivotTb])
+    ])]),
+    el('div', { class: 'body' }, [pgDash.node])
+  ]));
 
   return wrap;
 }
