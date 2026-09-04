@@ -11,7 +11,7 @@
         thật chứ không đọc mã nguồn. */
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { chromium } from 'playwright';
-import { LAUNCH } from '../helpers/env.mjs';
+import { LAUNCH, TEST_ENV } from '../helpers/env.mjs';
 import { startServer } from '../helpers/server.mjs';
 import { collectErrors, goToView, importHeadcount, loginToApp } from '../helpers/browser.mjs';
 
@@ -147,6 +147,76 @@ describe('không còn màu viết cứng nào chọi nền tối', () => {
     const bright = (c) => c && c.match(/\d+/g).slice(0, 3).every((x) => Number(x) > 200);
     for (const k of Object.keys(got)) expect([k, bright(got[k])]).toEqual([k, false]);
     await ctx.close();
+  });
+});
+
+/* LỖI ĐÃ BÁO: ở chế độ tối, chữ trong ô mật khẩu là chữ ĐEN trên nền tối, và
+   nút hiện mật khẩu cũng chìm. Nguyên nhân: ô nhập không tự thừa kế màu chữ của
+   trang — mặc định của trình duyệt là đen — và styles.css của app có dòng
+   `input { color: inherit }` nhưng trang đăng nhập dùng CSS riêng (middleware
+   chặn file tĩnh khi chưa có phiên) nên thiếu hẳn dòng đó. */
+describe('màn đăng nhập ở chế độ tối', () => {
+  /* Độ sáng tương đối theo WCAG — đo thật, không đọc mã nguồn. */
+  const lum = (c) => {
+    const [r, g, b] = c.match(/\d+(\.\d+)?/g).slice(0, 3).map((x) => {
+      const v = Number(x) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const ratio = (fg, bg) => {
+    const a = lum(fg), b = lum(bg);
+    return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+  };
+
+  async function loginPage(colorScheme) {
+    const c = await browser.newContext({ colorScheme });
+    const p = await c.newPage();
+    await p.goto(server.base + '/login');
+    await p.waitForSelector('.login .card');
+    return { c, p };
+  }
+
+  it('chữ đang gõ nổi hẳn trên nền ô, ở CẢ HAI chế độ', async () => {
+    for (const scheme of ['dark', 'light']) {
+      const { c, p } = await loginPage(scheme);
+      await p.fill('#pass', 'thu-mat-khau');
+      const got = await p.evaluate(() => {
+        const cs = getComputedStyle(document.getElementById('pass'));
+        return { fg: cs.color, bg: cs.backgroundColor };
+      });
+      expect([scheme, ratio(got.fg, got.bg) > 4.5]).toEqual([scheme, true]);
+      await c.close();
+    }
+  });
+
+  it('nút hiện mật khẩu đọc được, và bấm là hiện/giấu thật', async () => {
+    const { c, p } = await loginPage('dark');
+    await p.fill('#pass', 'thu-mat-khau');
+    const got = await p.evaluate(() => ({
+      eye: getComputedStyle(document.getElementById('eye')).color,
+      bg: getComputedStyle(document.getElementById('pass')).backgroundColor,
+    }));
+    expect(ratio(got.eye, got.bg)).toBeGreaterThan(4.5);
+
+    expect(await p.evaluate(() => document.getElementById('pass').type)).toBe('password');
+    await p.click('#eye');
+    expect(await p.evaluate(() => document.getElementById('pass').type)).toBe('text');
+    /* Giá trị không được mất khi đổi kiểu ô. */
+    expect(await p.inputValue('#pass')).toBe('thu-mat-khau');
+    await p.click('#eye');
+    expect(await p.evaluate(() => document.getElementById('pass').type)).toBe('password');
+    await c.close();
+  });
+
+  it('vẫn đăng nhập được sau khi bật hiện mật khẩu', async () => {
+    const { c, p } = await loginPage('dark');
+    await p.fill('#pass', TEST_ENV.APP_PASSWORD);
+    await p.click('#eye');
+    await p.click('#btn');
+    await p.waitForURL(server.base + '/', { timeout: 15000 });
+    await p.waitForSelector('.shell .rail');
+    await c.close();
   });
 });
 

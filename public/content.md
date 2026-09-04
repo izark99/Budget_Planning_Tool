@@ -233,6 +233,25 @@ fx.cat.params: Tham số
 fx.cat.round: Làm tròn
 fx.cat.text: Văn bản
 fx.cat.usableCols: Cột dùng được
+fx.chips.empty: Chưa có gợi ý nào ở nhóm này
+fx.chips.no_target: Bấm vào ô công thức cần chèn trước đã
+fx.chips.note.class: Cột do bảng Phân loại nhóm sinh ra
+fx.chips.note.hc: Cột lấy thẳng từ file định biên đã nạp
+fx.chips.note.param: Hằng số khai ở màn Thiết lập
+fx.chips.note.policy: Cột do bảng Cài đặt chính sách sinh ra
+fx.chips.note.shared: Biểu thức đặt tên, khai ở màn Thiết lập
+fx.chips.note.sys: Máy tự cấp theo từng dòng × tháng
+fx.chips.shared: Công thức dùng chung
+fx.chips.tab.class: Phân loại
+fx.chips.tab.hc: Định biên
+fx.chips.tab.param: Tham số
+fx.chips.tab.policy: Chính sách
+fx.chips.tab.shared: CT chung
+fx.chips.tab.sys: Biến hệ thống
+fx.chips.target: Chèn vào: {name}
+fx.chips.target.any: Chèn vào ô đang chọn
+fx.chips.target.none: Bấm vào một ô công thức để chèn
+fx.chips.title: Gợi ý chèn
 fx.col.desc: Giá trị của cột này ở dòng đang tính
 fx.desc.ABS: Giá trị tuyệt đối.
 fx.desc.AND: Đúng khi mọi điều kiện đều đúng.
@@ -304,12 +323,6 @@ fx.var.THANG: Tháng đang tính, 1 đến 12
 fx.var.THANG_BAT_DAU: Tháng đầu tiên dòng này có định biên, 0 nếu cả năm trống
 fx.var.TONG_THANG: Số tháng dòng này có định biên, không phụ thuộc tháng đang tính
 fx.var.calField: {label} của tháng đang tính
-fx.chips.title: Gợi ý chèn
-fx.chips.target: Chèn vào: {name}
-fx.chips.target.any: Chèn vào ô đang chọn
-fx.chips.target.none: Bấm vào một ô công thức để chèn
-fx.chips.no_target: Bấm vào ô công thức cần chèn trước đã
-fx.chips.shared: Công thức dùng chung
 
 # Máy tính ngân sách
 engine.err.code: Lỗi {e}

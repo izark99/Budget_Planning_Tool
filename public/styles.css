@@ -379,6 +379,13 @@ tr.tot td { font-weight: 600; background: var(--bone-2); border-top: 2px solid v
    riêng, thân cuộn bên dưới. Ở đây chỉ còn phần bố cục của riêng nó — dính theo
    màn hình khi cuộn — còn vỏ để .panel lo, cuộn để .chipbody lo. */
 .chipbox { position: sticky; top: 10px; align-self: start; margin-bottom: 0; }
+/* Đầu hộp gợi ý: nút Thư viện hàm rồi tới dải tab chia theo nguồn. Nằm NGOÀI
+   vùng cuộn để đổi tab được mà không phải cuộn ngược lên. */
+.chiphead { padding: 8px 10px 6px; border-bottom: 1px solid var(--rule-2); }
+.chiptabs { margin-top: 6px; }
+.chiptabs .chip { padding: 2px 7px; }
+/* Một dòng nói tab đang mở lấy gợi ý từ đâu — [Nhóm lương] nhìn không ra nguồn. */
+.chipnote { font-size: 11px; color: var(--soft); margin-bottom: 6px; line-height: 1.35; }
 .chipbody { max-height: 260px; overflow: auto; padding: 9px 10px; }
 /* Danh sách Formula Code: nhiều công thức thì tự cuộn trong khung, không đẩy
    hộp gợi ý bên dưới ra khỏi màn hình. */

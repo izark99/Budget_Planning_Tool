@@ -6,7 +6,7 @@ import { CAL_FIELDS, M, MONTHS, S, blankCalTable, numOf, setRESULT, touch } from
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { pickFile } from '../platform/io.js';
-import { el, esc, render, toast } from '../ui/dom.js';
+import { el, esc, render, renderSoon, toast } from '../ui/dom.js';
 import { downloadData, downloadTemplate, importMapped, panel } from '../ui/widgets.js';
 
 function viewCalendar() {
@@ -18,7 +18,7 @@ function viewCalendar() {
     el('div', { style: 'width:280px' }, [
       el('label', { class: 'f', text: t('cal.phan_lich_theo_cot') }),
       el('select', {
-        onchange: function (e) { cal.groupCol = e.target.value; setRESULT(null); touch(); render(); }
+        onchange: function (e) { cal.groupCol = e.target.value; setRESULT(null); touch(); renderSoon(); }
       }, groupOpts.map((c) => {
         return el('option', { value: c, selected: cal.groupCol === c, text: c || t('cal.one_calendar_for_all') });
       }))

@@ -6,7 +6,7 @@ import { M, MONTHS, RESULT, S, fmt, fmtNum, fmtShort, nkey, setRESULT, touch } f
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { exportBudget } from '../platform/io.js';
-import { el, modal, progressBox, render, ribbon, toast } from '../ui/dom.js';
+import { el, modal, progressBox, render, renderSoon, ribbon, toast } from '../ui/dom.js';
 import { pager, tableView } from '../ui/widgets.js';
 
 /* ==== 08-view-result-boot.js ==== */
@@ -200,7 +200,7 @@ function viewResult() {
 
     const grpSel = el('select', {
       style: 'width:auto',
-      onchange: function (e) { S.ui.raiseBy = e.target.value; touch(); render(); }
+      onchange: function (e) { S.ui.raiseBy = e.target.value; touch(); renderSoon(); }
     }, grpCols.map((c) => { return el('option', { value: c, selected: S.ui.raiseBy === c, text: c }); }));
 
     wrap.appendChild(el('div', { class: 'panel' }, [

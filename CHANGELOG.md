@@ -4,6 +4,44 @@ Gộp theo đợt việc, mới nhất ở trên. Dự án chưa đánh số phi
 
 ---
 
+## Đợt 8b — Ba lỗi sau khi dùng thật · 2026-09-04
+
+### "Thêm cột giá trị" phải bấm hai lần
+Chuỗi sự kiện thật của một cú bấm là `mousedown → blur → mouseup → click`. Bộ nghe
+`change` của ô tên cột nổ ở bước **blur**; nó gọi thẳng `render()`, mà `render()` xoá sạch
+`document.body` — nên `mouseup` rơi vào một cây DOM khác và `click` **không bao giờ nổ**.
+Cú bấm đầu chỉ ghi nhận việc đổi tên.
+
+Đây là họ hàng của lỗi chip chèn đã sửa ở đợt 6, chỉ khác chỗ nổ. Nên lần này sửa ở gốc:
+thêm `renderSoon()` trong `ui/dom.js` — hoãn một nhịp để nút còn sống đủ lâu nhận `click`
+— và chuyển **mọi** bộ nghe `change`/`blur` đang gọi `render()` sang nó (9 chỗ, 6 tệp).
+`render()` gọi thẳng sẽ huỷ lần hoãn đang chờ nên không bao giờ vẽ hai lần.
+
+Hai phép kiểm mới chạy trên mã cũ trước để chứng minh bắt đúng chỗ: cả hai đỏ.
+
+### Gợi ý chèn chia theo tab
+Danh sách phẳng thì nhìn `[Nhóm lương]` không biết nó từ đâu ra. Nay sáu tab theo nguồn:
+Định biên · Phân loại · Chính sách · CT chung · Tham số · Biến hệ thống. Tab rỗng không
+hiện; mỗi tab có một dòng nói gợi ý đó từ đâu; tab đang mở sống qua `render()` (biến mức
+module, không vào `S.ui` — đó là trạng thái nhìn tạm thời, không thuộc dự án). Bấm tab
+cũng `keepFocus` như bấm chip, nếu không thì đổi tab là mất ô đang soạn.
+
+Bỏ `colChips()` — không nơi nào dùng, và giữ lại là giữ một bản sao thứ hai của cùng danh
+sách, nay đã lệch.
+
+### Màn đăng nhập ở chế độ tối
+Ô mật khẩu hiện chữ **đen** trên nền tối. `styles.css` của app có
+`input { color: inherit }` nhưng trang đăng nhập dùng CSS riêng (middleware chặn file tĩnh
+khi chưa có phiên) nên thiếu hẳn dòng đó — mặc định của trình duyệt là đen. Đã chép sang,
+thêm màu `::placeholder`.
+
+Nút hiện mật khẩu: Edge tự vẽ một con mắt bằng ảnh đen, không theo được chế độ tối. Tắt
+`::-ms-reveal` và dùng nút của chính mình — ăn màu theo biến, giữ nguyên vị trí con trỏ
+khi đổi kiểu ô. Đo tương phản thật trong phép kiểm: chữ 12,6:1 (tối) và 17,2:1 (sáng),
+nút mắt 5,3:1 và 4,6:1.
+
+---
+
 ## Đợt 8 — Chế độ tối, sắp/lọc mọi bảng, Division · 2026-09-04
 
 Tám việc. Hai việc chạm vào mô hình dữ liệu (phân loại nhóm nhiều cột, khoá Budget Code),

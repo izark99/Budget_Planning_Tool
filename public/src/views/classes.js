@@ -6,7 +6,7 @@
 import { S, classDef, classOuts, ensureClassOuts, fmt, fmtNum, nkey, numOf, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
-import { confirmBox, el, render, toast } from '../ui/dom.js';
+import { confirmBox, el, render, renderSoon, toast } from '../ui/dom.js';
 import { comboLimit, dataTable, foldPanel, panel } from '../ui/widgets.js';
 
 /* SheetJS/XLTABLE nạp bằng thẻ <script> nên nằm trên window, không import được. */
@@ -189,14 +189,14 @@ function viewClasses() {
             type: 'text', class: 'fx', style: 'width:230px', value: o.name || '', placeholder: t('pol.ten_cot_gia_tri'),
             onchange: function (e) {
               ensureClassOuts(cl).outs[j].name = e.target.value;
-              cl._objs = null; ENGINE.invalidate(); setRESULT(null); touch(); render();
+              cl._objs = null; ENGINE.invalidate(); setRESULT(null); touch(); renderSoon();
             }
           }),
           el('select', {
             style: 'width:100px',
             onchange: function (e) {
               ensureClassOuts(cl).outs[j].type = e.target.value;
-              cl._objs = null; ENGINE.invalidate(); setRESULT(null); touch(); render();
+              cl._objs = null; ENGINE.invalidate(); setRESULT(null); touch(); renderSoon();
             }
           }, [
             el('option', { value: 'text', selected: o.type !== 'num', text: t('hc.chu') }),
@@ -253,7 +253,7 @@ function viewClasses() {
         el('div', { style: 'width:230px' }, [el('label', { class: 'f', text: t('cal.ten_bang_phan_loai') }),
         el('input', {
           type: 'text', class: 'fx', value: cl.name || '',
-          onchange: function (e) { cl.name = e.target.value; ENGINE.invalidate(); setRESULT(null); touch(); render(); }
+          onchange: function (e) { cl.name = e.target.value; ENGINE.invalidate(); setRESULT(null); touch(); renderSoon(); }
         })])
       ]),
       el('div', { style: 'margin-bottom:12px' }, [

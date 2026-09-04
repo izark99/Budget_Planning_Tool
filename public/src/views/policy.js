@@ -5,7 +5,7 @@
 import { S, fmt, nkey, numOf, setRESULT, touch, uid } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
-import { confirmBox, el, render } from '../ui/dom.js';
+import { confirmBox, el, render, renderSoon } from '../ui/dom.js';
 import { comboLimit, dataTable, foldPanel, panel } from '../ui/widgets.js';
 import { classMissCount } from './classes.js';
 
@@ -152,7 +152,7 @@ function viewPolicies() {
         outBox.appendChild(el('div', { class: 'row', style: 'margin-bottom:6px' }, [
           el('input', {
             type: 'text', class: 'fx', style: 'width:230px', value: o.name || '', placeholder: t('pol.ten_cot_gia_tri'),
-            onchange: function (e) { o.name = e.target.value; po._objs = null; ENGINE.invalidate(); setRESULT(null); touch(); render(); }
+            onchange: function (e) { o.name = e.target.value; po._objs = null; ENGINE.invalidate(); setRESULT(null); touch(); renderSoon(); }
           }),
           el('select', {
             style: 'width:100px',
@@ -195,7 +195,7 @@ function viewPolicies() {
         el('div', { style: 'width:230px' }, [el('label', { class: 'f', text: t('pol.ten_bang_chinh_sach') }),
         el('input', {
           type: 'text', class: 'fx', value: po.name || '',
-          onchange: function (e) { po.name = e.target.value; touch(); render(); }
+          onchange: function (e) { po.name = e.target.value; touch(); renderSoon(); }
         })])
       ]),
       el('div', { style: 'margin-bottom:12px' }, [

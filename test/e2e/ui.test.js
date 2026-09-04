@@ -787,8 +787,11 @@ describe('bảng biến hệ thống ở màn Thiết lập', () => {
   it('liệt kê đủ mọi biến, có diễn giải, chữ đơn cách ở cột tên', async () => {
     await goToView(page, 'Thiết lập');
     const r = await page.evaluate(() => {
+      /* Khớp trên TIÊU ĐỀ panel, không trên textContent của cả panel: hộp gợi
+         ý chèn cũng là .panel và nay có một tab tên "Biến hệ thống", nằm trước
+         trong DOM — so cả nội dung là bắt nhầm nó. */
       const p = [...document.querySelectorAll('.panel')]
-        .find((x) => x.textContent.includes('Biến hệ thống'));
+        .find((x) => (x.querySelector(':scope > header h3') || {}).textContent === 'Biến hệ thống');
       if (!p) return null;
       const rows = [...p.querySelectorAll('tbody tr')].map((tr) =>
         [...tr.querySelectorAll('td')].map((c) => c.textContent.trim()));

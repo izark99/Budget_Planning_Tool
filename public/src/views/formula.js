@@ -7,7 +7,7 @@ import { MONTHS, S, allMonths, fmt, fmtNum, nkey, setRESULT, touch, uid } from '
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
 import { distinctVals } from '../platform/io.js';
-import { confirmBox, el, esc, modal, render, ribbon, toast } from '../ui/dom.js';
+import { confirmBox, el, esc, modal, render, renderSoon, ribbon, toast } from '../ui/dom.js';
 import { dragList, moveBeside, panel, selection } from '../ui/widgets.js';
 import { chipsPanel, fxField } from '../ui/formula-input.js';
 
@@ -142,7 +142,7 @@ function viewFormula() {
         el('div', { style: 'flex:1;min-width:200px' }, [el('label', { class: 'f', text: t('export.audit.name') }),
         el('input', { type: 'text', value: fc.name || '', oninput: function (e) { fc.name = e.target.value; touch(); } })]),
         el('div', { style: 'width:230px' }, [el('label', { class: 'f', text: t('fm.ket_qua_cong_thuc_la') }),
-        el('select', { onchange: function (e) { fc.mode = e.target.value; setRESULT(null); touch(); render(); } }, [
+        el('select', { onchange: function (e) { fc.mode = e.target.value; setRESULT(null); touch(); renderSoon(); } }, [
           el('option', { value: 'monthly', selected: fc.mode !== 'spread', text: t('fm.so_tien_cua_mot_thang') }),
           el('option', { value: 'spread', selected: fc.mode === 'spread', text: t('fm.tong_ca_nam_chia_deu') })
         ])])

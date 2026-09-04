@@ -5,7 +5,7 @@
 import { M, MONTHS, RESULT, S, fmt, fmtNum, fmtShort, nkey, touch } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
-import { el, render } from '../ui/dom.js';
+import { el, render, renderSoon } from '../ui/dom.js';
 import { pager } from '../ui/widgets.js';
 import { runBudget } from './result.js';
 
@@ -224,7 +224,7 @@ function viewDashboard() {
       el('div', { style: 'width:168px' }, [
         el('label', { class: 'f', text: t('dash.filter_col', { i: i + 1 }) }),
         el('select', {
-          onchange: function (e) { x.col = e.target.value; x.val = ''; touch(); render(); }
+          onchange: function (e) { x.col = e.target.value; x.val = ''; touch(); renderSoon(); }
         }, [el('option', { value: '', text: t('dash.khong_loc') })].concat(groupCols.map((c) => {
           return el('option', { value: c, selected: x.col === c, text: c });
         })))
@@ -233,7 +233,7 @@ function viewDashboard() {
         el('label', { class: 'f', text: t('dash.gia_tri') }),
         el('select', {
           disabled: !x.col,
-          onchange: function (e) { x.val = e.target.value; touch(); render(); }
+          onchange: function (e) { x.val = e.target.value; touch(); renderSoon(); }
         }, [el('option', { value: '', text: x.col ? t('dash.all_option') : '—' })].concat(vals.map((v) => {
           return el('option', { value: v, selected: x.val === v, text: v });
         })))
@@ -262,7 +262,7 @@ function viewDashboard() {
         }).map((fc) => { return fc.code; }), (e) => { f.formulaCode = e.target.value; touch(); render(); }),
         el('div', { style: 'width:178px' }, [
           el('label', { class: 'f', text: t('dash.phan_loai_theo') }),
-          el('select', { onchange: function (e) { f.groupCol = e.target.value; f.groupVal = ''; touch(); render(); } },
+          el('select', { onchange: function (e) { f.groupCol = e.target.value; f.groupVal = ''; touch(); renderSoon(); } },
             groupCols.map((c) => { return el('option', { value: c, selected: f.groupCol === c, text: c }); }))
         ]),
         selBox(t('dash.group_value'), f.groupVal,

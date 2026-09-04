@@ -12,8 +12,29 @@ import { t } from '../core/content.js';
    nhờ vậy các màn hình gọi render() mà không cần import ngược lên app.js —
    đồ thị phụ thuộc giữ được một chiều, không có vòng. */
 let _render = function () { };
+let _soon = null;
 function setRenderer(fn) { _render = fn; }
-function render() { return _render(); }
+function render() {
+  if (_soon) { clearTimeout(_soon); _soon = null; }
+  return _render();
+}
+
+/* Vẽ lại SAU KHI cú bấm đang diễn ra kết thúc.
+
+   LỖI ĐÃ BÁO: "Nhấn Thêm cột giá trị xong phải click cái nữa mới thêm được."
+   Chuỗi sự kiện thật của một cú bấm là mousedown → blur (ô đang gõ mất tiêu
+   điểm) → mouseup → click. Bộ nghe `change` của ô nhập nổ ở bước blur; nếu nó
+   gọi thẳng render() thì document.body bị xoá sạch NGAY GIỮA cú bấm, mouseup
+   rơi vào một cây DOM khác và `click` KHÔNG BAO GIỜ nổ. Cú bấm đầu chỉ ghi
+   nhận việc đổi tên, phải bấm thêm lần nữa mới tới được cái nút.
+
+   Vì vậy: mọi bộ nghe `change`/`blur` gọi renderSoon() thay vì render(). Hoãn
+   một nhịp là nút còn sống đủ lâu để nhận click, rồi mới dựng lại. render()
+   gọi thẳng sẽ HUỶ lần hoãn đang chờ nên không bao giờ vẽ hai lần. */
+function renderSoon() {
+  if (_soon) return;
+  _soon = setTimeout(() => { _soon = null; _render(); }, 0);
+}
 
 /* ---------- DOM ---------- */
 function el(tag, attrs, kids) {
@@ -102,4 +123,4 @@ function ribbon(active, opts) {
   return r;
 }
 
-export { el, esc, toast, modal, progressBox, confirmBox, ribbon, render, setRenderer };
+export { el, esc, toast, modal, progressBox, confirmBox, ribbon, render, renderSoon, setRenderer };
