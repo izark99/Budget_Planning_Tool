@@ -5,6 +5,7 @@
 import { M, MONTHS, RESULT, S, fmt, fmtNum, fmtShort, nkey, setRESULT, touch } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
+import { extMark, grandAll, hasExt, monthTotalsAll, pivotAll } from '../core/external.js';
 import { exportBudget } from '../platform/io.js';
 import { el, modal, progressBox, render, renderSoon, ribbon, toast } from '../ui/dom.js';
 import { pager, tableView } from '../ui/widgets.js';
@@ -18,7 +19,13 @@ import { pager, tableView } from '../ui/widgets.js';
    LỚP PHỦ PHẢI ĐÓNG TRƯỚC khi nơi gọi render(): render() xoá sạch document.body
    mà lớp phủ là con trực tiếp của body. */
 async function runBudget(silent) {
-  if (!S.hc.rows.length) { if (!silent) toast(t('msg.no_hc'), 'bad'); return null; }
+  /* Có ngân sách ngoài định biên thì vẫn chạy được dù chưa nạp định biên: bản
+     "chỉ có khoản tính sẵn ở ngoài" là một kịch bản thật. Máy tính chịu được
+     rows rỗng — mọi vòng lặp của nó đều chạy theo rows.length. */
+  if (!S.hc.rows.length && !(S.external || []).length) {
+    if (!silent) toast(t('msg.no_hc'), 'bad');
+    return null;
+  }
   const box = silent ? null : progressBox(t('res.running'));
   try {
     setRESULT(await ENGINE.runAsync(box ? (p, label) => { box.set(p, label); } : null));
@@ -35,10 +42,11 @@ function viewResult() {
   const wrap = el('div');
   const R = RESULT;
   if (!R) {
+    const canRun = S.hc.rows.length || (S.external || []).length;
     wrap.appendChild(el('div', { class: 'panel' }, [el('div', { class: 'empty' }, [
-      el('strong', { text: S.hc.rows.length ? t('dash.not_run') : t('msg.no_hc') }),
-      el('span', { text: S.hc.rows.length ? t('res.not_run_hint') : t('dash.no_hc_hint') }),
-      S.hc.rows.length ? el('div', { style: 'margin-top:14px' }, [el('button', {
+      el('strong', { text: canRun ? t('dash.not_run') : t('msg.no_hc') }),
+      el('span', { text: canRun ? t('res.not_run_hint') : t('dash.no_hc_hint') }),
+      canRun ? el('div', { style: 'margin-top:14px' }, [el('button', {
         class: 'btn go', style: 'padding:8px 18px', text: t('dash.chay_tinh_ngay'),
         onclick: function () { runBudget().then(render); }
       })]) : null
@@ -50,13 +58,19 @@ function viewResult() {
   R.conflicts.forEach((c) => { applied[c.no + '|' + c.id + '|' + c.formulaCode] = 1; });
   const diffs = R.conflicts.filter((c) => { return c.diff; });
 
+  /* Thẻ đầu là TỔNG CUỐI CÙNG — có cả phần ngoài định biên. Con số riêng của
+     từng phần nằm ở dòng phụ và ở thẻ kế bên, để không ai phải trừ nhẩm. */
+  const gAll = grandAll(R);
   wrap.appendChild(el('div', { class: 'stats' }, [
-    el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('res.total_budget', { y: S.meta.year }) }), el('div', { class: 'v money', text: fmtShort(R.grand) }), el('div', { class: 'u', text: t('dash.currency', { n: fmt(R.grand) }) })]),
-    el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.binh_quan_thang') }), el('div', { class: 'v', text: fmtShort(R.grand / 12) })]),
+    el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('res.total_budget', { y: S.meta.year }) }), el('div', { class: 'v money', text: fmtShort(gAll) }),
+      el('div', { class: 'u', text: hasExt(R) ? t('res.card_from_hc', { n: fmt(R.grand) }) : t('dash.currency', { n: fmt(gAll) }) })]),
+    hasExt(R) ? el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('ext.card_grand') }), el('div', { class: 'v money', text: fmtShort(R.external.grand) }),
+      el('div', { class: 'u', text: t('ext.card_share', { n: fmt(R.external.grand), p: fmtNum(gAll ? Math.round(R.external.grand / gAll * 1000) / 10 : 0) }) })]) : null,
+    el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.binh_quan_thang') }), el('div', { class: 'v', text: fmtShort(gAll / 12) })]),
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('hc.dong_dinh_bien') }), el('div', { class: 'v', text: fmt(R.rows.length) })]),
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('res.luot_to_trinh_ap_dung') }), el('div', { class: 'v', text: fmt(Object.keys(applied).length) })]),
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('res.luot_lech_phai_theo_doi') }), el('div', { class: 'v ' + (diffs.length ? 'warn' : ''), text: fmt(diffs.length) })])
-  ]));
+  ].filter(Boolean)));
 
   if (R.formulaErrors.length) {
     wrap.appendChild(el('div', { class: 'errbox' }, [
@@ -100,6 +114,17 @@ function viewResult() {
     fcTb.appendChild(el('tr', { class: 'tot' }, [el('td', { colspan: 3, text: t('res.tong_cong') })]
       .concat(R.monthTotals.map((v) => { return el('td', { class: 'num', text: fmt(v) }); }))
       .concat([el('td', { class: 'num', text: fmt(R.grand) })])));
+    /* Chưa khai khoản ngoài định biên nào thì bảng y hệt hôm nay — không thêm
+       dòng nào cả. Có thì thêm ĐÚNG HAI: phần ngoài định biên, rồi tổng cộng.
+       Nhờ vậy tổng của bảng này vẫn khớp bảng pivot bên dưới. */
+    if (hasExt(R)) {
+      fcTb.appendChild(el('tr', { class: 'tot ext' }, [el('td', { colspan: 3, text: extMark() })]
+        .concat(R.external.months.map((v) => { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
+        .concat([el('td', { class: 'num', text: fmt(R.external.grand) })])));
+      fcTb.appendChild(el('tr', { class: 'tot' }, [el('td', { colspan: 3, text: t('res.tong_cong_all') })]
+        .concat(monthTotalsAll(R).map((v) => { return el('td', { class: 'num', text: fmt(v) }); }))
+        .concat([el('td', { class: 'num', text: fmt(grandAll(R)) })])));
+    }
   }
   drawFc();
 
@@ -258,24 +283,28 @@ function viewResult() {
     return { k: 'pm' + i, label: m, type: 'num', get: (p) => { return p.m[i]; } };
   })).concat([{ k: 'total', label: t('fm.full_year'), type: 'num' }]);
   const tvPivot = tableView(pvCols, () => { pgPivot.reset(); drawPivot(); });
+  /* Phần định biên trước, phần ngoài định biên nối vào cuối — KHÔNG trộn vào
+     giữa: bộ so sánh sắp xếp của máy tính chỉ nhìn bốn mã đầu và không bao giờ
+     trả 0, nên chèn xen kẽ là xáo cả thứ tự đang có. */
+  const pvRows = pivotAll(R);
   function drawPivot() {
     pivotTb.innerHTML = '';
-    pgPivot.apply(tvPivot.apply(R.pivot)).forEach((p) => {
-      pivotTb.appendChild(el('tr', {}, [
+    pgPivot.apply(tvPivot.apply(pvRows)).forEach((p) => {
+      pivotTb.appendChild(el('tr', { class: p.formulaCode === extMark() ? 'ext' : '' }, [
         el('td', { class: 'mono', text: p.division }), el('td', { class: 'mono', text: p.budgetCode }),
         el('td', { class: 'mono', text: p.costCenter }), el('td', { class: 'mono', text: p.costCode }),
         el('td', { class: 'mono', text: p.accountCode }), el('td', { class: 'mono', text: p.formulaCode })
       ].concat(p.m.map((v) => { return el('td', { class: 'num' + (v ? '' : ' zero'), text: v ? fmt(v) : '–' }); }))
         .concat([el('td', { class: 'num', text: fmt(p.total) })])));
     });
-    if (!R.pivot.length) pivotTb.appendChild(el('tr', {}, [el('td', { colspan: 19, class: 'empty', text: t('res.chua_co_so_lieu') })]));
+    if (!pvRows.length) pivotTb.appendChild(el('tr', {}, [el('td', { colspan: 19, class: 'empty', text: t('res.chua_co_so_lieu') })]));
   }
   drawPivot();
   wrap.appendChild(el('div', { class: 'panel' }, [
-    el('header', {}, [el('h3', { text: t('res.pivot_title') }), el('span', { class: 'tag', text: t('table.info.rows', { n: R.pivot.length }) })]),
+    el('header', {}, [el('h3', { text: t('res.pivot_title') }), el('span', { class: 'tag', text: t('table.info.rows', { n: pvRows.length }) })]),
     el('div', { class: 'body tight' }, [el('div', { class: 'tw' }, [
       el('table', {}, [el('thead', {}, [el('tr', {},
-        pvCols.map((c) => { return tvPivot.th(c, () => { return R.pivot; }); }))]),
+        pvCols.map((c) => { return tvPivot.th(c, () => { return pvRows; }); }))]),
       pivotTb])
     ])]),
     el('div', { class: 'body' }, [tvPivot.bar, pgPivot.node])
@@ -345,11 +374,15 @@ async function exportDialog() {
   }
   modal(t('res.xuat_file_excel'), el('div', {}, [
     cb('person', t('res.sheet_person'), t('res.sheet_person_note', { n: fmt(R.rows.length * M) })),
-    cb('pivot', t('res.sheet_pivot'), t('table.info.rows', { n: fmt(R.pivot.length) })),
+    cb('pivot', t('res.sheet_pivot'), t('table.info.rows', { n: fmt(pivotAll(R).length) })),
     cb('fc', t('res.sheet_fc'), ''),
     cb('conflict', t('res.sheet_conflict'), t('table.info.rows', { n: fmt(R.conflicts.length) })),
     cb('audit', t('res.sheet_audit'), t('res.sheet_audit_note')),
-    cb('long', t('res.sheet_long'), t('res.sheet_long_note', { n: fmt(R.rows.length * M * R.formulas.length) }))
+    /* Sheet này đi theo TỪNG DÒNG NHÂN SỰ nên không chở được khoản ngoài định
+       biên. Nói thẳng ở đây, chứ đừng để người dùng tự phát hiện qua một con số
+       tổng thấp hơn các sheet khác. */
+    cb('long', t('res.sheet_long'), t('res.sheet_long_note', { n: fmt(R.rows.length * M * R.formulas.length) })
+      + (hasExt(R) ? ' · ' + t('res.sheet_long_ext') : ''))
   ]), [{ label: t('btn.cancel') }, { label: t('res.export_btn'), cls: 'pri', onclick: function () { setTimeout(() => { doExport(opt); }, 60); } }]);
 }
 

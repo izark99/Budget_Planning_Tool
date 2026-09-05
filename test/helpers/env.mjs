@@ -10,6 +10,10 @@ export const FIXTURE_XLSX = path.join(ROOT, 'test/fixtures/dinh-bien-mau.xlsx');
 export const GOLDEN = path.join(ROOT, 'test/fixtures/golden-result.json');
 export const GOLDEN_EXPORT = path.join(ROOT, 'test/fixtures/golden-export.json');
 export const STATE_FIXTURE = path.join(ROOT, 'test/fixtures/state.json');
+/* Mốc thứ hai: cùng state đó CỘNG THÊM ngân sách ngoài định biên. Cần riêng vì
+   canon() không đọc phần ngoài định biên — xem canonExt() ở canon.mjs. */
+export const STATE_EXT = path.join(ROOT, 'test/fixtures/state-external.json');
+export const GOLDEN_EXT = path.join(ROOT, 'test/fixtures/golden-external.json');
 
 export const TEST_ENV = {
   APP_PASSWORD: 'matkhau-chi-dung-trong-bo-kiem',

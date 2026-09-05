@@ -10,6 +10,7 @@
    =========================================================== */
 import { CAL_FIELDS, classDef, classOuts, fmt, MONTHS, nkey, numOf, S } from './state.js';
 import { t } from './content.js';
+import { extSummary } from './external.js';
 import { FX } from './expression.js';
 
 const ENGINE = (function () {
@@ -546,6 +547,9 @@ const ENGINE = (function () {
         return ka < kb ? -1 : 1;
       }),
       conflicts, warnings, formulaErrors,
+      /* Ngân sách tính sẵn ở ngoài: đi kèm kết quả nhưng CỐ Ý không cộng vào
+         grand/monthTotals/totalsByFc/data/pivot — xem đầu core/external.js. */
+      external: extSummary(),
       dataNoRaise: null, raiseImpact: null, raiseTotal: 0,
       idCol, posCol, unitCol, ms: Date.now() - t0
     };

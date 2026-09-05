@@ -121,9 +121,13 @@ interface CompareSummary {
   year: number;
   /** Tên file .json đã mở; rỗng với bản đang làm. */
   file: string;
+  /** Tổng CUỐI CÙNG — đã gồm cả phần ngoài định biên. */
   grand: number;
   /** Phần tiền do tăng lương của chính bản này; 0 khi không khai đợt nào. */
   raise: number;
+  /** Phần ngoài định biên và số dòng của nó, để cảnh báo lệch cấu trúc. */
+  ext: number;
+  extN: number;
   months: number[];
   nRows: number;
   byFc: Record<string, number>;
@@ -134,6 +138,35 @@ interface CompareSummary {
   cols: string[];
   fcCodes: string[];
   attrCols: string[];
+}
+
+/** Một dòng ngân sách tính sẵn ở ngoài, không dựa vào định biên. Tự mang đủ năm
+ *  tầng phân loại mà bảng pivot dùng, nên không cần tra bảng ánh xạ nào cả.
+ *
+ *  Mười hai tháng là mười hai TRƯỜNG PHẲNG chứ không phải một mảng: dataTable
+ *  ghi thẳng vào row[col.k] (ui/widgets.js), nên hình dạng phẳng là thứ đổi lấy
+ *  toàn bộ vòng đời Excel — tải mẫu, xuất lại, nhập vào — mà không phải chép
+ *  tay như views/accrual.js đang làm. core/external.js là nơi DUY NHẤT đổi
+ *  m1..m12 thành m[12]. */
+interface ExternalLine {
+  id: string;
+  division: string;
+  budgetCode: string;
+  costCenter: string;
+  costCode: string;
+  accountCode: string;
+  /** Diễn giải — đứng ở cột TenCongThuc của bảng pivot. */
+  name: string;
+  [k: string]: any;
+}
+
+/** Phần ngoài định biên của một lượt tính, gắn vào BudgetResult.
+ *  LUÔN là object, n = 0 khi chưa khai gì — nơi gọi không phải kiểm null. */
+interface ExternalPart {
+  rows: PivotRow[];
+  months: number[];
+  grand: number;
+  n: number;
 }
 
 /** Trạng thái dự án — thứ được ghi vào localStorage và vào file .json. */
@@ -171,6 +204,7 @@ interface ProjectState {
     budgetCode: any[];
     accountCode: any[];
   };
+  external: ExternalLine[];
   exceptions: any[];
   raises: Raise[];
   ui: {
@@ -231,6 +265,12 @@ interface BudgetResult {
   raiseImpact: RaiseImpact[] | null;
   /** Tổng ảnh hưởng của tăng lương = tổng `data` trừ tổng `dataNoRaise`. */
   raiseTotal: number;
+  /** Ngân sách ngoài định biên. CỐ Ý nằm ngoài `grand`/`monthTotals`/`totalsByFc`/
+   *  `data`/`pivot`: hai bất biến `grand === Σ totalsByFc` và
+   *  `monthTotals[m] === Σ data` phải còn nguyên, và `views/result.js` chia tỷ lệ
+   *  tăng lương cho `grand` — gộp vào đó là mọi phần trăm co lại trong im lặng.
+   *  Số cộng chung chỉ lấy qua grandAll()/monthTotalsAll()/pivotAll(). */
+  external: ExternalPart;
   idCol: string;
   posCol: string;
   unitCol: string;

@@ -5,6 +5,7 @@
 import { M, MONTHS, RESULT, S, fmt, fmtNum, fmtShort, nkey, touch } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
+import { extBucket, extMark, hasExt } from '../core/external.js';
 import { el, render, renderSoon } from '../ui/dom.js';
 import { pager } from '../ui/widgets.js';
 import { runBudget } from './result.js';
@@ -223,9 +224,10 @@ function addCell(pv, colTot, colKey, v, up) {
    .bar vẫn là TỔNG nên đường tham chiếu và nhãn .bval không phải đổi gì; phần
    tăng là một <i class="up"> nằm ở đầu .bar (flex-direction: column nên con đầu
    ở trên). `raise` rỗng = chưa khai đợt tăng nào → không dựng đoạn nào cả. */
-function barsMonthly(months, stats, picked, raise) {
+function barsMonthly(months, stats, picked, raise, ext) {
   const mx = Math.max.apply(null, months.concat([1]));
   const up = raise || null;
+  const ex = (ext && ext.some((x) => { return x > 0; })) ? ext : null;
   const plot = el('div', { class: 'plot' });
   (picked || []).forEach((k) => {
     const v = stats[k];
@@ -237,23 +239,30 @@ function barsMonthly(months, stats, picked, raise) {
   plot.appendChild(el('div', { class: 'bars' }, months.map((v, i) => {
     const h = v / mx * 100;
     const u = up ? (up[i] || 0) : 0;
+    const e = ex ? (ex[i] || 0) : 0;
     return el('div', {
       class: 'col',
       title: MONTHS[i] + ': ' + fmt(v) + (u ? '\n' + t('dash.do_tang_luong') + ': ' + fmt(u) : '')
+        + (e ? '\n' + t('ext.card_grand') + ': ' + fmt(e) : '')
     }, [
       el('div', { class: 'bval', style: 'bottom:' + h + '%', text: v ? fmtShort(v) : '' }),
-      el('div', { class: 'bar', style: 'height:' + h + '%' },
-        /* Tỉ lệ tính TRÊN CHÍNH CỘT, không trên mx: .up là con của .bar. */
-        [u > 0 && v > 0 ? el('i', { class: 'up', style: 'height:' + Math.min(100, u / v * 100) + '%' }) : null])
+      /* Tỉ lệ tính TRÊN CHÍNH CỘT, không trên mx: các đoạn là con của .bar.
+         .bar xếp theo cột nên con ĐẦU nằm trên — ngoài định biên trên cùng. */
+      el('div', { class: 'bar', style: 'height:' + h + '%' }, [
+        e > 0 && v > 0 ? el('i', { class: 'ext', style: 'height:' + Math.min(100, e / v * 100) + '%' }) : null,
+        u > 0 && v > 0 ? el('i', { class: 'up', style: 'height:' + Math.min(100, u / v * 100) + '%' }) : null
+      ])
     ]);
   })));
   const out = [plot, el('div', { class: 'xaxis' }, MONTHS.map((m) => { return el('div', { text: m }); }))];
   /* Chú giải chỉ có nghĩa khi thật sự có hai phần để phân biệt. */
-  if (up && up.some((x) => { return x > 0; })) {
+  const hasUp = !!(up && up.some((x) => { return x > 0; }));
+  if (hasUp || ex) {
     out.push(el('div', { class: 'legend' }, [
       el('span', {}, [el('i', { class: 'sw base' }), document.createTextNode(t('dash.legend_base'))]),
-      el('span', {}, [el('i', { class: 'sw up' }), document.createTextNode(t('dash.do_tang_luong'))])
-    ]));
+      hasUp ? el('span', {}, [el('i', { class: 'sw up' }), document.createTextNode(t('dash.do_tang_luong'))]) : null,
+      ex ? el('span', {}, [el('i', { class: 'sw ext' }), document.createTextNode(t('ext.card_grand'))]) : null
+    ].filter(Boolean)));
   }
   return el('div', { class: 'chart' }, out);
 }
@@ -265,6 +274,55 @@ function hbar(v, mx, up) {
   return el('div', { class: 'hbar' }, [
     el('i', { style: 'width:' + w + '%' }, [uw > 0 ? el('b', { style: 'width:' + uw + '%' }) : null])
   ]);
+}
+
+/** Phần ngoài định biên mà Bảng điều khiển ĐƯỢC PHÉP cộng vào.
+
+    Dashboard cắt theo DÒNG ĐỊNH BIÊN, mà những khoản này không có dòng nào. Nên:
+      · lọc theo Cost Code  → cộng bình thường, chúng có mã thật;
+      · lọc theo Formula Code hay bất kỳ cột phân loại nào → GIỮ LẠI hết, vì
+        không có cách nào trả lời "khoản này thuộc Dept nào" mà không bịa.
+    `held` để màn hình nói thẳng ra là đang giữ lại bao nhiêu — im lặng bỏ đi
+    mới là cái sai. */
+function extDash(R, f) {
+  const ex = R.external || { rows: [], grand: 0, n: 0 };
+  const held = !!(f.formulaCode || dashFilters(f).length);
+  const out = { n: ex.n, total: 0, months: new Array(M).fill(0), byCc: {}, held, heldAmount: 0 };
+  if (!ex.n) return out;
+  ex.rows.forEach((p) => {
+    if (f.costCode && p.costCode !== f.costCode) return;
+    out.heldAmount += p.total;
+    if (held) return;
+    out.total += p.total;
+    for (let i = 0; i < M; i++) out.months[i] += p.m[i];
+    out.byCc[p.costCode] = (out.byCc[p.costCode] || 0) + p.total;
+  });
+  return out;
+}
+
+/** Rót phần ngoài định biên vào bảng pivot đang dựng: một DÒNG duy nhất mang
+    nhãn "(ngoài định biên)". Cột thì tuỳ chiều — theo Cost Code hoặc theo tháng
+    thì các khoản này trả lời được, còn theo Formula Code hay cột phân loại thì
+    dồn vào một cột "(ngoài định biên)". Nhờ vậy Σ ô = Σ dòng = Σ cột = tổng
+    vẫn đúng ở CẢ BỐN chiều. */
+function mergeExtPivot(A, EX, R, pvCol) {
+  if (!EX.total) return null;
+  const b = extBucket();
+  const key = '\u0002ext';
+  const pv = A.pivot[key] = {
+    vals: (A.pvRows.length ? A.pvRows : [0]).map(() => { return b; }),
+    total: EX.total, raise: 0, pm: 0, n: EX.n, cells: {}
+  };
+  (R.external.rows || []).forEach((p) => {
+    if (pvCol === PV_MONTH) {
+      for (let i = 0; i < M; i++) if (p.m[i]) addCell(pv, A.pvColTot, String(i), p.m[i], 0);
+    } else if (pvCol === PV_CC) {
+      addCell(pv, A.pvColTot, p.costCode, p.total, 0);
+    } else {
+      addCell(pv, A.pvColTot, b, p.total, 0);
+    }
+  });
+  return pv;
 }
 
 function viewDashboard() {
@@ -300,6 +358,10 @@ function viewDashboard() {
       && groupCols.indexOf(f.pivotCol) < 0) f.pivotCol = PV_CC;
 
   const A = dashAggregate(R, f);
+  /* Phần ngoài định biên phải tính TRƯỚC khi dựng bảng pivot: nó thêm cả dòng
+     lẫn cột, mà danh sách cột lấy từ A.pvColTot ở dưới. */
+  const EX = extDash(R, f);
+  mergeExtPivot(A, EX, R, f.pivotCol || PV_CC);
   const nActive = A.filters.length + (f.costCode ? 1 : 0) + (f.formulaCode ? 1 : 0);
 
   /* ---------- bộ lọc ---------- */
@@ -372,12 +434,26 @@ function viewDashboard() {
 
   /* ---------- tổng quan ---------- */
   const perHead = A.personMonths ? A.total / A.personMonths : 0;
+  /* Tổng trong bộ lọc, đã cộng phần ngoài định biên (0 khi đang bị giữ lại).
+     perHead thì KHÔNG cộng: khoản ngoài định biên không có người-tháng nào. */
+  const gAll = A.total + EX.total;
   wrap.appendChild(el('div', { class: 'stats' }, [
-    el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.ngan_sach_trong_bo_loc') }), el('div', { class: 'v money', text: fmtShort(A.total) }), el('div', { class: 'u', text: t('dash.currency', { n: fmt(A.total) }) })]),
-    el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.binh_quan_thang') }), el('div', { class: 'v', text: fmtShort(A.total / 12) })]),
+    /* Thẻ đầu là tổng CUỐI CÙNG trong bộ lọc, giống hệt lối màn Kết quả: phần
+       định biên nằm ở dòng phụ, phần ngoài định biên ở thẻ kế bên. Ba thẻ cho
+       ba con số thì dải thẻ tràn xuống dòng thứ hai mà chẳng nói thêm gì. */
+    el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.ngan_sach_trong_bo_loc') }), el('div', { class: 'v money', text: fmtShort(gAll) }),
+      el('div', { class: 'u', text: EX.total ? t('res.card_from_hc', { n: fmt(A.total) }) : t('dash.currency', { n: fmt(A.total) }) })]),
+    el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.binh_quan_thang') }), el('div', { class: 'v', text: fmtShort(gAll / 12) })]),
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.binh_quan_dau_nguoi_thang') }), el('div', { class: 'v', text: fmtShort(perHead) }), el('div', { class: 'u', text: t('dash.person_months', { n: fmt(A.personMonths) }) })]),
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('hc.dong_dinh_bien') }), el('div', { class: 'v', text: fmt(A.nRow) })]),
     el('div', { class: 'stat' }, [el('div', { class: 'k', text: t('dash.dinh_bien_binh_quan') }), el('div', { class: 'v', text: fmt(A.personMonths / 12) })]),
+    /* Ngoài định biên: LUÔN hiện khi có khai, kể cả lúc đang bị giữ lại — con số
+       không bao giờ được biến mất khỏi màn hình mà không nói gì. */
+    hasExt(R) ? el('div', { class: 'stat' }, [
+      el('div', { class: 'k', text: t('ext.card_grand') }),
+      el('div', { class: 'v money', text: EX.held ? '–' : fmtShort(EX.total) }),
+      el('div', { class: 'u', text: EX.held ? t('ext.held_short', { n: fmt(EX.heldAmount) }) : t('dash.currency', { n: fmt(EX.total) }) })
+    ]) : null,
     /* Chỉ hiện khi có khai đợt tăng lương — không thì thêm một ô rỗng vô nghĩa. */
     A.raise === null ? null : el('div', { class: 'stat' }, [
       el('div', { class: 'k', text: t('dash.do_tang_luong') }),
@@ -427,6 +503,9 @@ function viewDashboard() {
     if (!A.byFc[fc.code]) flags.push({ k: 'fc', t: t('dash.flag_fc_zero', { code: fc.code }), v: '0' });
   });
   if (A.zeroRows) flags.push({ k: 'row', t: t('dash.flag_zero_rows', { n: A.zeroRows }), v: '' });
+  /* Bỏ tiền ra khỏi mọi con số mà không nói gì mới là cái sai — nên nó là một
+     điểm cần soát, đứng cạnh những điểm khác. */
+  if (EX.held && EX.heldAmount) flags.push({ k: 'warn', t: t('ext.filtered', { n: fmt(EX.heldAmount) }), v: fmtShort(EX.heldAmount) });
   const diffs = R.conflicts.filter((c) => { return c.diff; });
   let excGap = 0;
   diffs.forEach((c) => { excGap += (c.final - c.formula); });
@@ -460,6 +539,11 @@ function viewDashboard() {
   ];
   const picked = STAT_DEFS.filter((s) => { return f.stats.indexOf(s.k) >= 0; });
   const monthStats = seriesStats(A.months);
+  /* Biểu đồ vẽ TỔNG CUỐI CÙNG nên đường tham chiếu cũng phải tính trên chính
+     dãy số nó vẽ. Không có khoản ngoài định biên nào thì hai dãy trùng nhau,
+     biểu đồ y hệt hôm nay. */
+  const chartMonths = EX.total ? A.months.map((v, i) => { return v + EX.months[i]; }) : A.months;
+  const chartStats = EX.total ? seriesStats(chartMonths) : monthStats;
 
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [
@@ -497,15 +581,21 @@ function viewDashboard() {
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('dash.dien_bien_12_thang') }), el('div', { class: 'sp' }),
     el('span', { class: 'tag', text: t('dash.spread', { n: fmtShort(monthStats.max - monthStats.min) }) })]),
-    el('div', { class: 'body' }, [barsMonthly(A.months, monthStats, f.stats, A.monthsRaise)])
+    el('div', { class: 'body' }, [barsMonthly(chartMonths, chartStats, f.stats, A.monthsRaise, EX.months)])
   ]));
 
   /* ---------- cơ cấu theo Cost Code ---------- */
   /* Cột "Do tăng lương" chỉ dựng khi có khai đợt tăng — không thì là một cột
      toàn dấu gạch, vô nghĩa với người không dùng tăng lương. */
   const showRaise = A.raise !== null;
-  const ccRows = Object.keys(A.byCc).map((c) => { return { c, v: A.byCc[c], up: A.byCcRaise[c] || 0 }; })
+  /* Cost Code là chiều DUY NHẤT mà khoản ngoài định biên trả lời được, nên nó
+     vào đây bình thường — chỉ đánh dấu để biết dòng đó có phần không đến từ
+     định biên. */
+  const ccExt = EX.byCc;
+  const ccRows = Object.keys(A.byCc).concat(Object.keys(ccExt).filter((c) => { return A.byCc[c] === undefined; }))
+    .map((c) => { return { c, v: (A.byCc[c] || 0) + (ccExt[c] || 0), up: A.byCcRaise[c] || 0, ext: ccExt[c] || 0 }; })
     .sort((p, q) => { return q.v - p.v; });
+  const ccTotal = A.total + EX.total;
   const ccMax = ccRows.length ? ccRows[0].v : 0;
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('dash.co_cau_theo_cost_code') }), el('span', { class: 'tag', text: t('dash.n_codes', { n: ccRows.length }) })]),
@@ -519,19 +609,25 @@ function viewDashboard() {
             style: 'cursor:pointer', title: t('dash.bam_de_loc_theo_ma_nay'),
             onclick: function () { f.costCode = f.costCode === x.c ? '' : x.c; f.formulaCode = ''; touch(); render(); }
           }, [
-            el('td', { class: 'mono', text: x.c }),
+            el('td', { class: 'mono' }, [document.createTextNode(x.c),
+              x.ext ? el('span', { class: 'tag', style: 'margin-left:6px', text: extMark(), title: t('ext.card_share', { n: fmt(x.ext), p: fmtNum(x.v ? Math.round(x.ext / x.v * 1000) / 10 : 0) }) }) : null]),
             el('td', {}, [hbar(x.v, ccMax, x.up)]),
             el('td', { class: 'num', text: fmt(x.v) })
           ].concat(showRaise ? [el('td', { class: 'num' + (x.up ? '' : ' zero'), text: x.up ? fmt(x.up) : '–' })] : [])
-            .concat([el('td', { class: 'num', text: A.total ? (x.v / A.total * 100).toFixed(1) + '%' : '' })]));
+            .concat([el('td', { class: 'num', text: ccTotal ? (x.v / ccTotal * 100).toFixed(1) + '%' : '' })]));
         }))
       ])
     ])])
   ]));
 
   /* ---------- chi tiết Formula Code ---------- */
+  /** @type {Array<{c: string, v: number, up: number, ext?: boolean}>} */
   const fcRows = Object.keys(A.byFc).map((c) => { return { c, v: A.byFc[c], up: A.byFcRaise[c] || 0 }; })
     .sort((p, q) => { return q.v - p.v; });
+  /* Khoản ngoài định biên KHÔNG có Formula Code, nên nó đứng thành đúng một
+     dòng mang nhãn riêng chứ không rải vào mã nào — nhưng vẫn phải có mặt, để
+     cột cả năm cộng lại đúng bằng tổng. */
+  if (EX.total) fcRows.push({ c: extMark(), v: EX.total, up: 0, ext: true });
   const fcMax = fcRows.length ? fcRows[0].v : 0;
   wrap.appendChild(el('div', { class: 'panel' }, [
     el('header', {}, [el('h3', { text: t('dash.chi_tiet_theo_formula_code') }), el('span', { class: 'tag', text: t('dash.n_formulas', { n: fcRows.length }) })]),
@@ -541,7 +637,9 @@ function viewDashboard() {
           .concat(showRaise ? [el('th', { class: 'num', text: t('dash.do_tang_luong') })] : [])
           .concat([el('th', { class: 'num', text: '%' })]))]),
         el('tbody', {}, fcRows.map((x) => {
-          return el('tr', {
+          /* Dòng dấu không phải một Formula Code nên bấm vào nó chẳng lọc được
+             gì — đừng mời người dùng bấm. */
+          return el('tr', x.ext ? { class: 'ext' } : {
             style: 'cursor:pointer', onclick: function () { f.formulaCode = f.formulaCode === x.c ? '' : x.c; touch(); render(); }
           }, [
             el('td', { class: 'mono', text: x.c }),
@@ -618,10 +716,11 @@ function viewDashboard() {
     pgDash.apply(pvList).forEach((x) => {
       const rt = baseline ? x.per / baseline : 1;
       const cls = (baseline && x.pm >= 3 && rt >= 1.5) ? 'o' : ((baseline && x.pm >= 3 && rt <= 0.6) ? 'g' : '');
-      const tr = el('tr', canFilter ? {
+      const isExt = x.key === '\u0002ext';
+      const tr = el('tr', isExt ? { class: 'ext' } : (canFilter ? {
         style: 'cursor:pointer',
         onclick: function () { f.groupVal = f.groupVal === x.vals[0] ? '' : x.vals[0]; touch(); render(); }
-      } : {}, (x.vals.length ? x.vals : [t('dash.all_groups')]).map((v) => {
+      } : {}), (x.vals.length ? x.vals : [t('dash.all_groups')]).map((v) => {
         return el('td', { text: v === '' ? t('table.filter.blank') : v });
       }).concat([el('td', { class: 'num', text: fmt(x.pm) })])
         .concat(pvCols.map((c) => {
@@ -630,9 +729,13 @@ function viewDashboard() {
         }))
         .concat([el('td', { class: 'num', text: fmt(x.total) })])
         .concat(showRaise ? [el('td', { class: 'num' + (x.up ? '' : ' zero'), text: x.up ? fmt(x.up) : '–' })] : [])
-        .concat([el('td', { class: 'num' }, [cls
-          ? el('span', { class: 'tag ' + cls, text: fmtShort(x.per) })
-          : el('span', { text: fmtShort(x.per) })])]));
+        /* Không có người-tháng nào thì "bình quân đầu người" không phải là 0 —
+           nó là KHÔNG ĐO ĐƯỢC. Đúng với dòng ngoài định biên, và cũng đúng với
+           dòng định biên nào có tiền mà hệ số tháng bằng 0. */
+        .concat([el('td', { class: 'num' + (x.pm ? '' : ' zero') }, [x.pm
+          ? (cls ? el('span', { class: 'tag ' + cls, text: fmtShort(x.per) })
+                 : el('span', { text: fmtShort(x.per) }))
+          : el('span', { text: '–' })])]));
       pivotTb.appendChild(tr);
     });
     picked.forEach((sd) => {
@@ -649,7 +752,7 @@ function viewDashboard() {
         .concat(new Array(Math.max(0, A.pvRows.length - 1)).fill(0).map(() => { return el('td', {}); }))
         .concat([el('td', { class: 'num', text: fmt(A.personMonths) })])
         .concat(pvCols.map((c) => { return el('td', { class: 'num', text: fmt(colTotOf(c).v) }); }))
-        .concat([el('td', { class: 'num', text: fmt(A.total) })])
+        .concat([el('td', { class: 'num', text: fmt(A.total + EX.total) })])
         .concat(showRaise ? [el('td', { class: 'num', text: fmt(A.raise) })] : [])
         .concat([el('td', { class: 'num', text: fmtShort(perHead) })])));
   }
@@ -714,4 +817,4 @@ function viewDashboard() {
 
 
 
-export { STAT_DEFS, dashState, pctile, seriesStats, dashFilters, rowPasses, distinctUnder, dashAggregate, barsMonthly, hbar, viewDashboard };
+export { STAT_DEFS, dashState, pctile, seriesStats, dashFilters, rowPasses, distinctUnder, dashAggregate, extDash, mergeExtPivot, barsMonthly, hbar, viewDashboard };

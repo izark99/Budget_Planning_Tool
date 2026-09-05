@@ -161,6 +161,11 @@ function defaultState() {
       }
     ],
     maps: { costCode: [], costCenter: [], division: [], budgetCode: [], accountCode: [] },
+    /* Ngân sách tính sẵn ở ngoài, KHÔNG dựa vào định biên: mỗi dòng tự mang đủ
+       năm tầng phân loại và 12 tháng tiền. Mười hai trường phẳng m1..m12 chứ
+       không phải m: [] — dataTable ghi thẳng vào row[col.k], nhờ vậy cả vòng
+       đời Excel (mẫu / xuất / nhập) dùng được nguyên xi. */
+    external: [],
     exceptions: [],
     raises: [{ id: uid(), name: 'Tăng lương định kỳ', fromMonth: 4, pct: 8, cond: '', formulas: ['FC_LUONG_HESO', 'FC_BHXH'], active: true }],
     ui: { view: 'hc', fSel: null, collapsed: {} }
@@ -203,7 +208,15 @@ function normaliseMaps(s) {
   return s;
 }
 
-function setS(next) { S = next; normaliseCalendar(S.calendar); normaliseMaps(S); }
+function setS(next) {
+  S = next;
+  normaliseCalendar(S.calendar); normaliseMaps(S);
+  /* Mảng mới thêm phải điền ở ĐÂY, không chỉ ở load()/projectFromJson(): setS()
+     là cửa duy nhất cho mọi lần thay cả state — mở file dự án, hoàn tác, màn So
+     sánh tráo state, và bộ kiểm đặt state thẳng. Object.assign nông nên dự án
+     cũ không có khoá này sẽ để nguyên undefined, và nơi đọc thì nổ. */
+  if (!Array.isArray(S.external)) S.external = [];
+}
 
 /* Đọc một file dự án .json thành state đầy đủ, hoặc ném lỗi nếu nó không phải
    dự án. ĐÚNG MỘT định nghĩa "file hợp lệ" cho cả nút "Mở file dự án" lẫn màn
@@ -217,6 +230,7 @@ function projectFromJson(text) {
   next.policies = next.policies || [];
   next.shared = next.shared || [];
   next.accruals = next.accruals || [];
+  next.external = next.external || [];
   next.ui = next.ui || { view: 'hc' };
   return next;
 }
@@ -235,6 +249,7 @@ function load() {
     S.ui.collapsed = S.ui.collapsed || {};
     S.shared = S.shared || [];
     S.accruals = S.accruals || [];
+    S.external = S.external || [];
     return true;
   } catch { return false; }
 }

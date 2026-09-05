@@ -23,6 +23,7 @@ import { viewRaise } from './views/raise.js';
 import { viewResult, runBudget } from './views/result.js';
 import { viewDashboard } from './views/dashboard.js';
 import { viewAccrual } from './views/accrual.js';
+import { viewExternal } from './views/external.js';
 import { viewCompare } from './views/compare.js';
 
 const VIEWS = [
@@ -36,9 +37,10 @@ const VIEWS = [
   { k: 'maps', n: '8', t: 'view.maps.tab', title: 'view.maps.tab', sub: 'view.maps.sub', fn: viewMaps },
   { k: 'raise', n: '9', t: 'view.raise.tab', title: 'fm.du_kien_tang_luong', sub: 'view.raise.sub', fn: viewRaise },
   { k: 'accrual', n: '10', t: 'view.accrual.tab', title: 'view.accrual.title', sub: 'view.accrual.sub', fn: viewAccrual },
-  { k: 'result', n: '11', t: 'view.result.tab', title: 'view.result.title', sub: 'view.result.sub', fn: viewResult },
-  { k: 'dash', n: '12', t: 'view.dash.tab', title: 'view.dash.title', sub: 'view.dash.sub', fn: viewDashboard },
-  { k: 'cmp', n: '13', t: 'view.cmp.tab', title: 'view.cmp.title', sub: 'view.cmp.sub', fn: viewCompare }
+  { k: 'external', n: '11', t: 'view.ext.tab', title: 'view.ext.title', sub: 'view.ext.sub', fn: viewExternal },
+  { k: 'result', n: '12', t: 'view.result.tab', title: 'view.result.title', sub: 'view.result.sub', fn: viewResult },
+  { k: 'dash', n: '13', t: 'view.dash.tab', title: 'view.dash.title', sub: 'view.dash.sub', fn: viewDashboard },
+  { k: 'cmp', n: '14', t: 'view.cmp.tab', title: 'view.cmp.title', sub: 'view.cmp.sub', fn: viewCompare }
 ];
 
 function badgeFor(k) {
@@ -57,6 +59,7 @@ function badgeFor(k) {
       return na ? { t: String(na) } : null;
     }
     case 'exc': return S.exceptions.length ? { t: String(S.exceptions.length) } : null;
+    case 'external': return (S.external || []).length ? { t: String(S.external.length) } : null;
     case 'maps': {
       const miss = S.formulas.filter((f) => {
         return !(S.maps.costCode || []).some((x) => { return nkey(x.formulaCode) === nkey(f.code) && x.costCode; });

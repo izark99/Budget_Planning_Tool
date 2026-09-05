@@ -4,6 +4,64 @@ Gộp theo đợt việc, mới nhất ở trên. Dự án chưa đánh số phi
 
 ---
 
+## Đợt 10 — Ngân sách ngoài định biên, gộp vào kết quả cuối · 2026-09-05
+
+App trước nay chỉ biết **một** nguồn tiền: tính ra từ bảng định biên, mỗi đồng đều truy
+được về một dòng nhân sự × một Formula Code. Nhưng bản ngân sách thật luôn có khoản **tính
+sẵn ở ngoài** — thuê ngoài trọn gói, đào tạo do phòng khác chốt, dự phòng ban giám đốc giao
+xuống. Trước đợt này không có đường nào đưa chúng vào; phải xuất Excel rồi cộng tay, và bản
+cộng tay đó không quay lại được vào app.
+
+### Tab 11 · Ngoài định biên
+Đứng ngay trước Kết quả (Kết quả → 12, Dashboard → 13, So sánh → 14). Mỗi dòng tự mang đủ
+**năm tầng phân loại** mà bảng pivot dùng — Division / Budget Code / Cost Center / Cost Code
+/ Account Code — cộng Diễn giải và 12 cột tháng. Gõ thẳng mã cuối cùng, không phải khai ở
+màn Phân loại chi phí. Cả vòng đời Excel có sẵn: tải mẫu, xuất dữ liệu ra, nhập ngược vào.
+
+Năm cột mã là ô CHỮ chứ không phải ô chọn: `dataTable` dựng `<select>` cứng khi danh sách
+≤ 25 lựa chọn, tức là không gõ được mã mới — mà khoản ngoài định biên rất hay dùng mã chưa
+khai ở đâu, và một giá trị ngoài danh sách còn bị `<select>` hiện thành trắng trong khi
+state vẫn giữ số thật. Mã lạ được nhắc bằng một nhãn xám, không phải hộp cảnh báo màu: một
+cảnh báo lúc nào cũng bật thì chỉ còn là tiếng ồn.
+
+### Số liệu: cộng THÊM trường, không sửa trường cũ
+`RESULT.external` đứng ngoài `grand`, `monthTotals`, `totalsByFc`, `data`, `pivot`. Lý do
+đầy đủ ở `docs/architecture.md` §3; ngắn gọn: gộp vào là chân bảng lệch thân bảng, và mọi
+phần trăm ảnh hưởng tăng lương co lại trong im lặng. Số cộng chung chỉ lấy qua
+`grandAll()` / `monthTotalsAll()` / `pivotAll()` của `core/external.js`.
+
+### Gộp vào bốn nơi
+**Kết quả** — thẻ tổng là tổng cuối cùng, thêm thẻ "Ngoài định biên" riêng; chân bảng Theo
+Formula Code có thêm hai dòng; dòng pivot ngoài định biên mang dấu `NGOÀI ĐỊNH BIÊN` ở cột
+Formula Code và được tô riêng.
+**File Excel** — `TongHop_PhanLoai` nối thêm dòng, `TongHop_FormulaCode` thêm dòng dấu +
+dòng tổng cộng, `BanKhaiBao` thêm khối khai báo. Mọi thứ mới đều **có điều kiện**: chưa
+khai khoản nào thì file y hệt trước.
+**Dashboard** — thẻ riêng, đoạn thứ ba trên cột chồng 12 tháng, gộp vào cơ cấu Cost Code.
+Bật lọc theo cột định biên thì phần này **bị giữ lại** (không có cột phân loại nào để mà
+lọc) và màn hình **nói thẳng ra** đang giữ lại bao nhiêu — bỏ đi trong im lặng mới là sai.
+**So sánh** — vào tổng, vào 12 tháng, vào Cost Code theo mã thật, và vào một ô
+"(ngoài định biên)" cho mọi chiều gộp khác, nên `Σ theo chiều nào cũng vẫn bằng tổng`.
+
+### Hệ quả phải nói thẳng
+Sheet `ChiTiet_Dong` đi theo **từng dòng nhân sự** nên không chở được khoản ngoài định biên.
+Từ nay tổng của nó thấp hơn `TongHop_PhanLoai` đúng bằng phần ngoài định biên. Điều đó
+được khai trong `BanKhaiBao`, ghi chú ngay trong hộp thoại xuất file, và **chốt bằng một
+phép kiểm** để nó là điều đã biết chứ không phải một lệch phát hiện sau.
+
+### Chạy tính không cần định biên
+Bản chỉ có khoản tính sẵn ở ngoài là kịch bản thật, nên cửa chặn của "Chạy tính" nới thành
+"chưa có định biên **và** chưa có ngoài định biên". Đã chạy thử: máy tính chịu được
+`hc.rows` rỗng, mọi vòng lặp của nó đều đi theo `rows.length`.
+
+### Kiểm chứng
+`golden-result.json` và `golden-export.json` **không đổi một ký tự** — và có một phép kiểm
+unit chốt đúng điều đó bằng cách chạy máy tính trên state CÓ ngoài định biên rồi so với
+golden cũ. Thêm mốc thứ hai (`canonExt()` + `state-external.json` +
+`golden-external.json`) vì `canon()` cố ý không đọc phần này. 242 unit · 238 e2e.
+
+---
+
 ## Đợt 9 — Dashboard: tách phần do tăng lương, và bảng pivot tuỳ chỉnh · 2026-09-04
 
 Ba việc, cùng một sợi chỉ: **phần do tăng lương phải nhìn thấy được ở mọi chiều**, chứ

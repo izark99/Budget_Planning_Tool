@@ -10,6 +10,12 @@
      test/fixtures/golden-export.json — từng ô của file Excel app xuất ra, dạng
                                         JSON đọc được trong diff thay vì một tệp
                                         nhị phân không ai soi được.
+     test/fixtures/state-external.json — CÙNG state đó, cộng thêm ngân sách
+                                        ngoài định biên.
+     test/fixtures/golden-external.json — chuỗi canonical của phần ngoài định
+                                        biên và của các con số cộng chung. Cần
+                                        mốc riêng vì canon() cố ý không đọc
+                                        phần này — xem canonExt().
 
    Vì sao tách hai bước: state.json cần trình duyệt (SheetJS đọc .xlsx), nhưng
    một khi đã có nó thì phép kiểm golden chạy thuần Node trong mili-giây, không
@@ -25,16 +31,23 @@
    là quá đắt), nên tệp golden chính là thứ giữ lại bằng chứng đó. Sinh lại
    golden là chấp nhận bỏ mốc so với bản gốc — chỉ làm khi biết rõ vì sao.
 
-   Cách chạy:  node tools/regen-golden.mjs
+   Cách chạy:  node tools/regen-golden.mjs         sinh lại TẤT CẢ (cần trình duyệt)
+               node tools/regen-golden.mjs --ext   chỉ sinh lại mốc ngoài định
+                                                   biên, đọc state.json đang có
+                                                   — không cần trình duyệt, và
+                                                   không đụng vào ba tệp kia.
+
+   Dùng --ext khi chỉ sửa phần ngoài định biên: chạy toàn bộ sẽ ghi lại cả dấu
+   thời gian và uid ngẫu nhiên trong state.json, đẻ ra một diff toàn tiếng ồn.
 */
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { chromium } from 'playwright';
-import { FIXTURE_XLSX, GOLDEN, GOLDEN_EXPORT, LAUNCH, STATE_FIXTURE } from '../test/helpers/env.mjs';
+import { FIXTURE_XLSX, GOLDEN, GOLDEN_EXPORT, GOLDEN_EXT, LAUNCH, STATE_EXT, STATE_FIXTURE } from '../test/helpers/env.mjs';
 import { startServer } from '../test/helpers/server.mjs';
 import { exportWorkbook, inPage, loginToApp, importHeadcount } from '../test/helpers/browser.mjs';
-import { canon } from '../test/helpers/canon.mjs';
+import { canon, canonExt } from '../test/helpers/canon.mjs';
 import { loadEngine, runOn } from '../test/helpers/load-engine.mjs';
 import { readCells } from '../test/helpers/xlsx-cells.mjs';
 
@@ -72,35 +85,83 @@ async function applyScenario(page) {
   `);
 }
 
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bpt-golden-'));
-const server = await startServer();
-const browser = await chromium.launch(LAUNCH);
-let snapshot, cells;
-try {
-  const ctx = await browser.newContext({ acceptDownloads: true });
-  const page = await loginToApp(ctx, server.base);
-  await importHeadcount(page, FIXTURE_XLSX);
-  snapshot = JSON.parse(await applyScenario(page));
-  cells = readCells(await exportWorkbook(page, tmp));
-  await ctx.close();
-} finally {
-  await browser.close();
-  await server.stop();
+const extOnly = process.argv.includes('--ext');
+
+let snapshot, cells, tmp;
+if (extOnly) {
+  snapshot = JSON.parse(fs.readFileSync(STATE_FIXTURE, 'utf8'));
+} else {
+  tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bpt-golden-'));
+  const server = await startServer();
+  const browser = await chromium.launch(LAUNCH);
+  try {
+    const ctx = await browser.newContext({ acceptDownloads: true });
+    const page = await loginToApp(ctx, server.base);
+    await importHeadcount(page, FIXTURE_XLSX);
+    snapshot = JSON.parse(await applyScenario(page));
+    cells = readCells(await exportWorkbook(page, tmp));
+    await ctx.close();
+  } finally {
+    await browser.close();
+    await server.stop();
+  }
+
+  fs.writeFileSync(STATE_FIXTURE, JSON.stringify(snapshot, null, 2) + '\n');
+  console.log(`state.json  : ${snapshot.hc.rows.length} dòng định biên, ${snapshot.cols.length} cột, ` +
+    `${snapshot.formulas.length} Formula Code, ${snapshot.shared.length} CT dùng chung, ` +
+    `${snapshot.raises.length} đợt tăng, ${snapshot.accruals.length} khai % trích`);
 }
 
-fs.writeFileSync(STATE_FIXTURE, JSON.stringify(snapshot, null, 2) + '\n');
-console.log(`state.json  : ${snapshot.hc.rows.length} dòng định biên, ${snapshot.cols.length} cột, ` +
-  `${snapshot.formulas.length} Formula Code, ${snapshot.shared.length} CT dùng chung, ` +
-  `${snapshot.raises.length} đợt tăng, ${snapshot.accruals.length} khai % trích`);
-
 const { state, formula } = await loadEngine();
-const R = runOn(state, formula, snapshot);
-const text = canon(R);
-fs.writeFileSync(GOLDEN, text + '\n');
-console.log(`golden      : ${text.length} ký tự · tổng ngân sách ${Number(R.grand).toLocaleString('vi-VN')} · ` +
-  `${R.warnings.length} cảnh báo · ${R.formulaErrors.length} lỗi công thức`);
+if (!extOnly) {
+  const R = runOn(state, formula, snapshot);
+  const text = canon(R);
+  fs.writeFileSync(GOLDEN, text + '\n');
+  console.log(`golden      : ${text.length} ký tự · tổng ngân sách ${Number(R.grand).toLocaleString('vi-VN')} · ` +
+    `${R.warnings.length} cảnh báo · ${R.formulaErrors.length} lỗi công thức`);
+}
 
-fs.writeFileSync(GOLDEN_EXPORT, JSON.stringify(cells, null, 1) + '\n');
-const nCells = Object.values(cells).reduce((n, c) => n + Object.keys(c).length, 0);
-console.log(`golden-export: ${Object.keys(cells).length} sheet · ${nCells} ô · ${Object.keys(cells).join(', ')}`);
-fs.rmSync(tmp, { recursive: true, force: true });
+/* --- Mốc thứ hai: ngân sách ngoài định biên ---
+   Dựng TỪ chính snapshot ở trên nên hai mốc luôn nói về cùng một dự án; khác
+   nhau đúng một thứ là mảng external. Số liệu cố ý chạm đủ các trường hợp: đủ
+   năm mã, thiếu Cost Center và Account Code (rơi vào chữ "chưa khai"), tháng để
+   trống, và hai dòng trùng Cost Code để phép gộp có việc mà làm. */
+const extSnapshot = JSON.parse(JSON.stringify(snapshot));
+extSnapshot.external = [
+  {
+    id: 'ex-thue-ngoai', division: 'DIV_HO', budgetCode: 'BC_THUE_NGOAI',
+    costCenter: 'CC_AC', costCode: '0301', accountCode: 'AC_6427',
+    name: 'Thuê ngoài bảo vệ trọn gói',
+    m1: 120000000, m2: 120000000, m3: 120000000, m4: 120000000, m5: 120000000, m6: 120000000,
+    m7: 120000000, m8: 120000000, m9: 120000000, m10: 120000000, m11: 120000000, m12: 120000000,
+  },
+  {
+    id: 'ex-dao-tao', division: 'DIV_HO', budgetCode: 'BC_DAO_TAO',
+    costCenter: 'CC_HR', costCode: '0301', accountCode: 'AC_6428',
+    name: 'Đào tạo do phòng Đào tạo chốt',
+    m1: 0, m2: 0, m3: 250000000, m4: 0, m5: 0, m6: 0,
+    m7: 0, m8: 0, m9: 400000000, m10: 0, m11: 0, m12: 0,
+  },
+  {
+    id: 'ex-du-phong', division: 'DIV_NM', budgetCode: '',
+    costCenter: '', costCode: '0303', accountCode: '',
+    name: 'Dự phòng ban giám đốc',
+    m1: '', m2: '', m3: '', m4: '', m5: '', m6: '',
+    m7: '', m8: '', m9: '', m10: '', m11: '', m12: 500000000,
+  },
+];
+fs.writeFileSync(STATE_EXT, JSON.stringify(extSnapshot, null, 2) + '\n');
+const external = await import('../public/src/core/external.js');
+const RX = runOn(state, formula, extSnapshot);
+const textExt = canonExt(RX, external);
+fs.writeFileSync(GOLDEN_EXT, textExt + '\n');
+console.log(`golden-ext  : ${RX.external.n} dòng ngoài định biên · ` +
+  `${Number(RX.external.grand).toLocaleString('vi-VN')} · tổng cộng ` +
+  `${Number(external.grandAll(RX)).toLocaleString('vi-VN')}`);
+
+if (!extOnly) {
+  fs.writeFileSync(GOLDEN_EXPORT, JSON.stringify(cells, null, 1) + '\n');
+  const nCells = Object.values(cells).reduce((n, c) => n + Object.keys(c).length, 0);
+  console.log(`golden-export: ${Object.keys(cells).length} sheet · ${nCells} ô · ${Object.keys(cells).join(', ')}`);
+  fs.rmSync(tmp, { recursive: true, force: true });
+}

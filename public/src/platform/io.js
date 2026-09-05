@@ -7,6 +7,7 @@ import { CAL_FIELDS, M, MONTHS, S, RESULT, classDef, classOuts, nkey, numOf } fr
 import { buildWorkbook } from './xlsx-write.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
+import { extMark, grandAll, hasExt, monthTotalsAll, pivotAll } from '../core/external.js';
 
 /* Nạp bằng <script defer> cổ điển trong index.html, chạy trước mọi module. */
 const XLSX = window.XLSX;
@@ -97,7 +98,9 @@ function exportBudget(opt) {
       /* Thứ tự cột khớp đúng bảng trên màn Kết quả: Division / Budget Code /
          Cost Center / Cost Code / Account. text(7) = sáu cột mã + tên công thức. */
       const a2 = [['Division', 'BudgetCode', 'CostCenter', 'CostCode', 'AccountCode', 'FormulaCode', 'TenCongThuc'].concat(MONTHS).concat(['CaNam'])];
-      R.pivot.forEach((p) => {
+      /* pivotAll: phần định biên rồi phần ngoài định biên. Cùng bảy cột mã, nên
+         header không đổi và sheet vẫn cộng đúng tổng cuối cùng. */
+      pivotAll(R).forEach((p) => {
         a2.push(/** @type {any[]} */ ([p.division, p.budgetCode, p.costCenter, p.costCode, p.accountCode, p.formulaCode, p.formulaName]).concat(p.m).concat([p.total]));
       });
       sheets.push({ name: 'TongHop_PhanLoai', aoa: a2, fmt: text(7).concat(money(M + 1)) });
@@ -113,9 +116,19 @@ function exportBudget(opt) {
         (fc.months || []).map((x) => { return 'T' + String(x).padStart(2, '0'); }).join(' ')]).concat(mt).concat([R.totalsByFc[c]]));
       });
       a3.push(/** @type {any[]} */ ([t('export.total'), '', '', '']).concat(R.monthTotals).concat([R.grand]));
+      /* Có khoản ngoài định biên thì thêm ĐÚNG HAI dòng, nếu không thì sheet y
+         hệt hôm nay. Không thêm thì tổng của sheet này thấp hơn sheet
+         TongHop_PhanLoai mà chẳng có gì giải thích — đúng thứ người đọc file
+         phát hiện ra trước tiên. */
+      const totRows = [a3.length - 1];
+      if (hasExt(R)) {
+        a3.push(/** @type {any[]} */ ([extMark(), t('ext.bucket'), '', '']).concat(R.external.months).concat([R.external.grand]));
+        a3.push(/** @type {any[]} */ ([t('res.tong_cong_all'), '', '', '']).concat(monthTotalsAll(R)).concat([grandAll(R)]));
+        totRows.push(a3.length - 2, a3.length - 1);
+      }
       sheets.push({
         name: 'TongHop_FormulaCode', aoa: a3,
-        fmt: text(4).concat(money(M + 1)), totalRows: [a3.length - 1]
+        fmt: text(4).concat(money(M + 1)), totalRows: totRows
       });
     }
 
@@ -170,6 +183,16 @@ function exportBudget(opt) {
           (r.formulas || []).join(' ') || t('export.audit.all'),
           impact[r.id] == null ? '' : Math.round(impact[r.id])]);
       });
+      /* CÓ ĐIỀU KIỆN, không phải lúc nào cũng thêm: bộ kiểm so file xuất theo
+         TỪNG Ô, nên một khối luôn có mặt là đổi golden của mọi dự án. */
+      if (hasExt(R)) {
+        a5.push([]); a5.push([t('export.audit.external'), 'Division', 'Budget Code / Cost Center', 'Cost Code / Account Code', t('export.audit.value')]);
+        (S.external || []).forEach((r, i) => {
+          const p = pivotAll(R)[R.pivot.length + i];
+          a5.push(['', p.division, p.budgetCode + ' / ' + p.costCenter, p.costCode + ' / ' + p.accountCode, p.total]);
+        });
+        a5.push(['', t('res.sheet_long_ext'), '', '', '']);
+      }
       sheets.push({ name: 'BanKhaiBao', aoa: a5, fmt: text(6) });
     }
 

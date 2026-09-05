@@ -35,7 +35,7 @@ ngân sách. Thêm một cái là phá vỡ tính chất trên — cân nhắc r
 
 ```
 core/content ─────► core/state ─────► core/expression ─────► core/engine
-                         │                                        ▲
+                         │                    core/external ──────►▲
                          └──────────► platform/io ────────────────┘
                                             │
         ui/dom ─────► ui/widgets            │
@@ -106,7 +106,39 @@ Thêm một chỗ "dưới cần gọi lên" nữa thì dùng lại đúng khuô
 11. Năm tầng mã       Formula Code → Cost Code · Đơn vị → Cost Center · Đơn vị → Division
                       · (Cost Code + Đơn vị) → Budget Code
                       · (Cost Code + Cost Center + Budget Code) → Account Code
+12. Ngoài định biên   S.external — tiền tính sẵn ở ngoài, tự mang đủ năm mã và 12
+                      tháng. KHÔNG đi qua mười một bước trên; chỉ được gắn kèm kết
+                      quả ở `RESULT.external`
 ```
+
+### Ngân sách ngoài định biên đứng NGOÀI năm trường số của máy tính
+
+`RESULT.external` cố ý **không** cộng vào `grand`, `monthTotals`, `totalsByFc`, `data`,
+`pivot`. Ba lý do, theo thứ tự quan trọng:
+
+1. Hai bất biến `grand === Σ totalsByFc` và `monthTotals[m] === Σ data[..][..*12+m]` là
+   thứ tám nơi trong app đang dựa vào. Chân bảng "Theo Formula Code" ở `views/result.js`
+   lấy `monthTotals` trong khi thân bảng cộng từ `data` — gộp vào là chân lệch thân ngay,
+   không có gì báo.
+2. `views/result.js` chia tỷ lệ ảnh hưởng tăng lương cho `grand`; Dashboard chia cho
+   `personMonths`. Gộp vào mẫu số là mọi phần trăm co lại trong im lặng.
+3. `raiseSlice()` so `cur.grand - prev.grand` giữa các lượt tính.
+
+Đổi lại, số cộng chung **chỉ được lấy qua ba hàm** của `core/external.js` —
+`grandAll()`, `monthTotalsAll()`, `pivotAll()`. Không nơi nào tự viết
+`R.grand + R.external.grand`: có tên gọi thì `grep -rn grandAll public/src` liệt kê được
+đủ mọi chỗ cộng chung, cộng tay thì không.
+
+Cái giá phải trả nằm ở bộ kiểm: `canon()` đọc đúng năm trường bị chừa ra, nên golden cũ
+**vĩnh viễn mù** với một hồi quy của phần ngoài định biên. Bù bằng mốc thứ hai —
+`canonExt()` + `state-external.json` + `golden-external.json`, sinh lại bằng
+`node tools/regen-golden.mjs --ext`.
+
+Nguyên tắc gộp ở mọi màn hình, một câu: **ở đâu app cắt theo thứ những dòng này CÓ**
+(tháng, Cost Code, Division, Budget Code, Cost Center, Account Code) **thì chúng tham gia
+bình thường; ở đâu app cắt theo thứ chúng KHÔNG có** (cột phân loại nhân sự, Formula Code,
+bình quân đầu người) **thì chúng rơi vào một ô "(ngoài định biên)" hiện rõ, chứ không biến
+mất.** Nhờ vế sau, gộp chiều nào tổng cũng vẫn cộng đúng.
 
 Hai điểm dễ sai:
 

@@ -13,6 +13,7 @@
 import { M, MONTHS, RESULT, S, fmt, fmtNum, fmtShort, nkey, projectFromJson, setRESULT, setS, touch } from '../core/state.js';
 import { t } from '../core/content.js';
 import { ENGINE } from '../core/engine.js';
+import { extBucket, extMark, grandAll, monthTotalsAll } from '../core/external.js';
 import { pickFile } from '../platform/io.js';
 import { el, render, toast } from '../ui/dom.js';
 import { pager, tableView } from '../ui/widgets.js';
@@ -91,10 +92,25 @@ function summarise(R, file) {
     }
   }
 
+  /* Ngân sách ngoài định biên vào ĐỦ MỌI chiều gộp, không chiều nào bỏ sót:
+     · theo Cost Code thì nó có mã thật, cộng vào đúng mã đó;
+     · theo Formula Code và theo mọi cột phân loại thì nó KHÔNG có giá trị nào,
+       nên rơi vào một ô "(ngoài định biên)" hiện rõ.
+     Nhờ vế thứ hai, Σ theo chiều nào cũng vẫn đúng bằng tổng — đúng thước đo mà
+     test/e2e/compare.test.js đang chốt, chỉ là nay nó canh cả phần này. */
+  const ex = R.external || { rows: [], grand: 0, n: 0 };
+  if (ex.n) {
+    const bucket = extBucket();
+    ex.rows.forEach((p) => { byCc[p.costCode] = (byCc[p.costCode] || 0) + p.total; });
+    byFc[extMark()] = (byFc[extMark()] || 0) + ex.grand;
+    cols.forEach((c) => { byCol[c][bucket] = (byCol[c][bucket] || 0) + ex.grand; });
+  }
+
   return {
     name: S.meta.name || '', year: S.meta.year, file,
-    grand: R.grand, raise: R.raiseTotal || 0,
-    months: R.monthTotals.slice(), nRows: nR,
+    grand: grandAll(R), raise: R.raiseTotal || 0,
+    ext: ex.grand, extN: ex.n,
+    months: monthTotalsAll(R), nRows: nR,
     byFc, byCc, byCol, cols,
     fcCodes: R.formulas.map((fc) => { return fc.code; }),
     attrCols: ENGINE.attrCols().map((c) => { return c.alias; })
@@ -135,6 +151,10 @@ function structDiff(A, B) {
   const cA = only(A.attrCols, B.attrCols), cB = only(B.attrCols, A.attrCols);
   if (cA.length) out.push(t('cmp.warn.col_a', { list: cA.join(', ') }));
   if (cB.length) out.push(t('cmp.warn.col_b', { list: cB.join(', ') }));
+  /* Một bên có ngân sách ngoài định biên mà bên kia không, là chênh lệch có
+     nguyên nhân rất khác với "công thức đổi" — phải nói ra. */
+  if (A.extN && !B.extN) out.push(t('cmp.warn.ext_a', { n: fmt(A.extN), amt: fmtShort(A.ext) }));
+  if (B.extN && !A.extN) out.push(t('cmp.warn.ext_b', { n: fmt(B.extN), amt: fmtShort(B.ext) }));
   return out;
 }
 

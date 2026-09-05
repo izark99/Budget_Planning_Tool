@@ -39,3 +39,32 @@ export function explainDiff(a, b) {
   }
   return out.join('\n');
 }
+
+/* Chuỗi canonical của PHẦN NGOÀI ĐỊNH BIÊN — và của những con số cộng chung.
+
+   VÌ SAO PHẢI CÓ HÀM THỨ HAI: canon() ở trên đọc đúng năm trường mà thiết kế
+   ngoài định biên cố ý KHÔNG đụng tới (grand, monthTotals, totalsByFc, data,
+   pivot). Đó là điều làm cho golden cũ chứng minh được "không đụng vào phép
+   tính" — nhưng cũng có nghĩa là golden cũ VĨNH VIỄN mù với một hồi quy của
+   phần ngoài định biên. Đây là cái lưới bù vào đúng chỗ đó.
+
+   canon() ở trên KHÔNG được đổi: nó là mốc so với bản một-file gốc. */
+export function canonExt(R, ext) {
+  const line = (p) => [
+    p.division, p.budgetCode, p.costCenter, p.costCode, p.accountCode,
+    p.formulaCode, p.formulaName, ...Array.from(p.m), p.total,
+  ];
+  return JSON.stringify({
+    n: R.external.n,
+    extGrand: R.external.grand,
+    extMonths: Array.from(R.external.months),
+    extRows: R.external.rows.map(line),
+    /* Ba hàm cộng chung — mọi con số "tổng cuối cùng" trong app đi qua chúng. */
+    grandAll: ext.grandAll(R),
+    monthTotalsAll: ext.monthTotalsAll(R),
+    pivotAll: ext.pivotAll(R).map(line),
+    /* Chốt luôn hai bất biến mà cả thiết kế dựa vào. */
+    baseGrandUntouched: R.grand,
+    baseMonthTotals: Array.from(R.monthTotals),
+  });
+}

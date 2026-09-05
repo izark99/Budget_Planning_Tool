@@ -646,3 +646,17 @@ tr.statrow td { background: var(--bone-2); color: var(--ink-3); border-bottom: 1
    tối thiểu bằng nhau và giữ cột tên đủ rộng để mắt bám được hàng. */
 .cmptbl th:first-child, .cmptbl td:first-child { min-width: 170px; }
 .cmptbl th.num, .cmptbl td.num { min-width: 116px; }
+
+/* ---------- Ngân sách ngoài định biên ----------
+   Cùng một bảng với phần tính từ định biên, nhưng phải nhìn ra được ngay: những
+   dòng này không truy về công thức hay dòng nhân sự nào. Nền ochre + một vạch
+   bên trái; dùng box-shadow inset để không đụng vào đường kẻ sẵn có của bảng.
+   Đặt CUỐI tệp nên thắng `tr.tot td` ở cùng độ đặc hiệu — dòng tổng của phần
+   ngoài định biên vẫn phải mang dấu. */
+tr.ext > td { background: var(--ochre-2); }
+tr.ext > td:first-child { box-shadow: inset 3px 0 0 var(--ochre); }
+/* Đoạn thứ ba của cột chồng: ngoài định biên nằm TRÊN CÙNG, trên cả phần do
+   tăng lương. Là con đầu của .bar (flex column) nên chỉ cần một màu riêng. */
+.bars .bar > .ext { width: 100%; background: var(--ochre-2); border-radius: 2px 2px 0 0; }
+.bars .col:hover .bar > .ext { background: var(--ochre); }
+.legend .sw.ext { background: var(--ochre-2); border: 1px solid var(--ochre); }

@@ -49,6 +49,9 @@ view.dash.sub: Lọc theo Cost Code và nhóm, tìm chỗ bất thường
 view.dash.tab: Dashboard
 view.dash.title: Dashboard soát số
 view.exc.sub: Trường hợp duyệt riêng, đối chiếu với công thức
+view.ext.sub: Khoản tính sẵn ở ngoài — gõ thẳng năm tầng mã, không qua định biên
+view.ext.tab: Ngoài định biên
+view.ext.title: Ngân sách ngoài định biên
 view.formula.sub: Formula Code — nhóm, công thức và tháng trích
 view.hc.sub: Nguồn dữ liệu gốc — mỗi dòng một nhân sự
 view.maps.sub: Cost Code · Cost Center · Division · Budget Code · Account Code
@@ -823,10 +826,35 @@ cmp.struct_hint: Con số chênh lệch bên dưới vẫn cộng đúng, nhưng
 cmp.struct_title: Hai bản khác nhau về cấu trúc
 cmp.warn.col_a: Cột định biên chỉ có ở bản đang làm: {list}
 cmp.warn.col_b: Cột định biên chỉ có ở bản đối chiếu: {list}
+cmp.warn.ext_a: Chỉ bản đang làm có ngân sách ngoài định biên: {n} dòng, {amt}
+cmp.warn.ext_b: Chỉ bản đối chiếu có ngân sách ngoài định biên: {n} dòng, {amt}
 cmp.warn.fc_a: Formula Code chỉ có ở bản đang làm: {list}
 cmp.warn.fc_b: Formula Code chỉ có ở bản đối chiếu: {list}
 cmp.warn.rows: Số dòng định biên khác nhau — bản đang làm {a}, bản đối chiếu {b}
 cmp.warn.year: Năm ngân sách khác nhau — bản đang làm {a}, bản đối chiếu {b}
+
+# Màn 11 · Ngoài định biên
+ext.bucket: (ngoài định biên)
+ext.card_grand: Tổng ngoài định biên
+ext.card_share: {n} đ · {p}% tổng ngân sách
+ext.card_lines: Số dòng đã khai
+ext.card_peak: Tháng cao nhất
+ext.dash_note: Bảng dưới cắt theo dòng định biên, nên phần ngoài định biên đứng riêng ở thẻ trên.
+ext.filtered: Đang lọc theo cột định biên — {n} đ ngoài định biên KHÔNG nằm trong các con số dưới đây, vì những khoản này không có cột phân loại để mà lọc.
+ext.held_short: {n} đ đang giữ lại vì bộ lọc
+ext.guide: Mỗi dòng là một khoản đã tính sẵn ở ngoài. Gõ thẳng năm mã cuối cùng (Division, Budget Code, Cost Center, Cost Code, Account Code) — không cần khai ở màn Phân loại chi phí. Mười hai cột T01…T12 là tiền từng tháng; để trống hiểu là 0.
+ext.help: Những khoản này gộp thẳng vào tổng cuối cùng ở màn Kết quả, file Excel, Dashboard và màn So sánh, nhưng luôn mang dấu “{mark}” ở cột Formula Code để nhìn ra được.
+ext.marker: NGOÀI ĐỊNH BIÊN
+ext.no_lines: Chưa khai khoản nào
+ext.only_ext: Dự án này chưa có bảng định biên — mọi con số đến từ phần ngoài định biên.
+ext.table_title: Ngân sách ngoài định biên
+ext.unmapped_none: Mọi mã đã có trong bảng Phân loại chi phí
+ext.unmapped_note: Không sao cả — khoản ngoài định biên được phép dùng mã chưa khai ở đâu. Đây chỉ là nhắc để bạn soát lại chính tả.
+ext.unmapped_some: {n} mã chưa có trong bảng Phân loại chi phí
+export.audit.external: NGOAI DINH BIEN
+res.card_from_hc: trong đó từ định biên {n} đ
+res.sheet_long_ext: Sheet ChiTiet_Dong chỉ có phần định biên — khoản ngoài định biên không gắn với dòng nhân sự nào nên không vào được sheet này.
+res.tong_cong_all: TỔNG CỘNG (kể cả ngoài định biên)
 
 # Khởi động
 boot.no_localstorage: <strong>Trình duyệt không cho lưu tự động.</strong> Dữ liệu sẽ mất khi đóng tab — bấm “Lưu file dự án (.json)” trước khi thoát.
